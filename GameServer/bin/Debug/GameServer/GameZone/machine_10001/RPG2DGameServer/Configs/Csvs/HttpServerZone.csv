@@ -1,0 +1,6 @@
+﻿服务器分区,服务分区,服务分区描述,服务器地址,Tcp端口,WebSocket端口,Http端口,Http站点,是否为直连模式
+int,string,string,string,int,int,int,string,int
+ID,GameZone,desic,ServerIp,TcpPort,WsPort,HttpPort,HttpWebsite,useDirectConn
+1,华南分区,华南分区,127.0.0.1,6080,6082,6090,http://127.0.0.1:6090/,0
+2,华北分区,华北分区,127.0.0.1,7080,7082,7090,http://127.0.0.1:7090/,0
+3,经典分区,经典分区,127.0.0.1,8080,8082,8090,http://127.0.0.1:8090/,0

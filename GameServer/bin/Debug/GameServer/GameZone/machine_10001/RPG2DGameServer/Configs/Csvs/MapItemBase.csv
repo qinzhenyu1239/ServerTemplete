@@ -1,0 +1,16 @@
+﻿角色ID,角色类型,角色描述,角色大小半径,角色资源路径
+int,string,string,float,string
+ID,desicName,itemDesic,raduis,assetUrl
+10001,an,地图,0,Maps/Prefabs/20003/NO5
+10002,anS,地图,0,Maps/Prefabs/20003/NO2
+20001,桥墩,障碍物,0,Maps/Prefabs/20003/NO1
+20002,单墩,障碍物,0,Maps/Prefabs/20003/NO4
+20003,光墩,障碍物,0,Maps/Prefabs/20003/NO3
+30001,巫婆,NPC,0,NPC/Prefabs/30001
+30002,巫师,NPC,0,NPC/Prefabs/30002
+40001,蜘蛛精,怪物,1.2,Monster/Prefabs/40001
+40002,跳跳猫,怪物,1,Monster/Prefabs/40002
+40003,飞龙,怪物,1,Monster/Prefabs/40003
+40004,海王,怪物,1,Monster/Prefabs/40004
+40005,Boss,怪物,1,Monster/Prefabs/40005
+50001,女玩家,玩家,0.5,Role/Prefabs/50001

@@ -1,0 +1,13 @@
+﻿角色ID,角色类型,角色大小半径,角色描述,角色资源路径
+int,string,float,string,string
+ID,charactorName,raduis,charactorDesic,assetUrl
+10001,战士1号,0,擅长骑射,Charactors/Prefabs/10001
+10002,战士2号,0,擅长大刀,Charactors/Prefabs/10001
+10003,战士3号,0,擅长宝剑,Charactors/Prefabs/10001
+20001,武士1号,0,擅长骑射,Charactors/Prefabs/10001
+20002,武士2号,0,擅长大刀,Charactors/Prefabs/10001
+20003,武士3号,0,擅长宝剑,Charactors/Prefabs/10001
+30001,法师1号,0,擅长骑射,Charactors/Prefabs/10001
+30002,法师2号,0,擅长大刀,Charactors/Prefabs/10001
+30003,法师3号,0,擅长宝剑,Charactors/Prefabs/10001
+50001,RVO地图角色,0.5,RVO的角色，女弓箭手,Charactors/Prefabs/10004

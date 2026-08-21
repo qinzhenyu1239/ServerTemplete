@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "5MjupNkbg0Q=",
+  "success": true,
+  "projectFilePath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenPBProto\\GenPBProto.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Windows\\.nuget\\packages\\protobuf-net\\3.2.30\\protobuf-net.3.2.30.nupkg.sha512",
+    "C:\\Users\\Windows\\.nuget\\packages\\protobuf-net.core\\3.2.30\\protobuf-net.core.3.2.30.nupkg.sha512",
+    "C:\\Users\\Windows\\.nuget\\packages\\system.collections.immutable\\7.0.0\\system.collections.immutable.7.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
