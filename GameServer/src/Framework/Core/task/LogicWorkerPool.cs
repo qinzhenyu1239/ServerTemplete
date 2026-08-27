@@ -164,7 +164,7 @@ namespace Framework.Core.task
             this.workerPool[index].taskEvent.Set();
         }
 
-        public void PushMsgToLogicServer(IdSession s, short module, short cmd, object msg) {
+        public void PushMsgToLogicServer(IdSession s, short module, short cmd, object msg, long requestId = 0) {
 
             
             if (/*s.accountId <= 0 || */s.playerId <= 0 || s.logicServerId == -1) {
@@ -175,11 +175,11 @@ namespace Framework.Core.task
             
             if (this.logicServers.ContainsKey(instId)) {
                 LogicTask task = this.logicServers[instId];
-                task.PushEvent(s, s.playerId, module, cmd, msg);
+                task.PushEvent(s, s.playerId, module, cmd, msg, requestId);
             }
         }
 
-        public void GWPushMsgToLogicServer(long playerId, short logicServerId, short module, short cmd, object msg)
+        public void GWPushMsgToLogicServer(long playerId, short logicServerId, short module, short cmd, object msg, long requestId = 0)
         {
 
 
@@ -193,7 +193,7 @@ namespace Framework.Core.task
             if (this.logicServers.ContainsKey(instId))
             {
                 LogicTask task = this.logicServers[instId];
-                task.PushEvent(SessionMgr.Instance.GatewaySession, playerId, module, cmd, msg);
+                task.PushEvent(SessionMgr.Instance.GatewaySession, playerId, module, cmd, msg, requestId);
             }
         }
     }

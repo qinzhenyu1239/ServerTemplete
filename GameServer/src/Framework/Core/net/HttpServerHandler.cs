@@ -68,10 +68,24 @@ namespace Framework.Core.Net {
         }
 
         private void Process(IChannelHandlerContext ctx, IFullHttpRequest request) {
+            MessageTrafficLogger.HttpReceived(
+                ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                request.Method.ToString(), request.Uri, request.Content.ReadableBytes);
             HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request);
         }
 
         void Process(IChannelHandlerContext ctx, IHttpRequest request, List<object> allContent) {
+            int contentLength = 0;
+            foreach (object item in allContent)
+            {
+                if (item is IHttpContent content)
+                {
+                    contentLength += content.Content.ReadableBytes;
+                }
+            }
+            MessageTrafficLogger.HttpReceived(
+                ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                request.Method.ToString(), request.Uri, contentLength);
             HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request, allContent);
         }
 

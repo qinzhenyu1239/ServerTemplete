@@ -54,7 +54,7 @@ namespace Game {
            
             this.logger.Info($"\n[GatewayMode = {GatewayMode}]");
 
-            if (GatewayMode == false) { // 普通模式                
+            if (GatewayMode == false) { // 普通模式
                 this.server.StartSterverAt(tcpPort, wsPort, IsSsl).Wait();
                 this.server.StartHttpServer(httpPort, IsSsl).Wait();
             }
@@ -78,22 +78,34 @@ namespace Game {
         private void FrameworkInit() {
             // 加载我们的配置文件，如果默认是nlog.config,会被自动加载
             LogManager.Configuration = new XmlLoggingConfiguration("nlog.config");
+
+            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
+            if (OnlyHttpServerZone) {
+                HttpRouteDispatcher.Instance.Init("/PullingServerZone");
+                return;
+            }
+
             MessageFactory.Instance.InitMeesagePool();
 
             MessageDispatcher.Instance.Init();
             HttpRouteDispatcher.Instance.Init();
 
             SessionMgr.Instance.Init();
-            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
             bool GatewayMode = bool.Parse(ConfigurationManager.AppSettings["GatewayMode"]);
             bool isGateway = bool.Parse(ConfigurationManager.AppSettings["AsGateway"]);
-            if (!OnlyHttpServerZone && GatewayMode && isGateway) {
+            if (GatewayMode && isGateway) {
                 GatewayMgr.Instance.Init();
             }
             TaskWorkerPool.Instance.Start(5);
         }
 
         private void GameLogicInit() {
+            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
+            if (OnlyHttpServerZone) {
+                HttpServerZoneModule.Instance.Init();
+                return;
+            }
+
             // 初始化数据库服务
             DBService.Instance.Init();
             RedisService.Instance.Init();
@@ -101,11 +113,6 @@ namespace Game {
             ConfigMgr.Instance.Init();
             HttpServerZoneModule.Instance.Init();
             HttpServerDirectConnModule.Instance.Init();
-
-            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
-            if (OnlyHttpServerZone) {
-                return;
-            }
 
             RuleProcesserFactory.Init();
 
@@ -149,6 +156,11 @@ namespace Game {
 
         public async Task Shutdown() {
             await this.server.Shutdown();
+
+            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
+            if (OnlyHttpServerZone) {
+                return;
+            }
 
             LogicWorkerPool.Instance.Stop();
             TaskWorkerPool.Instance.Stop();

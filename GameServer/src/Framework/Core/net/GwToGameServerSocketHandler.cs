@@ -43,6 +43,7 @@ namespace Framework.Core.Net{
             else {
                 s = SessionMgr.Instance.GatewaySession; // 网关的Session
             }
+            MessageTrafficLogger.Received(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);
             MessageDispatcher.Instance.OnGatewayToGameServerMsg(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);
             // this.logger.Debug($"{msg.ReadableBytes} : {msg.ArrayOffset}"); // ReadableBytes = 12 : 2 Array 包含了头;
             // byte[] cmdData = new byte[msg.ReadableBytes]; // 内存池来处理,后续考虑优化;

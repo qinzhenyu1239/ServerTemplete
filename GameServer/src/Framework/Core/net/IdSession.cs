@@ -36,6 +36,8 @@ namespace Framework.Core.Net {
                 return;
             }
 
+            MessageTrafficLogger.Sent(this, data, offset, count);
+
             IByteBuffer buffer = Unpooled.Buffer();
             buffer.WriteBytes(data, offset, count);
             // buffer.WriteBytes(data);
@@ -66,6 +68,8 @@ namespace Framework.Core.Net {
             if (this.client == null) {
                 return;
             }
+
+            MessageTrafficLogger.Sent(this, data, 0, data?.Length ?? 0);
 
             IByteBuffer buffer = Unpooled.Buffer();
             buffer.WriteBytes(data);

@@ -17,12 +17,14 @@ namespace Framework.Core.task {
         private MethodInfo method;
         /**arguments passed to the method */
         private object[] @params;
+        private long routeTag;
+        private long requestId;
 
 
 
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public static MessageTask Create(long distributeKey, object handler, MethodInfo method, object[] @params, IdSession s) {
+        public static MessageTask Create(long distributeKey, object handler, MethodInfo method, object[] @params, IdSession s, long routeTag, long requestId) {
             MessageTask t = new MessageTask();
             t.distributeKey = distributeKey;
 
@@ -30,6 +32,8 @@ namespace Framework.Core.task {
             t.method = method;
             t.@params = @params;
             t.session = s;
+            t.routeTag = routeTag;
+            t.requestId = requestId;
 
             return t;
         }
@@ -39,9 +43,7 @@ namespace Framework.Core.task {
             {
                 object response = method.Invoke(handler, @params);
                 if (response != null) {
-                    long utag = (long)(@params[2]);
-                    // MessagePusher.PushMessage(playerId, (Message)response);
-                    MessagePusher.PushMessage(this.session, (Message)response, utag);
+                    MessagePusher.PushMessage(this.session, (Message)response, routeTag, requestId: requestId);
                 }
             }
             catch (Exception e)

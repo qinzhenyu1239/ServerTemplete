@@ -18,8 +18,6 @@ namespace Game.Entries.HttpControllers
     [HttpController]
     class HttpAuthController
     {
-        private const int HEAD_SIZE = 14; // [Module2字节, 2字节Cmd, utag8字节, 2字节LogicServerId]
-
         private Dictionary<long, long> accountIdToOpenId = new Dictionary<long, long>();
         private Dictionary<long, long> openIdToAccountId = new Dictionary<long, long>();
         private string httpPlayerServerUrl = "http://127.0.0.1:6090/GetPlayerId";
@@ -39,7 +37,7 @@ namespace Game.Entries.HttpControllers
             short cmd = UtilsHelper.ReadShortLE(data, 2);
             openId = UtilsHelper.ReadLongLE(data, 4);
             int count = data.Length;
-            Message msg = SerializerHelper.PbDecode(module, cmd, data, HEAD_SIZE, count - HEAD_SIZE);
+            Message msg = SerializerHelper.PbDecode(module, cmd, data, ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
 
             return msg;
         }
@@ -53,7 +51,7 @@ namespace Game.Entries.HttpControllers
             short cmd = UtilsHelper.ReadShortLE(data, 2);
 
             int count = data.Length;
-            Message msg = SerializerHelper.PbDecode(module, cmd, data, HEAD_SIZE, count - HEAD_SIZE);
+            Message msg = SerializerHelper.PbDecode(module, cmd, data, ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
 
             return msg;
         }

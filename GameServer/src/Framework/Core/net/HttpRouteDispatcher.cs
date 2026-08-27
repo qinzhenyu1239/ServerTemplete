@@ -50,22 +50,37 @@ namespace Framework.Core.Net
         static readonly AsciiString ServerName = AsciiString.Cached("Bycw");
         // end
 
-        public void Init()
+        public void Init(params string[] allowedUris)
         {
+            HashSet<string> allowedUriSet = allowedUris != null && allowedUris.Length > 0
+                ? new HashSet<string>(allowedUris, StringComparer.Ordinal)
+                : null;
+
             IEnumerable<Type> controllers = TypeScanner.ListTypesWithAttribute(typeof(HttpController));
             foreach (Type controller in controllers)
             {
                 try
                 {
-                    object handler = Activator.CreateInstance(controller);
                     MethodInfo[] methods = controller.GetMethods();
+                    MethodInfo[] mappedMethods = methods
+                        .Where(method =>
+                        {
+                            HttpRequestMapping mapping = method.GetCustomAttribute<HttpRequestMapping>();
+                            return mapping != null &&
+                                   (allowedUriSet == null || allowedUriSet.Contains(mapping.uri));
+                        })
+                        .ToArray();
 
-                    foreach (MethodInfo method in methods)
+                    if (mappedMethods.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    object handler = Activator.CreateInstance(controller);
+
+                    foreach (MethodInfo method in mappedMethods)
                     {
                         HttpRequestMapping mapperAttribute = method.GetCustomAttribute<HttpRequestMapping>();
-                        if (mapperAttribute == null) {
-                            continue;
-                        }
 
                         string key = mapperAttribute.uri;
                         HTTP_ROUTE_CMD_HANDLERS.TryGetValue(key, out CmdExecutor cmdExecutor);
@@ -149,6 +164,9 @@ namespace Framework.Core.Net
             headers.Set(ContentLengthEntity, contentLength);
 
             // Close the non-keep-alive connection after the write operation is done.
+            MessageTrafficLogger.HttpSent(
+                ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                HttpResponseStatus.OK.Code, buf.ReadableBytes);
             ctx.WriteAndFlushAsync(response);
             ctx.CloseAsync();
         }
@@ -186,9 +204,36 @@ namespace Framework.Core.Net
             ctx.CloseAsync();
         }
 
+        private bool TryHandleBuiltInRequest(IChannelHandlerContext ctx, string uri)
+        {
+            if (!string.Equals(uri, "/favicon.ico", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var response = new DefaultFullHttpResponse(
+                HttpVersion.Http11,
+                HttpResponseStatus.NoContent,
+                Unpooled.Empty,
+                false);
+            response.Headers.Set(ContentLengthEntity, AsciiString.Cached("0"));
+
+            MessageTrafficLogger.HttpSent(
+                ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                HttpResponseStatus.NoContent.Code,
+                0);
+            ctx.WriteAndFlushAsync(response);
+            ctx.CloseAsync();
+            return true;
+        }
+
         public void OnHttpRequrestProcess(IChannelHandlerContext ctx, IFullHttpRequest request)
         {
             string uri = request.Uri;
+            if (TryHandleBuiltInRequest(ctx, uri))
+            {
+                return;
+            }
 
             HTTP_ROUTE_CMD_HANDLERS.TryGetValue(uri, out CmdExecutor cmdExecutor);
             if (cmdExecutor == null)
@@ -196,6 +241,9 @@ namespace Framework.Core.Net
                 logger.Warn($"Http uri executor missed, {uri}");
 
                 var response = new DefaultFullHttpResponse(HttpVersion.Http11, HttpResponseStatus.NotFound, Unpooled.Empty, false);
+                MessageTrafficLogger.HttpSent(
+                    ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                    HttpResponseStatus.NotFound.Code, 0);
                 ctx.WriteAndFlushAsync(response);
                 ctx.CloseAsync();
 
@@ -218,6 +266,10 @@ namespace Framework.Core.Net
 
         public void OnHttpRequrestProcess(IChannelHandlerContext ctx, IHttpRequest request, List<object> allContent) {
             string uri = request.Uri;
+            if (TryHandleBuiltInRequest(ctx, uri))
+            {
+                return;
+            }
 
             HTTP_ROUTE_CMD_HANDLERS.TryGetValue(uri, out CmdExecutor cmdExecutor);
             if (cmdExecutor == null)
@@ -225,6 +277,9 @@ namespace Framework.Core.Net
                 logger.Warn($"Http uri executor missed, {uri}");
 
                 var response = new DefaultFullHttpResponse(HttpVersion.Http11, HttpResponseStatus.NotFound, Unpooled.Empty, false);
+                MessageTrafficLogger.HttpSent(
+                    ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                    HttpResponseStatus.NotFound.Code, 0);
                 ctx.WriteAndFlushAsync(response);
                 ctx.CloseAsync();
 

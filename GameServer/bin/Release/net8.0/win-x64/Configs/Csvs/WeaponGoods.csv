@@ -1,0 +1,11 @@
+﻿唯一ID,设备名称,装备描述,攻击力,防御力,可强化的属性,买入价格,出售价格
+int,string,string,float,float,string,int,int
+ID,name,EqpmtDesic,Attack,Defense,UpgradeProp,BuyInPrice,SellOutPrice
+30001,普通刀,普通的刀，尽快换掉吧,1,1,define,3,2
+30002,强化刀,强力一点弓箭，凑合用吧,2,2,define|attack,3,2
+30003,普通剑,普通的剑，尽快换掉吧,1,1,define,6,5
+30004,屠龙刀,一般绝世神兵,10,10,define|attack,9,8
+30005,木弓,一言难尽，尽快换掉吧,1,1,define,3,2
+30006,宝雕弓,成吉思汗遗留之物,10,10,define|attack,6,5
+30007,金强弓,成吉思汗随身之物,20,20,define|attack,8,7
+30008,宝石弓,传言天上之物,30,30,define|attack,18,15

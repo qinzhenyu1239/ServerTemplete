@@ -34,6 +34,7 @@ namespace Framework.Core.Net{
             var msg = message as IByteBuffer;
             IChannel channel = context.Channel;
             IdSession s = SessionMgr.Instance.GetSessionBy(channel);
+            MessageTrafficLogger.Received(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);
             // this.logger.Debug($"{msg.ReadableBytes} : {msg.ArrayOffset}"); // ReadableBytes = 12 : 2 Array 包含了头;
             // byte[] cmdData = new byte[msg.ReadableBytes]; // 内存池来处理,后续考虑优化;
             // Array.Copy(msg.Array, msg.ArrayOffset, cmdData, 0, msg.ReadableBytes);

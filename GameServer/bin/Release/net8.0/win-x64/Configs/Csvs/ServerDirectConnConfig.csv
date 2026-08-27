@@ -1,0 +1,6 @@
+﻿直连逻辑服机器编号(0~255),分区服描述,TCP IP地址,直连TCP端口,直连Ws端口,直连Http端口,开启条件
+int,string,string,int,int,int,int
+ID,ServerDesic,IpAddr,TcpPort,WsPort,HttpPort,Enabled
+1,综合机器:所有玩法全部,127.0.0.1,6080,6082,6090,1
+2,专题机器：2D RPG开放世界,127.0.0.1,6080,6082,6090,1
+3,专题机器：RVO开放世界,127.0.0.1,6080,6082,6090,1
