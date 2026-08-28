@@ -82,6 +82,9 @@ namespace Game.Datas.Messages
 
         [ProtoMember(3, IsRequired = true)]
         public string unick;
+
+        [ProtoMember(4)]
+        public string accessToken;
     }
 
 
@@ -124,6 +127,9 @@ namespace Game.Datas.Messages
 
         [ProtoMember(3)]
         public long accountIdOrOpenId = 0;
+
+        [ProtoMember(4)]
+        public string accessToken;
     }
 
     [ProtoContract]
@@ -162,6 +168,62 @@ namespace Game.Datas.Messages
 
         [ProtoMember(3)]
         public long accountIdOrOpenId = 0;
+
+        [ProtoMember(4)]
+        public string accessToken;
+    }
+
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eIssueGameTicketReq)]
+    public class ReqIssueGameTicket : Message
+    {
+        [ProtoMember(1, IsRequired = true)]
+        public string accessToken;
+
+        [ProtoMember(2, IsRequired = true)]
+        public int serverId;
+    }
+
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eIssueGameTicketRes)]
+    public class ResIssueGameTicket : Message
+    {
+        [ProtoMember(1, IsRequired = true)]
+        public int status;
+
+        [ProtoMember(2)]
+        public string gameTicket;
+
+        [ProtoMember(3)]
+        public long expiresAtUnixSeconds;
+    }
+
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eGameAuthenticateReq)]
+    public class ReqGameAuthenticate : Message
+    {
+        [ProtoMember(1, IsRequired = true)]
+        public string gameTicket;
+
+        [ProtoMember(2, IsRequired = true)]
+        public int serverId;
+
+        [ProtoMember(3)]
+        public string clientVersion;
+    }
+
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eGameAuthenticateRes)]
+    public class ResGameAuthenticate : Message
+    {
+        [ProtoMember(1, IsRequired = true)]
+        public int status;
+
+        [ProtoMember(2)]
+        public long accountId;
+
+        [ProtoMember(3)]
+        public string errorMessage;
     }
 
 }

@@ -204,6 +204,27 @@ namespace Framework.Core.Net
             ctx.CloseAsync();
         }
 
+        private static async Task<object> AwaitInvocationResult(object invocationResult)
+        {
+            if (invocationResult is not Task task)
+            {
+                return invocationResult;
+            }
+
+            await task.ConfigureAwait(false);
+            PropertyInfo resultProperty = task.GetType().GetProperty("Result");
+            return resultProperty?.GetValue(task);
+        }
+
+        public void RemoveRoutes(params string[] uris)
+        {
+            if (uris == null) return;
+            foreach (string uri in uris)
+            {
+                if (!string.IsNullOrWhiteSpace(uri)) HTTP_ROUTE_CMD_HANDLERS.Remove(uri);
+            }
+        }
+
         private bool TryHandleBuiltInRequest(IChannelHandlerContext ctx, string uri)
         {
             if (!string.Equals(uri, "/favicon.ico", StringComparison.OrdinalIgnoreCase))
@@ -227,7 +248,7 @@ namespace Framework.Core.Net
             return true;
         }
 
-        public void OnHttpRequrestProcess(IChannelHandlerContext ctx, IFullHttpRequest request)
+        public async Task OnHttpRequrestProcess(IChannelHandlerContext ctx, IFullHttpRequest request)
         {
             string uri = request.Uri;
             if (TryHandleBuiltInRequest(ctx, uri))
@@ -244,8 +265,8 @@ namespace Framework.Core.Net
                 MessageTrafficLogger.HttpSent(
                     ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
                     HttpResponseStatus.NotFound.Code, 0);
-                ctx.WriteAndFlushAsync(response);
-                ctx.CloseAsync();
+                await ctx.WriteAndFlushAsync(response);
+                await ctx.CloseAsync();
 
                 return;
             }
@@ -253,7 +274,7 @@ namespace Framework.Core.Net
             if (cmdExecutor != null)
             {
                 object[] @params = ConvertToMethodParams(ctx, request, cmdExecutor.@params);
-                object response = (cmdExecutor.method.Invoke(cmdExecutor.handler, @params));
+                object response = await AwaitInvocationResult(cmdExecutor.method.Invoke(cmdExecutor.handler, @params));
                 if (response != null) {
                     this.SendHttpRespones(ctx, response);
                 }
@@ -264,7 +285,7 @@ namespace Framework.Core.Net
            
         }
 
-        public void OnHttpRequrestProcess(IChannelHandlerContext ctx, IHttpRequest request, List<object> allContent) {
+        public async Task OnHttpRequrestProcess(IChannelHandlerContext ctx, IHttpRequest request, List<object> allContent) {
             string uri = request.Uri;
             if (TryHandleBuiltInRequest(ctx, uri))
             {
@@ -280,15 +301,15 @@ namespace Framework.Core.Net
                 MessageTrafficLogger.HttpSent(
                     ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
                     HttpResponseStatus.NotFound.Code, 0);
-                ctx.WriteAndFlushAsync(response);
-                ctx.CloseAsync();
+                await ctx.WriteAndFlushAsync(response);
+                await ctx.CloseAsync();
 
                 return;
             }
 
             if (cmdExecutor != null) {
                 object[] @params = ConvertToMethodParams(ctx,request, cmdExecutor.@params);
-                object response = (cmdExecutor.method.Invoke(cmdExecutor.handler, @params));
+                object response = await AwaitInvocationResult(cmdExecutor.method.Invoke(cmdExecutor.handler, @params));
                 if (response != null) {
                     this.SendHttpRespones(ctx, response);
                 }

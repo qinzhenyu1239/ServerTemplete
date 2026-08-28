@@ -1,177 +1,176 @@
 using Framework.Core.Net;
 using Framework.Core.Serializer;
 using Framework.Core.task;
-using Game.Core.Db;
 using Game.Core.Configs;
+using Game.Core.Db;
+using Game.Core.EntityMgr;
+using Game.Core.GM_Backpack;
 using Game.Core.GM_Bonues;
+using Game.Core.GM_MailMessage;
+using Game.Core.GM_Rank;
+using Game.Core.GM_Task;
+using Game.Core.GM_Trading;
+using Game.Entries.Modules;
+using Game.LogicServer;
+using Game.Utils;
 using NLog;
 using NLog.Config;
 using System.Configuration;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Game.Core.EntityMgr;
-using Game.Entries.Modules;
-using Game.Core.GM_Task;
-using Game.Core.GM_MailMessage;
-using Game.Core.GM_Rank;
-using Game.Core.GM_Backpack;
-using Game.Core.GM_Trading;
-using Game.Utils;
-using Game.LogicServer;
 
-namespace Game {
+namespace Game
+{
     public class GameServer
     {
-        NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-
+        private readonly Logger logger = LogManager.GetCurrentClassLogger();
         public static GameServer Instance = new GameServer();
 
-        NettySocketServer server = null;
+        private NettySocketServer server;
+        private ServerRole role;
 
-        private void StartNetSocketServer() {
-            this.server = new NettySocketServer();
-            bool IsSsl = bool.Parse(ConfigurationManager.AppSettings["IsSsl"]);
+        private void StartNetSocketServer()
+        {
+            server = new NettySocketServer();
+            bool isSsl = bool.Parse(ConfigurationManager.AppSettings["IsSsl"]);
 
-            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
-            if (OnlyHttpServerZone) {
-                int HttpServerZonePort = int.Parse(ConfigurationManager.AppSettings["HttpServerZonePort"]);
-                this.server.StartHttpServer(HttpServerZonePort, IsSsl).Wait();
+            if (role == ServerRole.ServerZone)
+            {
+                int port = int.Parse(ConfigurationManager.AppSettings["HttpServerZonePort"]);
+                server.StartHttpServer(port, isSsl).Wait();
                 return;
             }
 
-            bool GatewayMode = bool.Parse(ConfigurationManager.AppSettings["GatewayMode"]);
-            bool isGateway = bool.Parse(ConfigurationManager.AppSettings["AsGateway"]);
-            bool isGameServer = bool.Parse(ConfigurationManager.AppSettings["AsServer"]);
+            if (role == ServerRole.Login)
+            {
+                int port = int.Parse(ConfigurationManager.AppSettings["LoginHttpPort"]);
+                server.StartHttpServer(port, isSsl).Wait();
+                return;
+            }
+
+            bool gatewayMode = role == ServerRole.Gateway ||
+                               bool.Parse(ConfigurationManager.AppSettings["GatewayMode"]);
+            bool isGateway = role == ServerRole.Gateway;
+            bool isGameServer = role == ServerRole.Game;
 
             int tcpPort = int.Parse(ConfigurationManager.AppSettings["port"]);
             int wsPort = int.Parse(ConfigurationManager.AppSettings["wsPort"]);
             int httpPort = int.Parse(ConfigurationManager.AppSettings["httpPort"]);
-            int GwConnectPort = int.Parse(ConfigurationManager.AppSettings["GwConnectPort"]);
+            int gatewayConnectPort = int.Parse(ConfigurationManager.AppSettings["GwConnectPort"]);
+            int gatewayTcpPort = int.Parse(ConfigurationManager.AppSettings["GatewayTcpPort"]);
+            int gatewayWsPort = int.Parse(ConfigurationManager.AppSettings["GatewayWsPort"]);
+            int gatewayHttpPort = int.Parse(ConfigurationManager.AppSettings["GatewayHttpPort"]);
 
-            int GatewayTcpPort = int.Parse(ConfigurationManager.AppSettings["GatewayTcpPort"]);
-            int GatewayWsPort = int.Parse(ConfigurationManager.AppSettings["GatewayWsPort"]);
-            int GatewayHttpPort = int.Parse(ConfigurationManager.AppSettings["GatewayHttpPort"]);
-           
-            this.logger.Info($"\n[GatewayMode = {GatewayMode}]");
-
-            if (GatewayMode == false) { // ∆’Õ®ƒ£ Ω
-                this.server.StartSterverAt(tcpPort, wsPort, IsSsl).Wait();
-                this.server.StartHttpServer(httpPort, IsSsl).Wait();
-            }
-            else { // Õ¯πÿƒ£ Ω
-                if (isGateway) {
-                    this.server.StartGatewayServerAt(GatewayTcpPort, GatewayWsPort, IsSsl).Wait();
-                    this.server.StartHttpServer(GatewayHttpPort, IsSsl).Wait();
-                }
-
-                if (isGameServer) {
-                    this.server.StartGwToServerSocketAt(GwConnectPort).Wait();
-                }
-
-                if (isGateway) {
-                    GatewayMgr.Instance.GatewayConnectToGameServer().Wait();
-                }
+            logger.Info($"\n[ServerRole = {role}, GatewayMode = {gatewayMode}]");
+            if (!gatewayMode)
+            {
+                server.StartSterverAt(tcpPort, wsPort, isSsl).Wait();
+                server.StartHttpServer(httpPort, isSsl).Wait();
+                return;
             }
 
+            if (isGateway)
+            {
+                server.StartGatewayServerAt(gatewayTcpPort, gatewayWsPort, isSsl).Wait();
+                server.StartHttpServer(gatewayHttpPort, isSsl).Wait();
+            }
+            if (isGameServer) server.StartGwToServerSocketAt(gatewayConnectPort).Wait();
+            if (isGateway) GatewayMgr.Instance.GatewayConnectToGameServer().Wait();
         }
 
-        private void FrameworkInit() {
-            // º”‘ÿŒ“√«µƒ≈‰÷√Œƒº˛£¨»Áπ˚ƒ¨»œ «nlog.config,ª·±ª◊‘∂Øº”‘ÿ
+        private void FrameworkInit()
+        {
             LogManager.Configuration = new XmlLoggingConfiguration("nlog.config");
+            role = ServerRoleConfig.Current;
 
-            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
-            if (OnlyHttpServerZone) {
+            if (role == ServerRole.ServerZone)
+            {
                 HttpRouteDispatcher.Instance.Init("/PullingServerZone");
                 return;
             }
 
             MessageFactory.Instance.InitMeesagePool();
+            if (role == ServerRole.Login)
+            {
+                HttpRouteDispatcher.Instance.Init(
+                    "/ReqGuestLogin", "/ReqRegisterUser", "/ReqUserLogin",
+                    "/ReqGuestUpgrade", "/ReqIssueGameTicket");
+                return;
+            }
 
             MessageDispatcher.Instance.Init();
             HttpRouteDispatcher.Instance.Init();
-
+            HttpRouteDispatcher.Instance.RemoveRoutes(
+                "/GetAccountId", "/ReqGuestLogin", "/ReqRegisterUser",
+                "/ReqUserLogin", "/ReqGuestUpgrade", "/ReqIssueGameTicket");
             SessionMgr.Instance.Init();
-            bool GatewayMode = bool.Parse(ConfigurationManager.AppSettings["GatewayMode"]);
-            bool isGateway = bool.Parse(ConfigurationManager.AppSettings["AsGateway"]);
-            if (GatewayMode && isGateway) {
-                GatewayMgr.Instance.Init();
-            }
+
+            bool gatewayMode = role == ServerRole.Gateway ||
+                               bool.Parse(ConfigurationManager.AppSettings["GatewayMode"]);
+            bool isGateway = role == ServerRole.Gateway;
+            if (gatewayMode && isGateway) GatewayMgr.Instance.Init();
             TaskWorkerPool.Instance.Start(5);
         }
 
-        private void GameLogicInit() {
-            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
-            if (OnlyHttpServerZone) {
+        private void GameLogicInit()
+        {
+            if (role == ServerRole.ServerZone)
+            {
                 HttpServerZoneModule.Instance.Init();
                 return;
             }
 
-            // ≥ı ºªØ ˝æ›ø‚∑˛ŒÒ
             DBService.Instance.Init();
             RedisService.Instance.Init();
-            // end
+            if (role == ServerRole.Login)
+            {
+                AuthModule.Instance.Init();
+                AuthSessionModule.Instance.Init();
+                return;
+            }
+
             ConfigMgr.Instance.Init();
             HttpServerZoneModule.Instance.Init();
             HttpServerDirectConnModule.Instance.Init();
-
             RuleProcesserFactory.Init();
-
-            
             GM_EntityMgr.Instance.Init();
             GM_SkillMgr.Instance.Init();
             GM_BuffMgr.Instance.Init();
-
             GM_MailMsgMgr.Instance.Init();
             GM_BonuesMgr.Instance.Init();
             GM_TaskMgr.Instance.Init();
             GM_RankMgr.Instance.Init();
             GM_BackpackMgr.Instance.Init();
             GM_TradingMgr.Instance.Init();
-
-            AuthModule.Instance.Init();
             PlayerModule.Instance.Init();
-
-
+            AuthSessionModule.Instance.Init();
             LogicWorkerPool.Instance.Start();
             LogicServerFactory.Instance.Init();
         }
 
-        public void Start() {
-
-            Stopwatch stopWatch = new Stopwatch();
-
-            stopWatch.Start();
-
-            logger.Info($"”Œœ∑∑˛ŒÒ∆˜:[{ConfigurationManager.AppSettings["ServerName"].ToString()}]’˝‘⁄∆Ù∂Ø÷–...");
-            this.FrameworkInit();
-
-            this.GameLogicInit();
-
-            this.StartNetSocketServer();
-
+        public void Start()
+        {
+            var stopWatch = Stopwatch.StartNew();
+            logger.Info($"ÊúçÂä°Âô®:[{ConfigurationManager.AppSettings["ServerName"]}] ÂºÄÂßãÂêØÂä®...");
+            FrameworkInit();
+            GameLogicInit();
+            StartNetSocketServer();
             stopWatch.Stop();
-
-            logger.Info($"\n”Œœ∑∑˛ŒÒ∆Ù∂Ø£¨∫ƒ ±[{stopWatch.ElapsedMilliseconds}]∫¡√Î");
+            logger.Info($"\nÊúçÂä°Âô®ÂêØÂä®ÂÆåÊàê,ËÄóÊó∂[{stopWatch.ElapsedMilliseconds}]ÊØ´Áßí");
         }
 
-        public async Task Shutdown() {
-            await this.server.Shutdown();
+        public async Task Shutdown()
+        {
+            if (server != null) await server.Shutdown();
+            if (role == ServerRole.ServerZone) return;
 
-            bool OnlyHttpServerZone = bool.Parse(ConfigurationManager.AppSettings["OnlyHttpServerZone"]);
-            if (OnlyHttpServerZone) {
-                return;
-            }
+            RedisService.Instance.Shutdown();
+            if (role == ServerRole.Login) return;
 
             LogicWorkerPool.Instance.Stop();
             TaskWorkerPool.Instance.Stop();
-
-            bool isGateway = bool.Parse(ConfigurationManager.AppSettings["AsGateway"]);
-            if (isGateway) {
-                GatewayMgr.Instance.Stop();
-            }
+            bool isGateway = role == ServerRole.Gateway;
+            if (isGateway) GatewayMgr.Instance.Stop();
         }
     }
 }
-
-
-

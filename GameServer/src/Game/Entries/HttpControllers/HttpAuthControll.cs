@@ -1,15 +1,10 @@
-﻿using DotNetty.Codecs.Base64;
 using DotNetty.Codecs.Http;
-using DotNetty.Transport.Channels;
 using Framework.Core.Net;
 using Framework.Core.Serializer;
 using Framework.Core.Utils;
 using Game.Datas.Messages;
 using Game.Entries.Modules;
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -18,181 +13,80 @@ namespace Game.Entries.HttpControllers
     [HttpController]
     class HttpAuthController
     {
-        private Dictionary<long, long> accountIdToOpenId = new Dictionary<long, long>();
-        private Dictionary<long, long> openIdToAccountId = new Dictionary<long, long>();
-        private string httpPlayerServerUrl = "http://127.0.0.1:6090/GetPlayerId";
-
-
-        public HttpAuthController() {
-            this.httpPlayerServerUrl = $"{ConfigurationManager.AppSettings["HttpAuthAndPlayerWebsite"]}GetPlayerId";
-        }
-
-        private Message DecodeMessage(byte[] data, ref long openId)
+        private static Message DecodeMessage(byte[] data)
         {
-            String base64 = Encoding.UTF8.GetString(data); // 将字节数组转换为字符串
-            byte[] decodedBytes = Convert.FromBase64String(base64);
-            data = decodedBytes;
-            short module = UtilsHelper.ReadShortLE(data, 0); // LE的方式
-            module = (short)(module & 0x00ff);
-            short cmd = UtilsHelper.ReadShortLE(data, 2);
-            openId = UtilsHelper.ReadLongLE(data, 4);
-            int count = data.Length;
-            Message msg = SerializerHelper.PbDecode(module, cmd, data, ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
-
-            return msg;
+            string base64 = Encoding.UTF8.GetString(data);
+            byte[] packet = Convert.FromBase64String(base64);
+            if (packet.Length < ProtocolPacketLayout.HeaderLength) return null;
+            short module = (short)(UtilsHelper.ReadShortLE(packet, 0) & 0x00ff);
+            short cmd = UtilsHelper.ReadShortLE(packet, 2);
+            return SerializerHelper.PbDecode(module, cmd, packet, ProtocolPacketLayout.HeaderLength,
+                packet.Length - ProtocolPacketLayout.HeaderLength);
         }
 
-        private Message DecodeMessage(byte[] data) {
-            String base64 = Encoding.UTF8.GetString(data); // 将字节数组转换为字符串
-            byte[] decodedBytes = Convert.FromBase64String(base64);
-            data = decodedBytes;
-            short module = UtilsHelper.ReadShortLE(data, 0); // LE的方式
-            module = (short)(module & 0x00ff);
-            short cmd = UtilsHelper.ReadShortLE(data, 2);
-
-            int count = data.Length;
-            Message msg = SerializerHelper.PbDecode(module, cmd, data, ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
-
-            return msg;
-        }
-
-
-        [HttpRequestMapping("/GetAccountId")]
-        public object DoGetAccountIdAction(IFullHttpRequest request)
+        private static Message ReadRequest(IFullHttpRequest request)
         {
-            if (request.Content.ReadableBytes <= 0) {
-                return null;
-            }
-
+            if (request?.Content == null || request.Content.ReadableBytes <= 0) return null;
             byte[] data = new byte[request.Content.ReadableBytes];
             request.Content.ReadBytes(data);
-
-            long openId = UtilsHelper.ReadLongLE(data, 0);
-            long accountId = 0;
-            if (this.openIdToAccountId.ContainsKey(openId)) {
-                accountId = this.openIdToAccountId[openId];
-            }
-            
-            byte[] body = new byte[8];
-            UtilsHelper.WriteULongLE(body, 0, (ulong)accountId);
-            return body;
+            try { return DecodeMessage(data); }
+            catch { return null; }
         }
-
 
         [HttpRequestMapping("/ReqGuestLogin")]
         public object DoGuestLoginAction(IFullHttpRequest request)
         {
-            if (request.Content.ReadableBytes == 0) {
-                return null;
-            }
-
-            byte[] data = new byte[request.Content.ReadableBytes];
-            request.Content.ReadBytes(data);
-           
-            Message msg = this.DecodeMessage(data);
-            ResGuestLogin res = null;
-            if (msg is ReqGuestLogin) {
-                res = AuthModule.Instance.HandlerReqGuestLogin(null, msg as ReqGuestLogin);
-                if (res.status == (int)Respones.OK) {
-                    if (!this.accountIdToOpenId.ContainsKey(res.accountIdOrOpenId)) {
-                        this.accountIdToOpenId.Add(res.accountIdOrOpenId, IdGenerator.GetNextId(1002));
-                    }
-                    
-                    long openId = this.accountIdToOpenId[res.accountIdOrOpenId]; // 返回openId,通过accountId带回客户端;
-                    if (!this.openIdToAccountId.ContainsKey(openId)) {
-                        this.openIdToAccountId.Add(openId, res.accountIdOrOpenId);
-                    }
-                    
-                    res.accountIdOrOpenId = openId;
-                }
-                
-                return res;
-            }
-
-            res = new ResGuestLogin();
-            res.status = (int)Respones.InvalidOpt;
-
-            return res;
-            // return HttpServerZoneModule.Instance.HandlePullServerZoneAction();
+            if (ReadRequest(request) is not ReqGuestLogin req)
+                return new ResGuestLogin { status = (int)Respones.InvalidParams };
+            ResGuestLogin response = AuthModule.Instance.HandlerReqGuestLogin(null, req);
+            if (response.status == (int)Respones.OK)
+                response.accessToken = AuthSessionModule.Instance.CreateLoginSession(response.accountIdOrOpenId);
+            return response;
         }
 
-        [HttpRequestMapping("/RegisterUser")]
-        public object DoReqRegisterUserAction(IFullHttpRequest request) {
-            if (request.Content.ReadableBytes == 0) {
-                return null;
-            }
-            byte[] data = new byte[request.Content.ReadableBytes];
-            request.Content.ReadBytes(data);
-            Message msg = this.DecodeMessage(data);
-            if (msg is ReqRegisterUser) {
-                ResRegisterUser res = AuthModule.Instance.HandlerReqRegisterUser(null, msg as ReqRegisterUser);
-                return res;
-            }
-            return null;
+        [HttpRequestMapping("/ReqRegisterUser")]
+        public object DoReqRegisterUserAction(IFullHttpRequest request)
+        {
+            return ReadRequest(request) is ReqRegisterUser req
+                ? AuthModule.Instance.HandlerReqRegisterUser(null, req)
+                : new ResRegisterUser { status = (int)Respones.InvalidParams };
         }
 
         [HttpRequestMapping("/ReqUserLogin")]
-        public object DoUserLoginAction(IFullHttpRequest request)
+        public async Task<object> DoUserLoginAction(IFullHttpRequest request)
         {
-            if (request.Content.ReadableBytes == 0)
-            {
-                return null;
-            }
-
-            byte[] data = new byte[request.Content.ReadableBytes];
-            request.Content.ReadBytes(data);
-
-            Message msg = this.DecodeMessage(data);
-            ResUserLogin res = null;
-            if (msg is ReqUserLogin)
-            {
-                res = AuthModule.Instance.HandlerReqUserLogin(null, msg as ReqUserLogin);
-                if (res.status == (int)Respones.OK)
-                {
-                    if (!this.accountIdToOpenId.ContainsKey(res.accountIdOrOpenId))
-                    {
-                        this.accountIdToOpenId.Add(res.accountIdOrOpenId, IdGenerator.GetNextId(1002));
-                    }
-
-                    long openId = this.accountIdToOpenId[res.accountIdOrOpenId]; // 返回openId,通过accountId带回客户端;
-                    if (!this.openIdToAccountId.ContainsKey(openId))
-                    {
-                        this.openIdToAccountId.Add(openId, res.accountIdOrOpenId);
-                    }
-
-                    res.accountIdOrOpenId = openId;
-                }
-
-                return res;
-            }
-
-            res = new ResUserLogin();
-            res.status = (int)Respones.InvalidOpt;
-
-            return res;
+            if (ReadRequest(request) is not ReqUserLogin req)
+                return new ResUserLogin { status = (int)Respones.InvalidParams };
+            ResUserLogin response = await AutoLoginModule.Instance.LoginOrRegisterAsync(req);
+            if (response.status == (int)Respones.OK)
+                response.accessToken = AuthSessionModule.Instance.CreateLoginSession(response.accountIdOrOpenId);
+            return response;
         }
 
         [HttpRequestMapping("/ReqGuestUpgrade")]
-        public async void DoReqGuestUpgrade(IChannelHandlerContext ctx, IFullHttpRequest request)
+        public object DoReqGuestUpgrade(IFullHttpRequest request)
         {
-            if (request.Content.ReadableBytes == 0)
+            if (ReadRequest(request) is not ReqGuestUpgrade req)
+                return new ResGuestUpgrade { status = (int)Respones.InvalidParams };
+            if (!AuthSessionModule.Instance.TryValidateAccessToken(req.accessToken, out long accountId, out _))
+                return new ResGuestUpgrade { status = (int)Respones.AccountIsNotLogin };
+            return AuthAccountUpgradeModule.Instance.Upgrade(req, accountId);
+        }
+
+        [HttpRequestMapping("/ReqIssueGameTicket")]
+        public object DoReqIssueGameTicket(IFullHttpRequest request)
+        {
+            if (ReadRequest(request) is not ReqIssueGameTicket req || req.serverId <= 0)
+                return new ResIssueGameTicket { status = (int)Respones.InvalidParams };
+            if (!AuthSessionModule.Instance.TryIssueGameTicket(
+                    req.accessToken, req.serverId, out string ticket, out long expiresAt))
+                return new ResIssueGameTicket { status = (int)Respones.AccountIsNotLogin };
+            return new ResIssueGameTicket
             {
-                return;
-            }
-            byte[] data = new byte[request.Content.ReadableBytes];
-            request.Content.ReadBytes(data);
-            
-            long openId = 0;
-            Message msg = this.DecodeMessage(data, ref openId);
-            if (msg is ReqGuestUpgrade)
-            {
-                long playerId = await HttpUtils.HttpPost(httpPlayerServerUrl, openId);
-                if (playerId > 0) {
-                    ResGuestUpgrade res = AuthModule.Instance.HandlerReqGuestUpgrade(null, msg as ReqGuestUpgrade, playerId);
-                    HttpRouteDispatcher.Instance.SendHttpRespones(ctx, res);
-                }
-            }
-            return;
+                status = (int)Respones.OK,
+                gameTicket = ticket,
+                expiresAtUnixSeconds = expiresAt
+            };
         }
     }
 }

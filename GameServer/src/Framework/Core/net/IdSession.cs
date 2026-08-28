@@ -14,6 +14,8 @@ namespace Framework.Core.Net {
 
         public long accountId = 0; // 玩家对应的账号ID;
 
+        public string authSessionId = null;
+
         public long accountIdAndJob = 0; // 玩家Id与职业所对应的key;
 
         public bool isWebSocket = false; // 当前的session是WebSocket还是TcpSocket;

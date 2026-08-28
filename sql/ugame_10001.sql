@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS `account` (
   `is_guest` int(8) unsigned NOT NULL DEFAULT '0' COMMENT '标志改账号是否为游客账号',
   `status` int(8) unsigned zerofill NOT NULL DEFAULT '00000000' COMMENT '0正常，其他的根据需求来定',
   `uchannel` int(8) NOT NULL DEFAULT '0' COMMENT '玩家注册对应的渠道，微信，抖音等',
-  PRIMARY KEY (`uid`)
+  PRIMARY KEY (`uid`),
+  UNIQUE KEY `uk_account_uname` (`uname`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='存放我们的玩家信息';
 
 -- 正在导出表  auth_10001.account 的数据：~8 rows (大约)

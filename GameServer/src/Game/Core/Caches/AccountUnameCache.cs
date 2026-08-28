@@ -4,6 +4,7 @@ using Game.Datas.DBEntities;
 using Game.Datas.Messages;
 using Game.Core.Db;
 using Game.Utils;
+using System.Threading.Tasks;
 
 namespace Game.Core.Caches
 {
@@ -21,6 +22,50 @@ namespace Game.Core.Caches
             return DBService.Instance.GetAuthInstance().Queryable<Account>().First(it => it.uname == uname);
         }
 
+        public async Task<Account> GetAsync(string uname)
+        {
+            Account account = GetIfPresent(uname);
+            if (account != null)
+            {
+                return account;
+            }
+
+            account = await DBService.Instance.GetAuthInstance()
+                .Queryable<Account>()
+                .FirstAsync(it => it.uname == uname);
+            if (account != null)
+            {
+                Put(uname, account);
+            }
+
+            return account;
+        }
+
+        public async Task<Account> CreateAsync(ReqRegisterUser req)
+        {
+            Account dbAccount = BuildAccount(req);
+            try
+            {
+                int affectedRows = await DBService.Instance.GetAuthInstance()
+                    .Insertable(dbAccount)
+                    .ExecuteCommandAsync();
+                if (affectedRows <= 0)
+                {
+                    logger.Error($"Create account failed, database inserted no rows: uname[{req.uname}]");
+                    return null;
+                }
+            }
+            catch (System.Exception exception)
+            {
+                logger.Error(exception, $"Create account failed: uname[{req.uname}]");
+                return null;
+            }
+
+            Put(req.uname, dbAccount);
+            AccountIDCache.Instance.Put(dbAccount.uid, dbAccount);
+            return dbAccount;
+        }
+
         private string RandUnameNick()
         { // [1000, 10000)
             return "用户" + GameUtils.Random(1000, 10000);
@@ -34,7 +79,34 @@ namespace Game.Core.Caches
                 return dbAccount;
             }
 
-            dbAccount = new Account();
+            dbAccount = BuildAccount(req);
+
+            // 当前同步注册接口仍使用同步写入；登录接口使用上面的 CreateAsync。
+            try
+            {
+                int affectedRows = DBService.Instance.GetAuthInstance()
+                    .Insertable(dbAccount)
+                    .ExecuteCommand();
+                if (affectedRows <= 0)
+                {
+                    logger.Error($"Create account failed, database inserted no rows: uname[{req.uname}]");
+                    return null;
+                }
+            }
+            catch (System.Exception exception)
+            {
+                logger.Error(exception, $"Create account failed: uname[{req.uname}]");
+                return null;
+            }
+
+            this.Put(req.uname, dbAccount);
+            AccountIDCache.Instance.Put(dbAccount.uid, dbAccount);
+            return dbAccount;
+        }
+
+        private Account BuildAccount(ReqRegisterUser req)
+        {
+            Account dbAccount = new Account();
             dbAccount.uid = IdGenerator.GetNextId();
             dbAccount.guest_key = "";
             dbAccount.is_guest = 0;
@@ -53,15 +125,6 @@ namespace Game.Core.Caches
             dbAccount.uvip = 0;
             dbAccount.email = "";
             dbAccount.address = "";*/
-
-            // 写入数据库
-            DBService.Instance.GetAuthInstance().Insertable(dbAccount).ExecuteCommandAsync();
-            //end
-
-            this.Put(req.uname, dbAccount);
-
-            // 添加uid--->account的映射
-            AccountIDCache.Instance.Put(dbAccount.uid, dbAccount);
 
             return dbAccount;
         }

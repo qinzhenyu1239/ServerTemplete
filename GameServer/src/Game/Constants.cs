@@ -34,6 +34,14 @@
         eUserLoginReq = 1001,
         eUserLoginRes = 1002,
 
+        // 登录服签发游戏服一次性票据
+        eIssueGameTicketReq = 1003,
+        eIssueGameTicketRes = 1004,
+
+        // TCP/WebSocket 连接游戏服后的首包鉴权
+        eGameAuthenticateReq = 1005,
+        eGameAuthenticateRes = 1006,
+
         // 游客账号升级
         eGuestUpgradeReq = 7,
         eGuestUpgradeRes = 8,

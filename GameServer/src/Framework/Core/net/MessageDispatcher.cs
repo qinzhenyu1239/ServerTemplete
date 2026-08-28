@@ -101,6 +101,7 @@ namespace Framework.Core.Net {
         // 有客户端离开;
         public void OnClientExit(IdSession s) {
             this.logger.Debug($"On Client Exit: {s.GetRemoteAddress()}");
+            SessionMgr.Instance.UnbindAuthenticatedAccount(s);
             if (s.logicServerId != -1) { // 说明玩家正在游戏
                 short module = (int)Game.Module.SCENE;
                 short cmd = (int)Cmd.eExitLogicServerReq;
@@ -232,6 +233,14 @@ namespace Framework.Core.Net {
             short module = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.ModuleOffset); // LE的方式
             module = (short)(module & 0x00ff);
             short cmd = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.CommandOffset);
+
+            if (s.accountId <= 0 &&
+                !(module == (short)Game.Module.AUTH && cmd == (short)Cmd.eGameAuthenticateReq))
+            {
+                logger.Warn($"Unauthenticated client attempted module[{module}] cmd[{cmd}]");
+                s.client?.CloseAsync();
+                return;
+            }
 
             long routeTag = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RouteTagOffset);
             long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);

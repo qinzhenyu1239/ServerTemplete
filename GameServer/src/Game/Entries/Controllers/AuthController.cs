@@ -7,7 +7,6 @@ using Game.Entries.Modules;
 namespace Game.Entries.Controllers
 {
 
-    [Controller]
     public class AuthController
     {
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
