@@ -221,7 +221,12 @@ public class CsvStreamReader
 			this.encoding = Encoding.Default;
 		}
 		
-		StreamReader sr = new StreamReader(this.fileName,this.encoding); 
+		using FileStream stream = new FileStream(
+			this.fileName,
+			FileMode.Open,
+			FileAccess.Read,
+			FileShare.ReadWrite);
+		using StreamReader sr = new StreamReader(stream, this.encoding);
 		string   csvDataLine;
 		
 		csvDataLine = "";
@@ -250,7 +255,6 @@ public class CsvStreamReader
 			}
 		}
         
-		sr.Close();
 		//数据行出现奇数个引号
 		if (csvDataLine.Length > 0)
 		{

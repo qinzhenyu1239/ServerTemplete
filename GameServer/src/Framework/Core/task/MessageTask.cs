@@ -44,6 +44,11 @@ namespace Framework.Core.task {
                 object response = method.Invoke(handler, @params);
                 if (response != null) {
                     MessagePusher.PushMessage(this.session, (Message)response, routeTag, requestId: requestId);
+                    if (SessionMgr.Instance.ConsumeCloseAfterNextResponse(this.session))
+                    {
+                        IChannel channel = this.session?.client;
+                        channel?.EventLoop.Execute(() => { channel.CloseAsync(); });
+                    }
                 }
             }
             catch (Exception e)

@@ -272,3 +272,7 @@ C:\Users\Windows\AppData\Local\Temp\miaowu-gameserver-build\GameServer.deps.json
 C:\Users\Windows\AppData\Local\Temp\miaowu-gameserver-build\GameServer.runtimeconfig.json
 C:\Users\Windows\AppData\Local\Temp\miaowu-gameserver-build\GameServer.dll
 C:\Users\Windows\AppData\Local\Temp\miaowu-gameserver-build\GameServer.pdb
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\GachaPoolConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\GachaPoolRewardConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\Item.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\Trap.csv

@@ -165,6 +165,12 @@
         // 测试游戏逻辑服通讯命令
         eTestLogicCmdEchoReq = 73,
         eTestLogicCmdEchoRes = 74,
+
+        // 抽奖
+        eGetGachaPoolInfoReq = 75,
+        eGetGachaPoolInfoRes = 76,
+        eGachaDrawReq = 77,
+        eGachaDrawRes = 78,
     }
 
     public enum QuitReason { 
@@ -199,6 +205,11 @@
         LevelIsNotEnough = -116,
         ChipIsNotEnough = -117,
         SeatIsUsing = -118,
+        GachaPoolNotFound = -119,
+        GachaConfigError = -120,
+        GachaDrawCountInvalid = -121,
+        GachaResourceNotEnough = -122,
+        GachaFailed = -123,
         // ...
     }
 

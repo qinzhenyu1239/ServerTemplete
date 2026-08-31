@@ -10,10 +10,9 @@ using System.IO;
 public class CreatConfigUitl {
     public static void CreatConfigFile(string filePath, string writePath)
     {
-        
-        string className = filePath.Substring(filePath.LastIndexOf("/") + 1);
-        className = className.Substring(0, className.IndexOf("."));
-        StreamWriter sw = new StreamWriter(writePath + className + ".cs");
+        string className = Path.GetFileNameWithoutExtension(filePath);
+        string outputFile = Path.Combine(writePath, className + ".cs");
+        using StreamWriter sw = new StreamWriter(outputFile);
 
         sw.WriteLine("using System;\n");
         sw.WriteLine("using System.Collections;\n");
@@ -32,7 +31,5 @@ public class CreatConfigUitl {
 
         sw.WriteLine("\t}");
         sw.WriteLine("}");
-        sw.Flush();
-        sw.Close();
     }
 }

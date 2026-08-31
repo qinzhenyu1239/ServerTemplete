@@ -31,6 +31,12 @@
 
         public BackpackComponent uBackpack;
 
+        public ItemComponent uItem;
+
+        public CharacterComponent uCharacter;
+
+        public GachaComponent uGacha;
+
     }
 
     // public class GM_NPCEntity : BaseEntity {}

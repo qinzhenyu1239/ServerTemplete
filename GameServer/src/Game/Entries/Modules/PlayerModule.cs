@@ -56,7 +56,7 @@ namespace Game.Entries.Modules
         {
             ResRecvLoginBonues res = new ResRecvLoginBonues();
 
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -72,7 +72,7 @@ namespace Game.Entries.Modules
             }
 
             if (data.days == 0 || data.status != 0)
-            { // ½±Àø²»ÄÜÁìÈ¡£¬·Ç·¨²Ù×÷
+            { // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½
                 res.status = (int)Respones.InvalidOpt;
                 return res;
             }
@@ -83,7 +83,7 @@ namespace Game.Entries.Modules
 
             Game.Datas.DBEntities.Player p = PlayerIDCache.Instance.Get((playerId));
             if (p != null)
-            { // ÖÁÓÚ½±ÀøÊÇÊ²Ã´£¬¸ù¾ÝÓÎÏ·ÐèÇóÀ´´¦Àí¼´¿É;
+            { // ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½Ê²Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½;
                 // logger.Info($"{p.GetHashCode()}");
                 p.ucoin += data.bonues;
             }
@@ -95,7 +95,7 @@ namespace Game.Entries.Modules
 
             // Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.Get(s.accountIdAndJob);
             /* 
-             * ÕâÀï¿ÉÄÜÓÐBug,Òª²âÊÔÒ»ÏÂ£¬¿´ÈçºÎ´¦Àí£¬Èç¹û²»ÐÐÒ»¸öPlayer Ö»ÄÜÊÇÒ»¸öÖ°Òµ;
+             * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Bug,Òªï¿½ï¿½ï¿½ï¿½Ò»ï¿½Â£ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Player Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ö°Òµ;
             p = PlayerAcountIDCache.Instance.Get(accountIdAndJob);
             if (p != null)
             {
@@ -117,15 +117,15 @@ namespace Game.Entries.Modules
             ResSelectPlayer res = new ResSelectPlayer();
             long utag = accountId;
 
-            // ÑéÖ¤accountIdÕËºÅ;
+            // ï¿½ï¿½Ö¤accountIdï¿½Ëºï¿½;
             if (accountId <= 0) {
                 res.status = (int)Respones.AccountIsNotLogin;
                 return res;
             }
 
-            // ¼ì²éreq²ÎÊý,Èç¹ûÓÐ·Ç·¨µÄ£¬ÄÇÃ´¾Í·µ»Ø²ÎÊý´íÎó
+            // ï¿½ï¿½ï¿½reqï¿½ï¿½ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½Ð·Ç·ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Ã´ï¿½Í·ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             if (req.job <= 0)
-            {  // ¸ù¾Ý×Ô¼ºµÄÊµ¼ÊÇé¿ö£¬¼ì²é²ÎÊý
+            {  // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 res.status = (int)Respones.InvalidParams;
                 return res;
             }
@@ -138,7 +138,7 @@ namespace Game.Entries.Modules
             }
 
             if (p.status != 0)
-            { // ÅÐ¶ÏÍæ¼ÒÊÇ·ñ±»¶³½á;
+            { // ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ñ±»¶ï¿½ï¿½ï¿½;
                 res.status = (int)Respones.PlayerIsFreeze;
                 return res;
             }
@@ -149,14 +149,14 @@ namespace Game.Entries.Modules
             this.CopyDbPlayerToResponesData(p, res.pInfo);
 
 
-            // http Ä£Ê½ÏÂ£¬¶¼Òª·µ»ØplayerId
+            // http Ä£Ê½ï¿½Â£ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½playerId
             res.playerId = p.id;
             
-            // ¼ì²éÒ»ÏÂÃ¿ÈÕµÇÂ¼½±Àø
+            // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ã¿ï¿½Õµï¿½Â¼ï¿½ï¿½ï¿½ï¿½
             this.CheckLoginBonues(p.id, res.pInfo);
             // end
 
-            // ´´½¨Íæ¼ÒEntity³öÀ´
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Entityï¿½ï¿½ï¿½ï¿½
             int isReConnectGame = GM_EntityMgr.Instance.AddPlayer(null, p.id);
             res.isReConnectGame = isReConnectGame;
             // end
@@ -169,31 +169,31 @@ namespace Game.Entries.Modules
             ResSelectPlayer res = new ResSelectPlayer();
             long utag = accountId;
 
-            // ÑéÖ¤accountIdÕËºÅ;
+            // ï¿½ï¿½Ö¤accountIdï¿½Ëºï¿½;
             if (accountId <= 0)
             {
                 if (req.openId != 0)
                 {
-                    // Ïñ·þÎñÆ÷·¢ËÍÇëÇó£¬»ñÈ¡openId¶ÔÓ¦µÄaccountId;
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¬»ï¿½È¡openIdï¿½ï¿½Ó¦ï¿½ï¿½accountId;
                     accountId = await HttpUtils.HttpPost(httpAuthServerUrl, req.openId);
                     if (accountId <= 0)
                     {
                         res.status = (int)Respones.AccountIsNotLogin;
-                        MessagePusher.PushMessage(s, (Message)res, utag); // Íø¹ØÄ£Ê½µÄutag,ÕâÀïÒªÔÙ×ÐÏ¸¼ì²éÏÂ;
+                        MessagePusher.PushMessage(s, (Message)res, utag); // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½utag,ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½;
                         return;
                     }
                 }
                 else
                 {
                     res.status = (int)Respones.AccountIsNotLogin;
-                    MessagePusher.PushMessage(s, (Message)res, utag); // Íø¹ØÄ£Ê½µÄutag,ÕâÀïÒªÔÙ×ÐÏ¸¼ì²éÏÂ;
+                    MessagePusher.PushMessage(s, (Message)res, utag); // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½utag,ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½;
                     return;
                 }
             }
 
-            // ¼ì²éreq²ÎÊý,Èç¹ûÓÐ·Ç·¨µÄ£¬ÄÇÃ´¾Í·µ»Ø²ÎÊý´íÎó
+            // ï¿½ï¿½ï¿½reqï¿½ï¿½ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½Ð·Ç·ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Ã´ï¿½Í·ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             if (req.job <= 0)
-            {  // ¸ù¾Ý×Ô¼ºµÄÊµ¼ÊÇé¿ö£¬¼ì²é²ÎÊý
+            {  // ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 res.status = (int)Respones.InvalidParams;
                 MessagePusher.PushMessage(s, (Message)res, utag);
             }
@@ -206,7 +206,7 @@ namespace Game.Entries.Modules
             }
 
             if (p.status != 0)
-            { // ÅÐ¶ÏÍæ¼ÒÊÇ·ñ±»¶³½á;
+            { // ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ñ±»¶ï¿½ï¿½ï¿½;
                 res.status = (int)Respones.PlayerIsFreeze;
                 MessagePusher.PushMessage(s, (Message)res, utag);
             }
@@ -223,11 +223,11 @@ namespace Game.Entries.Modules
             s.playerId = p.id;
             s.accountIdAndJob = PlayerAcountIDCache.Instance.Key(accountId, req.job);
 
-            // ¼ì²éÒ»ÏÂÃ¿ÈÕµÇÂ¼½±Àø
+            // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ã¿ï¿½Õµï¿½Â¼ï¿½ï¿½ï¿½ï¿½
             this.CheckLoginBonues(p.id, res.pInfo);
             // end
 
-            // ´´½¨Íæ¼ÒEntity³öÀ´
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Entityï¿½ï¿½ï¿½ï¿½
             int isReConnectGame = GM_EntityMgr.Instance.AddPlayer(s, p.id);
             res.isReConnectGame = isReConnectGame;
             // end
@@ -239,18 +239,18 @@ namespace Game.Entries.Modules
         {
             ResPullingPlayerData res = new ResPullingPlayerData();
             long utag = accountId;
-            // ÑéÖ¤accountIdÕËºÅ;
+            // ï¿½ï¿½Ö¤accountIdï¿½Ëºï¿½;
             if (accountId <= 0) {
                 res.status = (int)Respones.AccountIsNotLogin;
                 return res;
             }
 
-            int job = req.job; // Èç¹ûÒ»¸öÕËºÅÖ»ÔÊÐíÒ»¸öÖ°Òµ£¬ÄÇÃ´job = 0;
-            // ÅÐ¶ÏÖ°ÒµµÄÀàÐÍ£¬1,(Õ½Ê¿), 2(·¨Ê¦),
-            // ×öºÃjobµÄ²ÎÊýÅÐ¶Ï£¬¾ßÌåÓÎÏ·£¬¾ßÌåÀ´¶¨;
+            int job = req.job; // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ëºï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ö°Òµï¿½ï¿½ï¿½ï¿½Ã´job = 0;
+            // ï¿½Ð¶ï¿½Ö°Òµï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½1,(Õ½Ê¿), 2(ï¿½ï¿½Ê¦),
+            // ï¿½ï¿½ï¿½ï¿½jobï¿½Ä²ï¿½ï¿½ï¿½ï¿½Ð¶Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½;
 
-            // µ½Êý¾Ý¿âÖÐ²éÕÒ£¬¿´ÏÂÓÐÃ»ÓÐ¶ÔÓ¦µÄPlayer Êý¾Ý;
-            // accountId Óë job --->À´²éÑ¯;
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½Ð²ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð¶ï¿½Ó¦ï¿½ï¿½Player ï¿½ï¿½ï¿½ï¿½;
+            // accountId ï¿½ï¿½ job --->ï¿½ï¿½ï¿½ï¿½Ñ¯;
             Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.TryGetPlayer(accountId, req.job);
             if (p == null)
             {
@@ -259,29 +259,29 @@ namespace Game.Entries.Modules
             }
 
             if (p.status != 0)
-            { // ÅÐ¶ÏÍæ¼ÒÊÇ·ñ±»¶³½á;
+            { // ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ñ±»¶ï¿½ï¿½ï¿½;
                 res.status = (int)Respones.PlayerIsFreeze;
                 return res;
             }
 
 
-            res.status = (int)Respones.OK; // ÔÝÊ±·µ»ØÏµÍ³´íÎó;
+            res.status = (int)Respones.OK; // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½;
             res.pInfo = new PlayerInfo(); // 
             this.CopyDbPlayerToResponesData(p, res.pInfo);
 
             res.playerId = p.id;
             
-            // ¼ì²éÒ»ÏÂÃ¿ÈÕµÇÂ¼½±Àø
+            // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ã¿ï¿½Õµï¿½Â¼ï¿½ï¿½ï¿½ï¿½
             this.CheckLoginBonues(p.id, res.pInfo);
             // end
 
 
-            // ²âÊÔ, Ã¿´ÎµÇÂ¼£¬¸øÍæ¼Ò½±Àø180¸ö½ð±Ò
+            // ï¿½ï¿½ï¿½ï¿½, Ã¿ï¿½Îµï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò½ï¿½ï¿½ï¿½180ï¿½ï¿½ï¿½ï¿½ï¿½
             // Game.Datas.Excels.BonuesRuleA configItem = (Game.Datas.Excels.BonuesRuleA)ExcelUtils.GetConfigData<Game.Datas.Excels.BonuesRuleA>("100002");
             // GM_BonuesMgr.Instance.GenBonuesToPlayer(s.playerId, configItem.ID, configItem.value);
             // end
 
-            // ´´½¨Íæ¼ÒEntity³öÀ´
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Entityï¿½ï¿½ï¿½ï¿½
             int isReConnectGame = GM_EntityMgr.Instance.AddPlayer(null, p.id);
             res.isReConnectGame = isReConnectGame;
             // end
@@ -293,34 +293,34 @@ namespace Game.Entries.Modules
         {
             ResPullingPlayerData res = new ResPullingPlayerData();
             long utag = accountId;
-            // ÑéÖ¤accountIdÕËºÅ;
+            // ï¿½ï¿½Ö¤accountIdï¿½Ëºï¿½;
             if (accountId <= 0)
             {
                 if (req.openId != 0)
                 {
-                    // Ïñ·þÎñÆ÷·¢ËÍÇëÇó£¬»ñÈ¡openId¶ÔÓ¦µÄaccountId;
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¬»ï¿½È¡openIdï¿½ï¿½Ó¦ï¿½ï¿½accountId;
                     accountId = await HttpUtils.HttpPost(httpAuthServerUrl, req.openId);
                     if (accountId <= 0)
                     {
                         res.status = (int)Respones.AccountIsNotLogin;
-                        MessagePusher.PushMessage(s, (Message)res, utag); // Íø¹ØÄ£Ê½µÄutag,ÕâÀïÒªÔÙ×ÐÏ¸¼ì²éÏÂ;
+                        MessagePusher.PushMessage(s, (Message)res, utag); // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½utag,ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½;
                         return;
                     }
                 }
                 else {
                     res.status = (int)Respones.AccountIsNotLogin;
-                    MessagePusher.PushMessage(s, (Message)res, utag); // Íø¹ØÄ£Ê½µÄutag,ÕâÀïÒªÔÙ×ÐÏ¸¼ì²éÏÂ;
+                    MessagePusher.PushMessage(s, (Message)res, utag); // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½utag,ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½;
                     return;
                 }
                 
             }
 
-            int job = req.job; // Èç¹ûÒ»¸öÕËºÅÖ»ÔÊÐíÒ»¸öÖ°Òµ£¬ÄÇÃ´job = 0;
-            // ÅÐ¶ÏÖ°ÒµµÄÀàÐÍ£¬1,(Õ½Ê¿), 2(·¨Ê¦),
-            // ×öºÃjobµÄ²ÎÊýÅÐ¶Ï£¬¾ßÌåÓÎÏ·£¬¾ßÌåÀ´¶¨;
+            int job = req.job; // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ëºï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ö°Òµï¿½ï¿½ï¿½ï¿½Ã´job = 0;
+            // ï¿½Ð¶ï¿½Ö°Òµï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½1,(Õ½Ê¿), 2(ï¿½ï¿½Ê¦),
+            // ï¿½ï¿½ï¿½ï¿½jobï¿½Ä²ï¿½ï¿½ï¿½ï¿½Ð¶Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½;
 
-            // µ½Êý¾Ý¿âÖÐ²éÕÒ£¬¿´ÏÂÓÐÃ»ÓÐ¶ÔÓ¦µÄPlayer Êý¾Ý;
-            // accountId Óë job --->À´²éÑ¯;
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ý¿ï¿½ï¿½Ð²ï¿½ï¿½Ò£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð¶ï¿½Ó¦ï¿½ï¿½Player ï¿½ï¿½ï¿½ï¿½;
+            // accountId ï¿½ï¿½ job --->ï¿½ï¿½ï¿½ï¿½Ñ¯;
             Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.TryGetPlayer(accountId, req.job);
             if (p == null)
             {
@@ -330,14 +330,14 @@ namespace Game.Entries.Modules
             }
 
             if (p.status != 0)
-            { // ÅÐ¶ÏÍæ¼ÒÊÇ·ñ±»¶³½á;
+            { // ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ñ±»¶ï¿½ï¿½ï¿½;
                 res.status = (int)Respones.PlayerIsFreeze;
                 MessagePusher.PushMessage(s, (Message)res, utag);
                 return;
             }
 
 
-            res.status = (int)Respones.OK; // ÔÝÊ±·µ»ØÏµÍ³´íÎó;
+            res.status = (int)Respones.OK; // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½;
             res.pInfo = new PlayerInfo(); // 
             this.CopyDbPlayerToResponesData(p, res.pInfo);
 
@@ -347,17 +347,17 @@ namespace Game.Entries.Modules
             }
             s.accountIdAndJob = PlayerAcountIDCache.Instance.Key(accountId, req.job);
 
-            // ¼ì²éÒ»ÏÂÃ¿ÈÕµÇÂ¼½±Àø
+            // ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ã¿ï¿½Õµï¿½Â¼ï¿½ï¿½ï¿½ï¿½
             this.CheckLoginBonues(p.id, res.pInfo);
             // end
 
 
-            // ²âÊÔ, Ã¿´ÎµÇÂ¼£¬¸øÍæ¼Ò½±Àø180¸ö½ð±Ò
+            // ï¿½ï¿½ï¿½ï¿½, Ã¿ï¿½Îµï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò½ï¿½ï¿½ï¿½180ï¿½ï¿½ï¿½ï¿½ï¿½
             // Game.Datas.Excels.BonuesRuleA configItem = (Game.Datas.Excels.BonuesRuleA)ExcelUtils.GetConfigData<Game.Datas.Excels.BonuesRuleA>("100002");
             // GM_BonuesMgr.Instance.GenBonuesToPlayer(s.playerId, configItem.ID, configItem.value);
             // end
 
-            // ´´½¨Íæ¼ÒEntity³öÀ´
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Entityï¿½ï¿½ï¿½ï¿½
             int isReConnectGame = GM_EntityMgr.Instance.AddPlayer(s, p.id);
             res.isReConnectGame = isReConnectGame;
             // end
@@ -371,7 +371,7 @@ namespace Game.Entries.Modules
             Loginbonues data = PlayerIdLoginBonuesCache.Instance.GetOrCreate(playerId);
             if (data == null)
             {
-                logger.Error($"Ã¿ÈÕµÇÂ¼½±Àø»ñÈ¡Îªnull: {playerId}");
+                logger.Error($"Ã¿ï¿½Õµï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡Îªnull: {playerId}");
                 return;
             }
 
@@ -392,9 +392,9 @@ namespace Game.Entries.Modules
                 (data.bonues_time >= UtilsHelper.TimestampYesterday());
 
             data.days = (isSustain) ? (data.days + 1) : 1;
-            data.bonues = 100; // Òª·¢·Å½±Àø£¬Äã¿ÉÒÔ¸ù¾ÝÅäÖÃÀ´;
+            data.bonues = 100; // Òªï¿½ï¿½ï¿½Å½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½;
             data.bonues_time = (int)(UtilsHelper.Timestamp());
-            data.status = 0; // Î´ÁìÈ¡×´Ì¬;
+            data.status = 0; // Î´ï¿½ï¿½È¡×´Ì¬;
 
             res.hasBonues = 1;
             res.days = data.days;
@@ -407,13 +407,13 @@ namespace Game.Entries.Modules
         public ResPullingBonuesList HandlerReqPullingBonuesList(IdSession s, ReqPullingBonuesList req, long playerId)
         {
             ResPullingBonuesList res = new ResPullingBonuesList();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0) {
                 res.status = (int)Respones.AccountIsNotLogin;
                 return res;
             }
 
-            int typeId = req.typeId; // Èç¹ûÄãÓÐÕâ¸öidÏÞÖÆµ½Ê±ºò£¬Äã¾Í×Ô¼ºÔÙ¼ÓsqlÕÒ³öÀ´;
+            int typeId = req.typeId; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½idï¿½ï¿½ï¿½Æµï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½Ù¼ï¿½sqlï¿½Ò³ï¿½ï¿½ï¿½;
 
             Bonues[] datas = GM_BonuesMgr.Instance.PullingBonuesData(playerId, typeId);
             if (datas != null && datas.Length > 0)
@@ -421,7 +421,7 @@ namespace Game.Entries.Modules
                 res.bonues = new BonuesItem[datas.Length];
                 for (int i = 0; i < datas.Length; i++)
                 {
-                    /*if (datas[i].status != 0) { // ¸ù¾ÝÐèÇóÀ´¾ö¶¨
+                    /*if (datas[i].status != 0) { // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                         continue;
                     }*/
                     res.bonues[i] = new BonuesItem();
@@ -440,7 +440,7 @@ namespace Game.Entries.Modules
 
         public ResRecvBonues HandlerReqRecvBonues(IdSession s, ReqRecvBonues req, long playerId) {
             ResRecvBonues res = new ResRecvBonues();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0) {
                 res.status = (int)Respones.AccountIsNotLogin;
                 return res;
@@ -466,7 +466,7 @@ namespace Game.Entries.Modules
 
         public ResPullingTaskList HandlerReqPullingTaskList(IdSession s, ReqPullingTaskList req, long playerId) {
             ResPullingTaskList res = new ResPullingTaskList();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -488,7 +488,7 @@ namespace Game.Entries.Modules
                 res.tasks = new TaskItem[tasks.Count];
                 for (int i = 0; i < tasks.Count; i++)
                 {
-                    /*if (datas[i].status != 0) { // ¸ù¾ÝÐèÇóÀ´¾ö¶¨
+                    /*if (datas[i].status != 0) { // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                         continue;
                     }*/
                     res.tasks[i] = new TaskItem();
@@ -505,7 +505,7 @@ namespace Game.Entries.Modules
 
         public ResUpdateMailMsg HandlerReqUpdateMailMsg(IdSession s, ReqUpdateMailMsg req, long playerId) {
             ResUpdateMailMsg res = new ResUpdateMailMsg();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -524,7 +524,7 @@ namespace Game.Entries.Modules
 
         public ResPullingMailMsg HandlerReqPullingMailMsg(IdSession s, ReqPullingMailMsg req, long playerId) {
             ResPullingMailMsg res = new ResPullingMailMsg();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -557,7 +557,7 @@ namespace Game.Entries.Modules
 
         public ResPullingRank HandlerReqPullingRank(IdSession s, ReqPullingRank req, long playerId) {
             ResPullingRank res = new ResPullingRank();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -582,7 +582,7 @@ namespace Game.Entries.Modules
 
             res.ranks = new RankItem[rankData.Length];
             for (int i = 0; i < rankData.Length; i++) {
-                RankItem item = new RankItem(); // uid ²»Òª·Å½o¿Í»§¶Ë;
+                RankItem item = new RankItem(); // uid ï¿½ï¿½Òªï¿½Å½oï¿½Í»ï¿½ï¿½ï¿½;
 
                 Player p = PlayerIDCache.Instance.Get(rankData[i].uid);
                 if (p == null) {
@@ -612,19 +612,19 @@ namespace Game.Entries.Modules
         public async void HandlerReqEnterLogicServer(IdSession s, ReqEnterLogicServer req, long playerId)
         {
             ResEnterLogicServer res = new ResEnterLogicServer();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 if (req.openId > 0) {
-                    // Ïñ·þÎñÆ÷·¢ËÍÇëÇó£¬»ñÈ¡openId¶ÔÓ¦µÄaccountId;
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ó£¬»ï¿½È¡openIdï¿½ï¿½Ó¦ï¿½ï¿½accountId;
                     playerId = await HttpUtils.HttpPost(httpPlayerServerUrl, req.openId);
                     if (playerId <= 0) {
                         res.status = (int)Respones.AccountIsNotLogin;
-                        MessagePusher.PushMessage(s, (Message)res, playerId); // Íø¹ØÄ£Ê½µÄutag,ÕâÀïÒªÔÙ×ÐÏ¸¼ì²éÏÂ;
+                        MessagePusher.PushMessage(s, (Message)res, playerId); // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½utag,ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½;
                         return;
                     }
 
-                    // ×ßopenid, ·ÇÍø¹ØÄ£Ê½,Session,±£´æPlayerId;
+                    // ï¿½ï¿½openid, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½,Session,ï¿½ï¿½ï¿½ï¿½PlayerId;
                     if (this.GatewayMode == false) {
                         s.playerId = playerId;
                     }
@@ -647,11 +647,11 @@ namespace Game.Entries.Modules
                 }
             }
             else {
-                // ÖØÐÂ¸³ÖµÒ»ÏÂsession, http Ä£Ê½ÏÂ£¬ÓÐ¿ÉÄÜ»¹Ã»ÓÐsession;
+                // ï¿½ï¿½ï¿½Â¸ï¿½ÖµÒ»ï¿½ï¿½session, http Ä£Ê½ï¿½Â£ï¿½ï¿½Ð¿ï¿½ï¿½Ü»ï¿½Ã»ï¿½ï¿½session;
                 player.uPlayer.s = s;
             }
 
-            // ²»ÔÚÍø¹ØÄ£Ê½ÏÂ,Èç¹ûÊÇÍø¹ØÄ£Ê½£¬ÎÒÖ±½ÓÔÚÍø¹Ø¾Í´¦ÀíÁË;
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾Í´ï¿½ï¿½ï¿½ï¿½ï¿½;
             if (this.GatewayMode == false && s.logicServerId != -1)
             {
                 res.status = (int)Respones.InOtherLogicServerInst;
@@ -665,7 +665,7 @@ namespace Game.Entries.Modules
                 isReconnGame = true;
             }
 
-            if (req.instId == -1) { // ×Ô¶¯Ñ°ÕÒ;
+            if (req.instId == -1) { // ï¿½Ô¶ï¿½Ñ°ï¿½ï¿½;
                 req.instId = LogicServerFactory.Instance.FindLogicServerInst(req.typeId, req.zoneId);
                 if (req.instId == -1) {
                     this.logger.Warn($"Can not find {req.typeId}:{req.zoneId} LogicServer");
@@ -676,8 +676,8 @@ namespace Game.Entries.Modules
 
             res.status = this.ProcEnterLogicServer(playerId, s, req.instId, req.zoneId, isReconnGame);
 
-            if (res.status == (int)Respones.OK) { // ÎªÁËÍø¹ØÀ´ÌØÊâµ÷Õû;
-                // Íø¹Ø[2, 2, 8, 2, body]
+            if (res.status == (int)Respones.OK) { // Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½;
+                // ï¿½ï¿½ï¿½ï¿½[2, 2, 8, 2, body]
                 MessagePusher.PushMessage(s, res, playerId, (short)req.instId);
             }
         }
@@ -709,7 +709,7 @@ namespace Game.Entries.Modules
 
         public ResExchangeProduct HandlerReqExchangeProduct(IdSession s, ReqExchangeProduct req, long playerId) {
             ResExchangeProduct res = new ResExchangeProduct();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (/*s.accountId <= 0 || */playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -738,7 +738,7 @@ namespace Game.Entries.Modules
         public ResPullingPackData HandlerReqPullingPackData(IdSession s, ReqPullingPackData req, long playerId) {
 
             ResPullingPackData res = new ResPullingPackData();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -769,7 +769,7 @@ namespace Game.Entries.Modules
 
         public ResTestUpdateGoods HandlerReqTestUpdatesGoods(IdSession s, ReqTestUpdateGooods req, long playerId) {
             ResTestUpdateGoods res = new ResTestUpdateGoods();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -790,7 +790,7 @@ namespace Game.Entries.Modules
         }
         public ResTestGetGoods HandlerReqTestGetGoods(IdSession s, ReqTestGetGoods req, long playerId) {
             ResTestGetGoods res = new ResTestGetGoods();
-            // ÑéÖ¤accountId, playerIDÕËºÅ;
+            // ï¿½ï¿½Ö¤accountId, playerIDï¿½Ëºï¿½;
             if (playerId <= 0)
             {
                 res.status = (int)Respones.AccountIsNotLogin;
@@ -803,15 +803,15 @@ namespace Game.Entries.Modules
                 return res;
             }
 
-            // ²âÊÔ´úÂë
-            if (req.typeId == 1) {  // ×êÊ¯
-                // ¸üÐÂÍæ¼ÒÉíÉÏµÄÊôÐÔ£¬¸üÐÂÈÎÎñ½ø¶È;
+            // ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½
+            if (req.typeId == 1) {  // ï¿½ï¿½Ê¯
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½;
                 GM_Task collectTask = GM_TaskMgr.Instance.GetCurrectTaskData(player, 100000);
                 if (collectTask != null) {
                     GM_TaskMgr.Instance.UpdateTaskProgress(player, collectTask, "damond", req.num);
                 }
             }
-            else if (req.typeId == 2) {  // ÌìÊé
+            else if (req.typeId == 2) {  // ï¿½ï¿½ï¿½ï¿½
                 GM_Task collectTask = GM_TaskMgr.Instance.GetCurrectTaskData(player, 100000);
                 if (collectTask != null) {
                     GM_TaskMgr.Instance.UpdateTaskProgress(player, collectTask, "book", req.num);

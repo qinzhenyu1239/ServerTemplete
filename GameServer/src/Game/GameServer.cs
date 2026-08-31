@@ -130,6 +130,7 @@ namespace Game
             }
 
             ConfigMgr.Instance.Init();
+            GachaModule.Instance.Init();
             HttpServerZoneModule.Instance.Init();
             HttpServerDirectConnModule.Instance.Init();
             RuleProcesserFactory.Init();

@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Framework.Core.Net;
+using Framework.Core.Utils;
+using Game.Datas.Messages;
 using NLog;
 
 namespace Game.Entries.Modules
@@ -76,6 +78,53 @@ namespace Game.Entries.Modules
             gameSessionNotifyUrl = ConfigurationManager.AppSettings["GameSessionNotifyUrl"];
             processStartedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             nextCleanupAtUnixSeconds = processStartedAtUnixSeconds + 60;
+        }
+
+        public ResGameAuthenticate HandlerReqGameAuthenticate(
+            IdSession session,
+            ReqGameAuthenticate request)
+        {
+            int configuredServerId = int.TryParse(ConfigurationManager.AppSettings["ServerId"], out int value)
+                ? value
+                : 1;
+            var response = new ResGameAuthenticate();
+            if (request == null || request.serverId != configuredServerId ||
+                string.IsNullOrWhiteSpace(request.gameTicket))
+            {
+                response.status = (int)Respones.InvalidParams;
+                response.errorMessage = "Invalid game authentication request.";
+                SessionMgr.Instance.CloseAfterNextResponse(session);
+                return response;
+            }
+
+            if (!TryConsumeGameTicket(
+                    request.gameTicket,
+                    request.serverId,
+                    out long accountId,
+                    out string authSessionId,
+                    out long sessionVersion))
+            {
+                response.status = (int)Respones.AccountIsNotLogin;
+                response.errorMessage = "The game ticket is invalid, expired, or already used.";
+                SessionMgr.Instance.CloseAfterNextResponse(session);
+                return response;
+            }
+
+            if (!TryBindAuthenticatedGameSession(
+                    session,
+                    accountId,
+                    authSessionId,
+                    sessionVersion))
+            {
+                response.status = (int)Respones.AccountIsNotLogin;
+                response.errorMessage = "The game ticket belongs to a superseded login session.";
+                SessionMgr.Instance.CloseAfterNextResponse(session);
+                return response;
+            }
+
+            response.status = (int)Respones.OK;
+            response.accountId = accountId;
+            return response;
         }
 
         public string CreateLoginSession(long accountId)
