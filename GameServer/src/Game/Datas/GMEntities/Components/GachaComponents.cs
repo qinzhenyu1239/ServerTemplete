@@ -1,7 +1,6 @@
-using Game.Core.Db;
+using Game.Core.GM_Gacha;
 using Game.Datas.DBEntities;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Game.Datas.GMEntities
 {
@@ -14,11 +13,7 @@ namespace Game.Datas.GMEntities
 
         public static void Reload(GM_PlayerEntity entity)
         {
-            entity.uItem.quantities = DBService.Instance.GetGameInstance()
-                .Queryable<Player_item>()
-                .Where(item => item.player_id == entity.uPlayer.playerInfo.id)
-                .ToList()
-                .ToDictionary(item => item.item_id, item => item.quantity);
+            GM_GachaMgr.Instance.ReloadItemComponent(entity);
         }
     }
 
@@ -31,11 +26,7 @@ namespace Game.Datas.GMEntities
 
         public static void Reload(GM_PlayerEntity entity)
         {
-            entity.uCharacter.characterIds = new HashSet<int>(DBService.Instance.GetGameInstance()
-                .Queryable<Player_character>()
-                .Where(character => character.player_id == entity.uPlayer.playerInfo.id)
-                .Select(character => character.character_id)
-                .ToList());
+            GM_GachaMgr.Instance.ReloadCharacterComponent(entity);
         }
     }
 
@@ -56,12 +47,7 @@ namespace Game.Datas.GMEntities
         public static void EnsureLoaded(GM_PlayerEntity entity)
         {
             if (entity.uGacha.isLoaded) return;
-            entity.uGacha.poolStates = DBService.Instance.GetGameInstance()
-                .Queryable<Player_gacha_state>()
-                .Where(state => state.player_id == entity.uPlayer.playerInfo.id)
-                .ToList()
-                .ToDictionary(state => state.pool_id, state => state);
-            entity.uGacha.isLoaded = true;
+            GM_GachaMgr.Instance.ReloadGachaComponent(entity);
         }
     }
 }

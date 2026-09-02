@@ -1,6 +1,6 @@
 using Framework.Core.Net;
 using Framework.Core.Utils;
-using Game.Core.Caches;
+using Game.Core.EntityMgr;
 using Game.Core.GM_Gacha;
 using Game.Datas.DBEntities;
 using Game.Datas.Excels;
@@ -40,7 +40,7 @@ namespace Game.Entries.Modules
             ReqGetGachaPoolInfo request,
             long playerId)
         {
-            Player player = playerId > 0 ? PlayerIDCache.Instance.Get(playerId) : null;
+            Player player = playerId > 0 ? GM_AccountEntityMgr.Instance.GetPlayerById(playerId) : null;
             if (player == null)
             {
                 return new ResGetGachaPoolInfo
@@ -79,7 +79,7 @@ namespace Game.Entries.Modules
 
         public ResGachaDraw HandlerDraw(IdSession session, ReqGachaDraw request, long playerId)
         {
-            Player player = playerId > 0 ? PlayerIDCache.Instance.Get(playerId) : null;
+            Player player = playerId > 0 ? GM_AccountEntityMgr.Instance.GetPlayerById(playerId) : null;
             if (player == null)
             {
                 return new ResGachaDraw

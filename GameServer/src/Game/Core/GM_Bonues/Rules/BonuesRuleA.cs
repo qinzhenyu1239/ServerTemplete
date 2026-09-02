@@ -1,5 +1,5 @@
 ﻿using Framework.Core.Utils;
-using Game.Core.Caches;
+using Game.Core.EntityMgr;
 using Game.Utils;
 using System;
 using System.Collections.Generic;
@@ -31,9 +31,9 @@ namespace Game.Core.GM_Bonues.Rules
             
             logger.Info("DefaultBonuesApplayToPlayer");
             // 给玩家计算出来，它这次账号升级可以获得的奖励
-            Game.Datas.DBEntities.Player playerInfo = PlayerIDCache.Instance.Get(bonues.uid);
+            Game.Datas.DBEntities.Player playerInfo = GM_AccountEntityMgr.Instance.GetPlayerById(bonues.uid);
             playerInfo.ucoin += bonues.bonues1; 
-            PlayerIDCache.Instance.UpdateDataToDb(playerInfo);
+            GM_AccountEntityMgr.Instance.UpdatePlayer(playerInfo);
             // end
 
 
@@ -88,9 +88,9 @@ namespace Game.Core.GM_Bonues.Rules
 
             logger.Info("MonneyBonuesApplayToPlayer");
             // 给玩家计算出来，它这次账号升级可以获得的奖励
-            Game.Datas.DBEntities.Player playerInfo = PlayerIDCache.Instance.Get(bonues.uid);
+            Game.Datas.DBEntities.Player playerInfo = GM_AccountEntityMgr.Instance.GetPlayerById(bonues.uid);
             playerInfo.umoney += bonues.bonues1; // 配置表里面读;
-            PlayerIDCache.Instance.UpdateDataToDb(playerInfo);
+            GM_AccountEntityMgr.Instance.UpdatePlayer(playerInfo);
             // end
 
 

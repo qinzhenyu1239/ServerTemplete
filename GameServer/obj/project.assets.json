@@ -1306,26 +1306,23 @@
           }
         }
       },
-      "System.Runtime.Caching/8.0.0": {
+      "System.Runtime.Caching/4.7.0": {
         "type": "package",
         "dependencies": {
-          "System.Configuration.ConfigurationManager": "8.0.0"
+          "System.Configuration.ConfigurationManager": "4.7.0"
         },
         "compile": {
-          "lib/net8.0/System.Runtime.Caching.dll": {
+          "ref/netstandard2.0/_._": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net8.0/System.Runtime.Caching.dll": {
+          "lib/netstandard2.0/System.Runtime.Caching.dll": {
             "related": ".xml"
           }
         },
-        "build": {
-          "buildTransitive/net6.0/_._": {}
-        },
         "runtimeTargets": {
-          "runtimes/win/lib/net8.0/System.Runtime.Caching.dll": {
+          "runtimes/win/lib/netstandard2.0/System.Runtime.Caching.dll": {
             "assetType": "runtime",
             "rid": "win"
           }
@@ -3752,43 +3749,40 @@
         "system.runtime.nuspec"
       ]
     },
-    "System.Runtime.Caching/8.0.0": {
-      "sha512": "4TmlmvGp4kzZomm7J2HJn6IIx0UUrQyhBDyb5O1XiunZlQImXW+B8b7W/sTPcXhSf9rp5NR5aDtQllwbB5elOQ==",
+    "System.Runtime.Caching/4.7.0": {
+      "sha512": "NdvNRjTPxYvIEhXQszT9L9vJhdQoX6AQ0AlhjTU+5NqFQVuacJTfhPVAvtGWNA2OJCqRiR/okBcZgMwI6MqcZg==",
       "type": "package",
-      "path": "system.runtime.caching/8.0.0",
+      "path": "system.runtime.caching/4.7.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
-        "Icon.png",
         "LICENSE.TXT",
-        "PACKAGE.md",
         "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net6.0/_._",
-        "buildTransitive/netcoreapp2.0/System.Runtime.Caching.targets",
         "lib/MonoAndroid10/_._",
         "lib/MonoTouch10/_._",
-        "lib/net462/_._",
-        "lib/net6.0/System.Runtime.Caching.dll",
-        "lib/net6.0/System.Runtime.Caching.xml",
-        "lib/net7.0/System.Runtime.Caching.dll",
-        "lib/net7.0/System.Runtime.Caching.xml",
-        "lib/net8.0/System.Runtime.Caching.dll",
-        "lib/net8.0/System.Runtime.Caching.xml",
+        "lib/net45/_._",
         "lib/netstandard2.0/System.Runtime.Caching.dll",
         "lib/netstandard2.0/System.Runtime.Caching.xml",
         "lib/xamarinios10/_._",
         "lib/xamarinmac20/_._",
         "lib/xamarintvos10/_._",
         "lib/xamarinwatchos10/_._",
-        "runtimes/win/lib/net6.0/System.Runtime.Caching.dll",
-        "runtimes/win/lib/net6.0/System.Runtime.Caching.xml",
-        "runtimes/win/lib/net7.0/System.Runtime.Caching.dll",
-        "runtimes/win/lib/net7.0/System.Runtime.Caching.xml",
-        "runtimes/win/lib/net8.0/System.Runtime.Caching.dll",
-        "runtimes/win/lib/net8.0/System.Runtime.Caching.xml",
-        "system.runtime.caching.8.0.0.nupkg.sha512",
+        "ref/MonoAndroid10/_._",
+        "ref/MonoTouch10/_._",
+        "ref/net45/_._",
+        "ref/netstandard2.0/System.Runtime.Caching.dll",
+        "ref/netstandard2.0/System.Runtime.Caching.xml",
+        "ref/xamarinios10/_._",
+        "ref/xamarinmac20/_._",
+        "ref/xamarintvos10/_._",
+        "ref/xamarinwatchos10/_._",
+        "runtimes/win/lib/net45/_._",
+        "runtimes/win/lib/netstandard2.0/System.Runtime.Caching.dll",
+        "runtimes/win/lib/netstandard2.0/System.Runtime.Caching.xml",
+        "system.runtime.caching.4.7.0.nupkg.sha512",
         "system.runtime.caching.nuspec",
-        "useSharedDesignerContext.txt"
+        "useSharedDesignerContext.txt",
+        "version.txt"
       ]
     },
     "System.Runtime.CompilerServices.Unsafe/6.0.0": {
@@ -4409,7 +4403,6 @@
       "SqlSugarCore >= 5.1.4.167",
       "StackExchange.Redis >= 2.8.12",
       "System.Configuration.ConfigurationManager >= 8.0.0",
-      "System.Runtime.Caching >= 8.0.0",
       "protobuf-net >= 3.2.30"
     ]
   },
@@ -4510,10 +4503,6 @@
             "version": "[2.8.12, )"
           },
           "System.Configuration.ConfigurationManager": {
-            "target": "Package",
-            "version": "[8.0.0, )"
-          },
-          "System.Runtime.Caching": {
             "target": "Package",
             "version": "[8.0.0, )"
           },

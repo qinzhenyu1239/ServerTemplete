@@ -26,7 +26,6 @@
     <PackageReference Include="SqlSugarCore" Version="5.1.4.167" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.12" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

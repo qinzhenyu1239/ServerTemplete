@@ -4,7 +4,6 @@ using Framework.Core.Utils;
 using Game.Datas.DBEntities;
 using Game.Datas.Messages;
 using Game.Core.GM_Bonues;
-using Game.Core.Caches;
 using Game.Core.EntityMgr;
 using Game.Datas.GMEntities;
 using Game.Core.GM_Task;
@@ -29,16 +28,9 @@ namespace Game.Entries.Modules
         private NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         private bool GatewayMode = false;
-        private string httpAuthServerUrl = "http://127.0.0.1:6090/GetAccountId";
-        private string httpPlayerServerUrl = "http://127.0.0.1:6090/GetPlayerId";
         public void Init()
         {
             this.GatewayMode = bool.Parse(ConfigurationManager.AppSettings["GatewayMode"]);
-            this.httpAuthServerUrl = $"{ConfigurationManager.AppSettings["HttpAuthAndPlayerWebsite"]}GetAccountId";
-            this.httpPlayerServerUrl = $"{ConfigurationManager.AppSettings["HttpAuthAndPlayerWebsite"]}GetPlayerId";
-            PlayerIDCache.Instance.Init();
-            PlayerAcountIDCache.Instance.Init();
-            PlayerIdLoginBonuesCache.Instance.Init();
         }
 
         private void CopyDbPlayerToResponesData(Game.Datas.DBEntities.Player p, PlayerInfo pInfo)
@@ -64,7 +56,7 @@ namespace Game.Entries.Modules
             }
 
 
-            Loginbonues data = PlayerIdLoginBonuesCache.Instance.Get(playerId);
+            Loginbonues data = GM_AccountEntityMgr.Instance.GetLoginBonues(playerId);
             if (data == null)
             {
                 res.status = (int)Respones.SystemErr;
@@ -81,7 +73,7 @@ namespace Game.Entries.Modules
             res.status = (int)Respones.OK;
             res.num = data.bonues;
 
-            Game.Datas.DBEntities.Player p = PlayerIDCache.Instance.Get((playerId));
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
             if (p != null)
             { // ���ڽ�����ʲô��������Ϸ��������������;
                 // logger.Info($"{p.GetHashCode()}");
@@ -90,13 +82,13 @@ namespace Game.Entries.Modules
 
             if (p != null)
             {
-                PlayerIDCache.Instance.UpdateDataToDb(p);
+                GM_AccountEntityMgr.Instance.UpdatePlayer(p);
             }
 
-            // Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.Get(s.accountIdAndJob);
+            // The account entity already keeps the account-to-player association.
             /* 
              * ���������Bug,Ҫ����һ�£�����δ������������һ��Player ֻ����һ��ְҵ;
-            p = PlayerAcountIDCache.Instance.Get(accountIdAndJob);
+            p = GM_AccountEntityMgr.Instance.GetPlayerByAccountId(accountId, 0);
             if (p != null)
             {
                 // logger.Info($"{p.GetHashCode()}");
@@ -105,7 +97,7 @@ namespace Game.Entries.Modules
 
             data.bonues = 0;
             data.status = 1;
-            PlayerIdLoginBonuesCache.Instance.UpdateDataToDb(data);
+            GM_AccountEntityMgr.Instance.UpdateLoginBonues(data);
 
 
 
@@ -130,7 +122,7 @@ namespace Game.Entries.Modules
                 return res;
             }
 
-            Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.GetOrCreate(accountId, req);
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(accountId, req);
             if (p == null)
             {
                 res.status = (int)Respones.SystemErr;
@@ -164,7 +156,7 @@ namespace Game.Entries.Modules
             return res;
         }
 
-        public async void HandlerReqSelectPlayer(IdSession s, ReqSelectPlayer req, long accountId)
+        public ResSelectPlayer HandlerReqSelectPlayer(IdSession s, ReqSelectPlayer req, long accountId)
         {
             ResSelectPlayer res = new ResSelectPlayer();
             long utag = accountId;
@@ -172,43 +164,28 @@ namespace Game.Entries.Modules
             // ��֤accountId�˺�;
             if (accountId <= 0)
             {
-                if (req.openId != 0)
-                {
-                    // ��������������󣬻�ȡopenId��Ӧ��accountId;
-                    accountId = await HttpUtils.HttpPost(httpAuthServerUrl, req.openId);
-                    if (accountId <= 0)
-                    {
-                        res.status = (int)Respones.AccountIsNotLogin;
-                        MessagePusher.PushMessage(s, (Message)res, utag); // ����ģʽ��utag,����Ҫ����ϸ�����;
-                        return;
-                    }
-                }
-                else
-                {
-                    res.status = (int)Respones.AccountIsNotLogin;
-                    MessagePusher.PushMessage(s, (Message)res, utag); // ����ģʽ��utag,����Ҫ����ϸ�����;
-                    return;
-                }
+                res.status = (int)Respones.AccountIsNotLogin;
+                return res;
             }
 
             // ���req����,����зǷ��ģ���ô�ͷ��ز�������
             if (req.job <= 0)
             {  // �����Լ���ʵ�������������
                 res.status = (int)Respones.InvalidParams;
-                MessagePusher.PushMessage(s, (Message)res, utag);
+                return res;
             }
 
-            Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.GetOrCreate(accountId, req);
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(accountId, req);
             if (p == null)
             {
                 res.status = (int)Respones.SystemErr;
-                MessagePusher.PushMessage(s, (Message)res, utag);
+                return res;
             }
 
             if (p.status != 0)
             { // �ж�����Ƿ񱻶���;
                 res.status = (int)Respones.PlayerIsFreeze;
-                MessagePusher.PushMessage(s, (Message)res, utag);
+                return res;
             }
 
             res.status = (int)Respones.OK;
@@ -221,7 +198,7 @@ namespace Game.Entries.Modules
                 res.playerId = p.id;
             }
             s.playerId = p.id;
-            s.accountIdAndJob = PlayerAcountIDCache.Instance.Key(accountId, req.job);
+            s.accountIdAndJob = GM_AccountEntityMgr.Instance.PlayerKey(accountId, req.job);
 
             // ���һ��ÿ�յ�¼����
             this.CheckLoginBonues(p.id, res.pInfo);
@@ -232,7 +209,7 @@ namespace Game.Entries.Modules
             res.isReConnectGame = isReConnectGame;
             // end
 
-            MessagePusher.PushMessage(s, (Message)res, utag);
+            return res;
         }
 
         public ResPullingPlayerData HandlerHttpReqPullingPlayerData(ReqPullingPlayerData req, long accountId)
@@ -251,7 +228,7 @@ namespace Game.Entries.Modules
 
             // �����ݿ��в��ң�������û�ж�Ӧ��Player ����;
             // accountId �� job --->����ѯ;
-            Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.TryGetPlayer(accountId, req.job);
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetPlayerByAccountId(accountId, req.job);
             if (p == null)
             {
                 res.status = (int)Respones.PlayerIsNotExist;
@@ -289,30 +266,15 @@ namespace Game.Entries.Modules
             return res;
         }
 
-        public async void HandlerReqPullingPlayerData(IdSession s, ReqPullingPlayerData req, long accountId)
+        public ResPullingPlayerData HandlerReqPullingPlayerData(IdSession s, ReqPullingPlayerData req, long accountId)
         {
             ResPullingPlayerData res = new ResPullingPlayerData();
             long utag = accountId;
             // ��֤accountId�˺�;
             if (accountId <= 0)
             {
-                if (req.openId != 0)
-                {
-                    // ��������������󣬻�ȡopenId��Ӧ��accountId;
-                    accountId = await HttpUtils.HttpPost(httpAuthServerUrl, req.openId);
-                    if (accountId <= 0)
-                    {
-                        res.status = (int)Respones.AccountIsNotLogin;
-                        MessagePusher.PushMessage(s, (Message)res, utag); // ����ģʽ��utag,����Ҫ����ϸ�����;
-                        return;
-                    }
-                }
-                else {
-                    res.status = (int)Respones.AccountIsNotLogin;
-                    MessagePusher.PushMessage(s, (Message)res, utag); // ����ģʽ��utag,����Ҫ����ϸ�����;
-                    return;
-                }
-                
+                res.status = (int)Respones.AccountIsNotLogin;
+                return res;
             }
 
             int job = req.job; // ���һ���˺�ֻ����һ��ְҵ����ôjob = 0;
@@ -321,19 +283,17 @@ namespace Game.Entries.Modules
 
             // �����ݿ��в��ң�������û�ж�Ӧ��Player ����;
             // accountId �� job --->����ѯ;
-            Game.Datas.DBEntities.Player p = PlayerAcountIDCache.Instance.TryGetPlayer(accountId, req.job);
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetPlayerByAccountId(accountId, req.job);
             if (p == null)
             {
                 res.status = (int)Respones.PlayerIsNotExist;
-                MessagePusher.PushMessage(s, (Message)res, utag);
-                return;
+                return res;
             }
 
             if (p.status != 0)
             { // �ж�����Ƿ񱻶���;
                 res.status = (int)Respones.PlayerIsFreeze;
-                MessagePusher.PushMessage(s, (Message)res, utag);
-                return;
+                return res;
             }
 
 
@@ -345,7 +305,7 @@ namespace Game.Entries.Modules
             if (this.GatewayMode) {
                 res.playerId = p.id;
             }
-            s.accountIdAndJob = PlayerAcountIDCache.Instance.Key(accountId, req.job);
+            s.accountIdAndJob = GM_AccountEntityMgr.Instance.PlayerKey(accountId, req.job);
 
             // ���һ��ÿ�յ�¼����
             this.CheckLoginBonues(p.id, res.pInfo);
@@ -361,14 +321,14 @@ namespace Game.Entries.Modules
             int isReConnectGame = GM_EntityMgr.Instance.AddPlayer(s, p.id);
             res.isReConnectGame = isReConnectGame;
             // end
-            MessagePusher.PushMessage(s, (Message)res, utag);
+            return res;
 
         }
 
         private void CheckLoginBonues(long playerId, PlayerInfo res)
         {
             res.hasBonues = 0;
-            Loginbonues data = PlayerIdLoginBonuesCache.Instance.GetOrCreate(playerId);
+            Loginbonues data = GM_AccountEntityMgr.Instance.GetLoginBonues(playerId, true);
             if (data == null)
             {
                 logger.Error($"ÿ�յ�¼������ȡΪnull: {playerId}");
@@ -400,7 +360,7 @@ namespace Game.Entries.Modules
             res.days = data.days;
             res.loginBonues = data.bonues;
 
-            PlayerIdLoginBonuesCache.Instance.UpdateDataToDb(data);
+            GM_AccountEntityMgr.Instance.UpdateLoginBonues(data);
         }
 
 
@@ -584,12 +544,12 @@ namespace Game.Entries.Modules
             for (int i = 0; i < rankData.Length; i++) {
                 RankItem item = new RankItem(); // uid ��Ҫ�Žo�ͻ���;
 
-                Player p = PlayerIDCache.Instance.Get(rankData[i].uid);
+                Player p = GM_AccountEntityMgr.Instance.GetPlayerById(rankData[i].uid);
                 if (p == null) {
                     this.logger.Error($"rankdata Error uid {rankData[i].uid}");
                     continue;
                 }
-                Account a = AccountIDCache.Instance.Get(p.accountId);
+                Account a = GM_AccountEntityMgr.Instance.GetAccountById(p.accountId);
                 if (a == null) {
                     this.logger.Error($"rankdata Error uid {rankData[i].uid}");
                     continue;
@@ -609,27 +569,15 @@ namespace Game.Entries.Modules
             return res;
         }
 
-        public async void HandlerReqEnterLogicServer(IdSession s, ReqEnterLogicServer req, long playerId)
+        public void HandlerReqEnterLogicServer(IdSession s, ReqEnterLogicServer req, long playerId)
         {
             ResEnterLogicServer res = new ResEnterLogicServer();
             // ��֤accountId, playerID�˺�;
             if (playerId <= 0)
             {
-                if (req.openId > 0) {
-                    // ��������������󣬻�ȡopenId��Ӧ��accountId;
-                    playerId = await HttpUtils.HttpPost(httpPlayerServerUrl, req.openId);
-                    if (playerId <= 0) {
-                        res.status = (int)Respones.AccountIsNotLogin;
-                        MessagePusher.PushMessage(s, (Message)res, playerId); // ����ģʽ��utag,����Ҫ����ϸ�����;
-                        return;
-                    }
-
-                    // ��openid, ������ģʽ,Session,����PlayerId;
-                    if (this.GatewayMode == false) {
-                        s.playerId = playerId;
-                    }
-                    
-                }
+                res.status = (int)Respones.AccountIsNotLogin;
+                MessagePusher.PushMessage(s, (Message)res, playerId);
+                return;
             }
 
             GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);

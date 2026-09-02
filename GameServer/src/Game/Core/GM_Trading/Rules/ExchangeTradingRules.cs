@@ -1,5 +1,5 @@
 ﻿using Framework.Core.Utils;
-using Game.Core.Caches;
+using Game.Core.EntityMgr;
 using Game.Core.GM_Backpack;
 using Game.Datas.Excels;
 using Game.Datas.GMEntities;
@@ -44,7 +44,7 @@ namespace Game.Core.GM_Trading
             }
 
             player.uPlayer.playerInfo.umoney -= config.Price;
-            PlayerIDCache.Instance.UpdateDataToDb(player.uPlayer.playerInfo);
+            GM_AccountEntityMgr.Instance.UpdatePlayer(player.uPlayer.playerInfo);
 
             foreach (var key in products.Keys) {
                 int value = products[key];

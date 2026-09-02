@@ -1,5 +1,4 @@
 using Framework.Core.Net;
-using Game.Core.Caches;
 
 namespace Game.Datas.GMEntities {
     public struct PlayerComponent {

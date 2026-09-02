@@ -1,5 +1,4 @@
 ﻿using Framework.Core.Net;
-using Game.Core.Caches;
 using Game.Core.Configs;
 using Game.Core.GM_MailMessage;
 using Game.Core.GM_Rank;
@@ -30,8 +29,8 @@ namespace Game.Core.EntityMgr
             if (this.players.ContainsKey(playerId)) {
                 player = this.players[playerId];
                 player.uPlayer.s = s;
-                player.uPlayer.playerInfo = PlayerIDCache.Instance.Get(playerId);
-                player.uPlayer.accountInfo = AccountIDCache.Instance.Get(player.uPlayer.playerInfo.accountId);
+                player.uPlayer.playerInfo = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
+                player.uPlayer.accountInfo = GM_AccountEntityMgr.Instance.GetAccountById(player.uPlayer.playerInfo.accountId);
 
                 FieldInfo[] fileds = (typeof(GM_PlayerEntity)).GetFields();
                 foreach (var f in fileds)
@@ -54,8 +53,8 @@ namespace Game.Core.EntityMgr
                 // 加入到集合;
                 this.players.TryAdd(playerId, player);
                 // PlayerComponent
-                player.uPlayer.playerInfo = PlayerIDCache.Instance.Get(playerId);
-                player.uPlayer.accountInfo = AccountIDCache.Instance.Get(player.uPlayer.playerInfo.accountId);
+                player.uPlayer.playerInfo = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
+                player.uPlayer.accountInfo = GM_AccountEntityMgr.Instance.GetAccountById(player.uPlayer.playerInfo.accountId);
                 player.uPlayer.s = s;
 
                 FieldInfo[] fileds = (typeof(GM_PlayerEntity)).GetFields();

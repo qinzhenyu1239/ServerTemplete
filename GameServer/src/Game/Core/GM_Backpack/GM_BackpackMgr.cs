@@ -26,6 +26,30 @@ namespace Game.Core.GM_Backpack
             return (tid / 10000) * 10000;
         }
 
+        public void LoadBackpackComponent(GM_PlayerEntity entity)
+        {
+            entity.uBackpack.packItems = new Dictionary<int, List<PackItem>>();
+            Game.Datas.DBEntities.Gamegoods[] gameGoods = DBService.Instance.GetGameInstance()
+                .Queryable<Game.Datas.DBEntities.Gamegoods>()
+                .Where(it => it.uid == entity.uPlayer.playerInfo.id)
+                .ToArray();
+
+            foreach (Game.Datas.DBEntities.Gamegoods gameGood in gameGoods)
+            {
+                var item = new PackItem
+                {
+                    goods = gameGood,
+                    strengData = null
+                };
+                if (!entity.uBackpack.packItems.TryGetValue(gameGood.tid, out List<PackItem> goodsSet))
+                {
+                    goodsSet = new List<PackItem>();
+                    entity.uBackpack.packItems.Add(gameGood.tid, goodsSet);
+                }
+                goodsSet.Add(item);
+            }
+        }
+
         public Dictionary<int, List<GoodsItem>> GetBackpackData(ref BackpackComponent backpack) {
             // 药水类: 30000  ===> [物品1， 物品2， 物品3]
             var ret = new Dictionary<int, List<GoodsItem>>();

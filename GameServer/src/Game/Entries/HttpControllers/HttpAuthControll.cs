@@ -38,7 +38,7 @@ namespace Game.Entries.HttpControllers
         {
             if (ReadRequest(request) is not ReqGuestLogin req)
                 return new ResGuestLogin { status = (int)Respones.InvalidParams };
-            ResGuestLogin response = AuthModule.Instance.HandlerReqGuestLogin(null, req);
+            ResGuestLogin response = AuthModule.Instance.HandlerReqGuestLogin(req);
             if (response.status == (int)Respones.OK)
                 response.accessToken = AuthSessionModule.Instance.CreateLoginSession(response.accountIdOrOpenId);
             return response;
@@ -48,7 +48,7 @@ namespace Game.Entries.HttpControllers
         public object DoReqRegisterUserAction(IFullHttpRequest request)
         {
             return ReadRequest(request) is ReqRegisterUser req
-                ? AuthModule.Instance.HandlerReqRegisterUser(null, req)
+                ? AuthModule.Instance.HandlerReqRegisterUser(req)
                 : new ResRegisterUser { status = (int)Respones.InvalidParams };
         }
 
@@ -57,7 +57,7 @@ namespace Game.Entries.HttpControllers
         {
             if (ReadRequest(request) is not ReqUserLogin req)
                 return new ResUserLogin { status = (int)Respones.InvalidParams };
-            ResUserLogin response = await AutoLoginModule.Instance.LoginOrRegisterAsync(req);
+            ResUserLogin response = await AuthModule.Instance.HandlerReqUserLoginAsync(req);
             if (response.status == (int)Respones.OK)
                 response.accessToken = AuthSessionModule.Instance.CreateLoginSession(response.accountIdOrOpenId);
             return response;
@@ -70,7 +70,7 @@ namespace Game.Entries.HttpControllers
                 return new ResGuestUpgrade { status = (int)Respones.InvalidParams };
             if (!AuthSessionModule.Instance.TryValidateAccessToken(req.accessToken, out long accountId, out _))
                 return new ResGuestUpgrade { status = (int)Respones.AccountIsNotLogin };
-            return AuthAccountUpgradeModule.Instance.Upgrade(req, accountId);
+            return AuthModule.Instance.HandlerReqGuestUpgrade(req, accountId);
         }
 
         [HttpRequestMapping("/ReqIssueGameTicket")]

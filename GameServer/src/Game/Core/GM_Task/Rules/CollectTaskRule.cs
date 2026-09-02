@@ -11,7 +11,7 @@ using ProtoBuf;
 using System.IO;
 using System.Reflection;
 using Game.Utils;
-using Game.Core.Caches;
+using Game.Core.EntityMgr;
 
 namespace Game.Core.GM_Task
 {
@@ -113,7 +113,7 @@ namespace Game.Core.GM_Task
                 GameUtils.SetProp(entity.uPlayer.playerInfo, key, value);
             }
 
-            PlayerIDCache.Instance.UpdateDataToDb(entity.uPlayer.playerInfo);
+            GM_AccountEntityMgr.Instance.UpdatePlayer(entity.uPlayer.playerInfo);
             // end
         }
     }

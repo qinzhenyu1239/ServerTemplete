@@ -122,9 +122,9 @@ namespace Game
 
             DBService.Instance.Init();
             RedisService.Instance.Init();
+            GM_AccountEntityMgr.Instance.Init();
             if (role == ServerRole.Login)
             {
-                AuthModule.Instance.Init();
                 AuthSessionModule.Instance.Init();
                 return;
             }
