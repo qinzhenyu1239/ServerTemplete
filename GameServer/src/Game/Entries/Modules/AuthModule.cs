@@ -1,31 +1,19 @@
-using Framework.Core.Utils;
 using Game.Core.EntityMgr;
+using Game.Core.GM_Auth;
 using Game.Datas.DBEntities;
 using Game.Datas.Messages;
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Game.Entries.Modules
 {
     /// <summary>
     /// Handles account-stage authentication operations. Access tokens, game tickets,
-    /// and authenticated game connections remain the responsibility of AuthSessionModule.
+    /// and authenticated game connections remain the responsibility of GM_AuthSessionMgr.
     /// </summary>
     public sealed class AuthModule
     {
         public static AuthModule Instance { get; } = new AuthModule();
-
-        private sealed class AccountCreationLock
-        {
-            public readonly SemaphoreSlim Semaphore = new(1, 1);
-            public int ReferenceCount;
-        }
-
-        private readonly object accountCreationLocksSync = new();
-        private readonly Dictionary<string, AccountCreationLock> accountCreationLocks =
-            new(StringComparer.OrdinalIgnoreCase);
 
         private static void CopyAccountInfo(Account account, AccountInfo accountInfo)
         {
@@ -66,6 +54,7 @@ namespace Game.Entries.Modules
             response.accountIdOrOpenId = account.uid;
             response.uinfo = new AccountInfo();
             CopyAccountInfo(account, response.uinfo);
+            response.accessToken = GM_AuthSessionMgr.Instance.CreateLoginSession(account.uid);
             return response;
         }
 
@@ -79,30 +68,8 @@ namespace Game.Entries.Modules
                 return response;
             }
 
-            Account account = await GM_AccountEntityMgr.Instance.GetAccountByUsernameAsync(request.uname);
-            if (account == null)
-            {
-                AccountCreationLock accountLock = RetainAccountCreationLock(request.uname);
-                await accountLock.Semaphore.WaitAsync();
-                try
-                {
-                    account = await GM_AccountEntityMgr.Instance.GetAccountByUsernameAsync(request.uname);
-                    if (account == null)
-                    {
-                        account = await GM_AccountEntityMgr.Instance.CreateAccountAsync(new ReqRegisterUser
-                        {
-                            uname = request.uname,
-                            upwd = request.upwd,
-                            channal = (int)Channal.SelfChannal
-                        });
-                    }
-                }
-                finally
-                {
-                    accountLock.Semaphore.Release();
-                    ReleaseAccountCreationLock(request.uname, accountLock);
-                }
-            }
+            Account account = await GM_AccountEntityMgr.Instance.GetOrCreateAccountAsync(
+                request.uname, request.upwd, (int)Channal.SelfChannal);
 
             if (account == null)
             {
@@ -114,7 +81,7 @@ namespace Game.Entries.Modules
                 response.status = (int)Respones.UserIsFreeze;
                 return response;
             }
-            if (!string.Equals(account.upwd, UtilsHelper.Md5(request.upwd), StringComparison.Ordinal))
+            if (!GM_AccountEntityMgr.Instance.VerifyPassword(account, request.upwd))
             {
                 response.status = (int)Respones.UnameOrUpwdError;
                 return response;
@@ -124,6 +91,7 @@ namespace Game.Entries.Modules
             response.accountIdOrOpenId = account.uid;
             response.uinfo = new AccountInfo();
             CopyAccountInfo(account, response.uinfo);
+            response.accessToken = GM_AuthSessionMgr.Instance.CreateLoginSession(account.uid);
             return response;
         }
 
@@ -144,24 +112,32 @@ namespace Game.Entries.Modules
                 return response;
             }
 
-            response.status = GM_AccountEntityMgr.Instance.CreateAccount(request) == null
+            var command = new AccountRegistrationCommand
+            {
+                Username = request.uname,
+                Password = request.upwd,
+                Channel = request.channal
+            };
+            response.status = GM_AccountEntityMgr.Instance.CreateAccount(command) == null
                 ? (int)Respones.SystemErr
                 : (int)Respones.OK;
             return response;
         }
 
-        public ResGuestUpgrade HandlerReqGuestUpgrade(ReqGuestUpgrade request, long accountId)
+        public ResGuestUpgrade HandlerReqGuestUpgrade(ReqGuestUpgrade request)
         {
             var response = new ResGuestUpgrade();
-            if (accountId <= 0)
-            {
-                response.status = (int)Respones.AccountIsNotLogin;
-                return response;
-            }
             if (request == null || string.IsNullOrWhiteSpace(request.uname) ||
                 string.IsNullOrWhiteSpace(request.upwd) || string.IsNullOrWhiteSpace(request.unick))
             {
                 response.status = (int)Respones.InvalidParams;
+                return response;
+            }
+            AccessTokenValidationResult validation =
+                GM_AuthSessionMgr.Instance.ValidateAccessToken(request.accessToken);
+            if (!validation.IsSuccess)
+            {
+                response.status = (int)Respones.AccountIsNotLogin;
                 return response;
             }
             if (GM_AccountEntityMgr.Instance.GetAccountByUsername(request.uname) != null)
@@ -170,7 +146,7 @@ namespace Game.Entries.Modules
                 return response;
             }
 
-            Account account = GM_AccountEntityMgr.Instance.GetAccountById(accountId);
+            Account account = GM_AccountEntityMgr.Instance.GetAccountById(validation.AccountId);
             if (account == null)
             {
                 response.status = (int)Respones.AccountIsNotExist;
@@ -182,8 +158,14 @@ namespace Game.Entries.Modules
                 return response;
             }
 
-            if (!GM_AccountEntityMgr.Instance.UpgradeGuestAccount(
-                    accountId, request.uname, UtilsHelper.Md5(request.upwd), request.unick, out account))
+            account = GM_AccountEntityMgr.Instance.UpgradeGuestAccount(new GuestAccountUpgradeCommand
+            {
+                AccountId = validation.AccountId,
+                Username = request.uname,
+                Password = request.upwd,
+                Nickname = request.unick
+            });
+            if (account == null)
             {
                 response.status = (int)Respones.SystemErr;
                 return response;
@@ -195,34 +177,25 @@ namespace Game.Entries.Modules
             return response;
         }
 
-        private AccountCreationLock RetainAccountCreationLock(string username)
+        public ResIssueGameTicket HandlerReqIssueGameTicket(ReqIssueGameTicket request)
         {
-            lock (accountCreationLocksSync)
+            if (request == null || request.serverId <= 0)
             {
-                if (!accountCreationLocks.TryGetValue(username, out AccountCreationLock accountLock))
-                {
-                    accountLock = new AccountCreationLock();
-                    accountCreationLocks.Add(username, accountLock);
-                }
-
-                accountLock.ReferenceCount++;
-                return accountLock;
+                return new ResIssueGameTicket { status = (int)Respones.InvalidParams };
             }
-        }
-
-        private void ReleaseAccountCreationLock(string username, AccountCreationLock accountLock)
-        {
-            lock (accountCreationLocksSync)
+            IssueGameTicketResult result =
+                GM_AuthSessionMgr.Instance.IssueGameTicket(request.accessToken, request.serverId);
+            if (!result.IsSuccess)
             {
-                accountLock.ReferenceCount--;
-                if (accountLock.ReferenceCount == 0 &&
-                    accountCreationLocks.TryGetValue(username, out AccountCreationLock current) &&
-                    ReferenceEquals(current, accountLock))
-                {
-                    accountCreationLocks.Remove(username);
-                    accountLock.Semaphore.Dispose();
-                }
+                return new ResIssueGameTicket { status = (int)Respones.AccountIsNotLogin };
             }
+
+            return new ResIssueGameTicket
+            {
+                status = (int)Respones.OK,
+                gameTicket = result.Ticket,
+                expiresAtUnixSeconds = result.ExpiresAtUnixSeconds
+            };
         }
     }
 }

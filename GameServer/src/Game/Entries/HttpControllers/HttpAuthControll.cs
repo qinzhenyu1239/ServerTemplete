@@ -34,59 +34,23 @@ namespace Game.Entries.HttpControllers
         }
 
         [HttpRequestMapping("/ReqGuestLogin")]
-        public object DoGuestLoginAction(IFullHttpRequest request)
-        {
-            if (ReadRequest(request) is not ReqGuestLogin req)
-                return new ResGuestLogin { status = (int)Respones.InvalidParams };
-            ResGuestLogin response = AuthModule.Instance.HandlerReqGuestLogin(req);
-            if (response.status == (int)Respones.OK)
-                response.accessToken = AuthSessionModule.Instance.CreateLoginSession(response.accountIdOrOpenId);
-            return response;
-        }
+        public object DoGuestLoginAction(IFullHttpRequest request) =>
+            AuthModule.Instance.HandlerReqGuestLogin(ReadRequest(request) as ReqGuestLogin);
 
         [HttpRequestMapping("/ReqRegisterUser")]
-        public object DoReqRegisterUserAction(IFullHttpRequest request)
-        {
-            return ReadRequest(request) is ReqRegisterUser req
-                ? AuthModule.Instance.HandlerReqRegisterUser(req)
-                : new ResRegisterUser { status = (int)Respones.InvalidParams };
-        }
+        public object DoReqRegisterUserAction(IFullHttpRequest request) =>
+            AuthModule.Instance.HandlerReqRegisterUser(ReadRequest(request) as ReqRegisterUser);
 
         [HttpRequestMapping("/ReqUserLogin")]
         public async Task<object> DoUserLoginAction(IFullHttpRequest request)
-        {
-            if (ReadRequest(request) is not ReqUserLogin req)
-                return new ResUserLogin { status = (int)Respones.InvalidParams };
-            ResUserLogin response = await AuthModule.Instance.HandlerReqUserLoginAsync(req);
-            if (response.status == (int)Respones.OK)
-                response.accessToken = AuthSessionModule.Instance.CreateLoginSession(response.accountIdOrOpenId);
-            return response;
-        }
+            => await AuthModule.Instance.HandlerReqUserLoginAsync(ReadRequest(request) as ReqUserLogin);
 
         [HttpRequestMapping("/ReqGuestUpgrade")]
-        public object DoReqGuestUpgrade(IFullHttpRequest request)
-        {
-            if (ReadRequest(request) is not ReqGuestUpgrade req)
-                return new ResGuestUpgrade { status = (int)Respones.InvalidParams };
-            if (!AuthSessionModule.Instance.TryValidateAccessToken(req.accessToken, out long accountId, out _))
-                return new ResGuestUpgrade { status = (int)Respones.AccountIsNotLogin };
-            return AuthModule.Instance.HandlerReqGuestUpgrade(req, accountId);
-        }
+        public object DoReqGuestUpgrade(IFullHttpRequest request) =>
+            AuthModule.Instance.HandlerReqGuestUpgrade(ReadRequest(request) as ReqGuestUpgrade);
 
         [HttpRequestMapping("/ReqIssueGameTicket")]
-        public object DoReqIssueGameTicket(IFullHttpRequest request)
-        {
-            if (ReadRequest(request) is not ReqIssueGameTicket req || req.serverId <= 0)
-                return new ResIssueGameTicket { status = (int)Respones.InvalidParams };
-            if (!AuthSessionModule.Instance.TryIssueGameTicket(
-                    req.accessToken, req.serverId, out string ticket, out long expiresAt))
-                return new ResIssueGameTicket { status = (int)Respones.AccountIsNotLogin };
-            return new ResIssueGameTicket
-            {
-                status = (int)Respones.OK,
-                gameTicket = ticket,
-                expiresAtUnixSeconds = expiresAt
-            };
-        }
+        public object DoReqIssueGameTicket(IFullHttpRequest request) =>
+            AuthModule.Instance.HandlerReqIssueGameTicket(ReadRequest(request) as ReqIssueGameTicket);
     }
 }

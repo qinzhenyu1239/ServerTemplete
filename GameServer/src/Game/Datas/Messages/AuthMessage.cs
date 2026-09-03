@@ -226,4 +226,27 @@ namespace Game.Datas.Messages
         public string errorMessage;
     }
 
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eInvalidateAccountSessionReq)]
+    public class ReqInvalidateAccountSession : Message
+    {
+        [ProtoMember(1, IsRequired = true)]
+        public long accountId;
+
+        [ProtoMember(2, IsRequired = true)]
+        public long sessionVersion;
+
+        [ProtoMember(3, IsRequired = true)]
+        public string sessionId;
+
+        [ProtoMember(4, IsRequired = true)]
+        public long timestamp;
+
+        [ProtoMember(5, IsRequired = true)]
+        public string nonce;
+
+        [ProtoMember(6, IsRequired = true)]
+        public byte[] signature;
+    }
+
 }

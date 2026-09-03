@@ -7,18 +7,19 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Framework.Core.Net;
+using Framework.Core.Serializer;
 using Framework.Core.Utils;
 using Game.Datas.Messages;
 using NLog;
 
-namespace Game.Entries.Modules
+namespace Game.Core.GM_Auth
 {
-    public sealed class AuthSessionModule
+    public sealed class GM_AuthSessionMgr
     {
         private const string TicketVersion = "v2";
         private const string InvalidationPurpose = "session-invalidate|";
 
-        public static AuthSessionModule Instance { get; } = new AuthSessionModule();
+        public static GM_AuthSessionMgr Instance { get; } = new GM_AuthSessionMgr();
         private static readonly HttpClient InternalHttpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
 
         private readonly ConcurrentDictionary<string, LoginSession> accessSessions = new();
@@ -78,53 +79,6 @@ namespace Game.Entries.Modules
             gameSessionNotifyUrl = ConfigurationManager.AppSettings["GameSessionNotifyUrl"];
             processStartedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             nextCleanupAtUnixSeconds = processStartedAtUnixSeconds + 60;
-        }
-
-        public ResGameAuthenticate HandlerReqGameAuthenticate(
-            IdSession session,
-            ReqGameAuthenticate request)
-        {
-            int configuredServerId = int.TryParse(ConfigurationManager.AppSettings["ServerId"], out int value)
-                ? value
-                : 1;
-            var response = new ResGameAuthenticate();
-            if (request == null || request.serverId != configuredServerId ||
-                string.IsNullOrWhiteSpace(request.gameTicket))
-            {
-                response.status = (int)Respones.InvalidParams;
-                response.errorMessage = "Invalid game authentication request.";
-                SessionMgr.Instance.CloseAfterNextResponse(session);
-                return response;
-            }
-
-            if (!TryConsumeGameTicket(
-                    request.gameTicket,
-                    request.serverId,
-                    out long accountId,
-                    out string authSessionId,
-                    out long sessionVersion))
-            {
-                response.status = (int)Respones.AccountIsNotLogin;
-                response.errorMessage = "The game ticket is invalid, expired, or already used.";
-                SessionMgr.Instance.CloseAfterNextResponse(session);
-                return response;
-            }
-
-            if (!TryBindAuthenticatedGameSession(
-                    session,
-                    accountId,
-                    authSessionId,
-                    sessionVersion))
-            {
-                response.status = (int)Respones.AccountIsNotLogin;
-                response.errorMessage = "The game ticket belongs to a superseded login session.";
-                SessionMgr.Instance.CloseAfterNextResponse(session);
-                return response;
-            }
-
-            response.status = (int)Respones.OK;
-            response.accountId = accountId;
-            return response;
         }
 
         public string CreateLoginSession(long accountId)
@@ -193,24 +147,21 @@ namespace Game.Entries.Modules
             }
         }
 
-        public bool TryIssueGameTicket(string accessToken, int serverId, out string ticket, out long expiresAt)
+        public IssueGameTicketResult IssueGameTicket(string accessToken, int serverId)
         {
-            ticket = null;
-            expiresAt = 0;
-            if (serverId <= 0 ||
-                !TryValidateAccessToken(accessToken, out long accountId, out string sessionId,
-                    out long sessionVersion))
+            AccessTokenValidationResult validation = ValidateAccessToken(accessToken);
+            if (serverId <= 0 || !validation.IsSuccess)
             {
-                return false;
+                return new IssueGameTicketResult { Status = AuthOperationStatus.InvalidAccessToken };
             }
 
             long issuedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            expiresAt = issuedAt + (long)ticketLifetime.TotalSeconds;
+            long expiresAt = issuedAt + (long)ticketLifetime.TotalSeconds;
             string nonce = CreateRandomToken();
             string payload = string.Join("|",
-                accountId.ToString(CultureInfo.InvariantCulture),
-                sessionId,
-                sessionVersion.ToString(CultureInfo.InvariantCulture),
+                validation.AccountId.ToString(CultureInfo.InvariantCulture),
+                validation.SessionId,
+                validation.SessionVersion.ToString(CultureInfo.InvariantCulture),
                 serverId.ToString(CultureInfo.InvariantCulture),
                 issuedAt.ToString(CultureInfo.InvariantCulture),
                 expiresAt.ToString(CultureInfo.InvariantCulture),
@@ -218,26 +169,51 @@ namespace Game.Entries.Modules
 
             string encodedPayload = Base64UrlEncode(Encoding.UTF8.GetBytes(payload));
             byte[] signature = HMACSHA256.HashData(ticketHmacKey, Encoding.ASCII.GetBytes(encodedPayload));
-            ticket = TicketVersion + "." + encodedPayload + "." + Base64UrlEncode(signature);
-            return true;
+            return new IssueGameTicketResult
+            {
+                Status = AuthOperationStatus.Success,
+                Ticket = TicketVersion + "." + encodedPayload + "." + Base64UrlEncode(signature),
+                ExpiresAtUnixSeconds = expiresAt
+            };
         }
 
-        public bool TryConsumeGameTicket(string ticket, int serverId, out long accountId, out string sessionId,
-            out long sessionVersion)
+        public GameAuthenticationResult AuthenticateGameSession(
+            IdSession connection,
+            string ticket,
+            int serverId)
         {
-            accountId = 0;
-            sessionId = null;
-            sessionVersion = 0;
+            AccessTokenValidationResult ticketResult = ConsumeGameTicket(ticket, serverId);
+            if (!ticketResult.IsSuccess)
+                return new GameAuthenticationResult { Status = AuthOperationStatus.InvalidGameTicket };
+
+            if (!TryBindAuthenticatedGameSession(
+                    connection,
+                    ticketResult.AccountId,
+                    ticketResult.SessionId,
+                    ticketResult.SessionVersion))
+            {
+                return new GameAuthenticationResult { Status = AuthOperationStatus.SupersededSession };
+            }
+
+            return new GameAuthenticationResult
+            {
+                Status = AuthOperationStatus.Success,
+                AccountId = ticketResult.AccountId
+            };
+        }
+
+        private AccessTokenValidationResult ConsumeGameTicket(string ticket, int serverId)
+        {
             if (serverId <= 0 || string.IsNullOrWhiteSpace(ticket) || ticket.Length > 2048 || ticketHmacKey == null)
             {
-                return false;
+                return InvalidTicket();
             }
 
             string[] ticketParts = ticket.Split('.');
             if (ticketParts.Length != 3 || ticketParts[0] != TicketVersion ||
                 !TryBase64UrlDecode(ticketParts[2], out byte[] suppliedSignature))
             {
-                return false;
+                return InvalidTicket();
             }
 
             byte[] expectedSignature = HMACSHA256.HashData(
@@ -245,18 +221,15 @@ namespace Game.Entries.Modules
             if (suppliedSignature.Length != expectedSignature.Length ||
                 !CryptographicOperations.FixedTimeEquals(suppliedSignature, expectedSignature))
             {
-                return false;
+                return InvalidTicket();
             }
 
             if (!TryBase64UrlDecode(ticketParts[1], out byte[] payloadBytes) ||
-                !TryDecodeTicket(Encoding.UTF8.GetString(payloadBytes), out accountId, out sessionId,
-                    out sessionVersion, out int ticketServerId, out long issuedAt, out long expiresAt,
+                !TryDecodeTicket(Encoding.UTF8.GetString(payloadBytes), out long accountId, out string sessionId,
+                    out long sessionVersion, out int ticketServerId, out long issuedAt, out long expiresAt,
                     out string nonce))
             {
-                accountId = 0;
-                sessionId = null;
-                sessionVersion = 0;
-                return false;
+                return InvalidTicket();
             }
 
             long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -264,57 +237,63 @@ namespace Game.Entries.Modules
             if (ticketServerId != serverId || issuedAt > now + 5 || expiresAt <= now ||
                 expiresAt - issuedAt != maximumLifetime || issuedAt < processStartedAtUnixSeconds)
             {
-                accountId = 0;
-                sessionId = null;
-                sessionVersion = 0;
-                return false;
+                return InvalidTicket();
             }
 
             CleanupExpiredEntries(now);
             if (!consumedNonces.TryAdd(nonce, expiresAt))
             {
-                accountId = 0;
-                sessionId = null;
-                sessionVersion = 0;
-                return false;
+                return InvalidTicket();
             }
 
-            return true;
+            return new AccessTokenValidationResult
+            {
+                Status = AuthOperationStatus.Success,
+                AccountId = accountId,
+                SessionId = sessionId,
+                SessionVersion = sessionVersion
+            };
         }
 
-        public bool TryValidateAccessToken(string accessToken, out long accountId, out string sessionId)
+        private static AccessTokenValidationResult InvalidTicket()
         {
-            return TryValidateAccessToken(accessToken, out accountId, out sessionId, out _);
+            return new AccessTokenValidationResult { Status = AuthOperationStatus.InvalidGameTicket };
         }
 
-        private bool TryValidateAccessToken(string accessToken, out long accountId, out string sessionId,
-            out long sessionVersion)
+        public AccessTokenValidationResult ValidateAccessToken(string accessToken)
         {
-            accountId = 0;
-            sessionId = null;
-            sessionVersion = 0;
-            if (string.IsNullOrWhiteSpace(accessToken) || accessToken.Length > 512) return false;
+            if (string.IsNullOrWhiteSpace(accessToken) || accessToken.Length > 512)
+                return InvalidAccessToken();
 
             long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             CleanupExpiredEntries(now);
             string tokenHash = HashToken(accessToken);
-            if (!accessSessions.TryGetValue(tokenHash, out LoginSession loginSession)) return false;
+            if (!accessSessions.TryGetValue(tokenHash, out LoginSession loginSession))
+                return InvalidAccessToken();
             if (loginSession.ExpiresAtUnixSeconds <= now)
             {
                 accessSessions.TryRemove(tokenHash, out _);
-                return false;
+                return InvalidAccessToken();
             }
             if (!currentSessions.TryGetValue(loginSession.AccountId, out LoginSession currentSession) ||
                 !string.Equals(currentSession.SessionId, loginSession.SessionId, StringComparison.Ordinal) ||
                 currentSession.SessionVersion != loginSession.SessionVersion)
             {
-                return false;
+                return InvalidAccessToken();
             }
 
-            accountId = loginSession.AccountId;
-            sessionId = loginSession.SessionId;
-            sessionVersion = loginSession.SessionVersion;
-            return true;
+            return new AccessTokenValidationResult
+            {
+                Status = AuthOperationStatus.Success,
+                AccountId = loginSession.AccountId,
+                SessionId = loginSession.SessionId,
+                SessionVersion = loginSession.SessionVersion
+            };
+        }
+
+        private static AccessTokenValidationResult InvalidAccessToken()
+        {
+            return new AccessTokenValidationResult { Status = AuthOperationStatus.InvalidAccessToken };
         }
 
         private void CleanupExpiredEntries(long now)
@@ -360,36 +339,25 @@ namespace Game.Entries.Modules
             }
         }
 
-        public bool TryApplySessionInvalidation(string requestBody)
+        public bool ApplySessionInvalidation(SessionInvalidationCommand command)
         {
-            if (string.IsNullOrWhiteSpace(requestBody) || requestBody.Length > 2048) return false;
-            string[] parts = requestBody.Split('|');
-            if (parts.Length != 6 ||
-                !long.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out long accountId) ||
-                !long.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out long sessionVersion) ||
-                !long.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out long timestamp) ||
-                accountId <= 0 || sessionVersion <= 0 || string.IsNullOrWhiteSpace(parts[2]) ||
-                string.IsNullOrWhiteSpace(parts[4]) || !TryBase64UrlDecode(parts[5], out byte[] suppliedSignature))
-            {
-                return false;
-            }
-
-            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (timestamp < now - 30 || timestamp > now + 30) return false;
-
-            string unsignedBody = string.Join("|", parts[0], parts[1], parts[2], parts[3], parts[4]);
+            string unsignedBody = BuildInvalidationUnsignedBody(
+                command.AccountId,
+                command.SessionVersion,
+                command.SessionId,
+                command.Timestamp,
+                command.Nonce);
             byte[] expectedSignature = ComputeHmac(InvalidationPurpose + unsignedBody);
-            if (suppliedSignature.Length != expectedSignature.Length ||
-                !CryptographicOperations.FixedTimeEquals(suppliedSignature, expectedSignature))
+            if (command.Signature.Length != expectedSignature.Length ||
+                !CryptographicOperations.FixedTimeEquals(command.Signature, expectedSignature))
             {
                 return false;
             }
 
-            string sessionId = parts[2];
             lock (gameSessionLock)
             {
-                if (!TryAcceptGameSession(accountId, sessionId, sessionVersion)) return true;
-                SessionMgr.Instance.KickSupersededSession(accountId, sessionId);
+                if (!TryAcceptGameSession(command.AccountId, command.SessionId, command.SessionVersion)) return true;
+                SessionMgr.Instance.KickSupersededSession(command.AccountId, command.SessionId);
                 return true;
             }
         }
@@ -416,13 +384,21 @@ namespace Game.Entries.Modules
             if (string.IsNullOrWhiteSpace(gameSessionNotifyUrl)) return;
 
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            string unsignedBody = string.Join("|",
-                session.AccountId.ToString(CultureInfo.InvariantCulture),
-                session.SessionVersion.ToString(CultureInfo.InvariantCulture),
-                session.SessionId,
-                timestamp.ToString(CultureInfo.InvariantCulture),
-                CreateRandomToken());
-            string requestBody = unsignedBody + "|" + Base64UrlEncode(ComputeHmac(InvalidationPurpose + unsignedBody));
+            string nonce = CreateRandomToken();
+            string unsignedBody = BuildInvalidationUnsignedBody(
+                session.AccountId, session.SessionVersion, session.SessionId, timestamp, nonce);
+            var request = new ReqInvalidateAccountSession
+            {
+                accountId = session.AccountId,
+                sessionVersion = session.SessionVersion,
+                sessionId = session.SessionId,
+                timestamp = timestamp,
+                nonce = nonce,
+                signature = ComputeHmac(InvalidationPurpose + unsignedBody)
+            };
+            byte[] packet = MessagePusher.PackMessage(request, 0);
+            if (packet == null) return;
+            string requestBody = Convert.ToBase64String(packet);
 
             try
             {
@@ -443,6 +419,15 @@ namespace Game.Entries.Modules
         {
             return HMACSHA256.HashData(ticketHmacKey, Encoding.UTF8.GetBytes(value));
         }
+
+        private static string BuildInvalidationUnsignedBody(
+            long accountId, long sessionVersion, string sessionId, long timestamp, string nonce) =>
+            string.Join("|",
+                accountId.ToString(CultureInfo.InvariantCulture),
+                sessionVersion.ToString(CultureInfo.InvariantCulture),
+                sessionId,
+                timestamp.ToString(CultureInfo.InvariantCulture),
+                nonce);
 
         private static bool TryDecodeTicket(string value, out long accountId, out string sessionId,
             out long sessionVersion, out int serverId, out long issuedAt, out long expiresAt, out string nonce)

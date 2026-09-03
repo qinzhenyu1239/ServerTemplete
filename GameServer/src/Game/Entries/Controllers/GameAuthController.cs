@@ -10,6 +10,6 @@ namespace Game.Entries.Controllers
     {
         [RequestMapping]
         public object DoReqGameAuthenticate(IdSession session, ReqGameAuthenticate request) =>
-            AuthSessionModule.Instance.HandlerReqGameAuthenticate(session, request);
+            GameAuthModule.Instance.HandlerReqGameAuthenticate(session, request);
     }
 }

@@ -1,0 +1,11 @@
+[2026-09-02 13:44:23.8413] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:56267 method=GET uri=/PullingServerZone bytes=0 
+[2026-09-02 13:44:23.8413] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:56267 status=200 bytes=345 
+[2026-09-02 13:44:23.9409] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:56269 method=GET uri=/PullingServerDirectConnConfig bytes=0 
+[2026-09-02 13:44:23.9409] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:56269 status=200 bytes=383 
+[2026-09-02 14:45:24.5553] [MESSAGE] [RECV] transport=TCP remote=[::ffff:127.0.0.1]:58486 module=104 cmd=75 routeTag=0 requestId=0 logicServerId=0 bytes=24 
+[2026-09-02 15:23:40.3139] [MESSAGE] [RECV] transport=TCP remote=[::ffff:127.0.0.1]:59449 module=101 cmd=1005 routeTag=0 requestId=0 logicServerId=0 bytes=27 
+[2026-09-02 15:23:40.5254] [MESSAGE] [SEND] transport=TCP remote=[::ffff:127.0.0.1]:59449 module=101 cmd=1006 routeTag=0 requestId=0 logicServerId=0 bytes=88 
+[2026-09-02 15:24:21.2624] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:59522 method=POST uri=/ReqIssueGameTicket bytes=0 
+[2026-09-02 15:24:21.3218] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:59522 status=200 bytes=33 
+[2026-09-02 15:24:32.8829] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:59528 method=POST uri=/ReqIssueGameTicket bytes=0 
+[2026-09-02 15:24:32.8829] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:59528 status=200 bytes=33 

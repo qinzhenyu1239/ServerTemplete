@@ -42,6 +42,9 @@
         eGameAuthenticateReq = 1005,
         eGameAuthenticateRes = 1006,
 
+        // 登录服通知游戏服淘汰旧认证会话
+        eInvalidateAccountSessionReq = 1007,
+
         // 游客账号升级
         eGuestUpgradeReq = 7,
         eGuestUpgradeRes = 8,

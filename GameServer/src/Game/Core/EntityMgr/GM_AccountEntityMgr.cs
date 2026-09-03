@@ -1,11 +1,14 @@
 using Framework.Core.Utils;
 using Game.Core.Db;
+using Game.Core.GM_Auth;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
 using Game.Datas.Messages;
 using Game.Utils;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Game.Core.EntityMgr
@@ -23,17 +26,24 @@ namespace Game.Core.EntityMgr
         private ConcurrentDictionary<string, long> accountIdsByUsername;
         private ConcurrentDictionary<string, long> accountIdsByGuestKey;
         private ConcurrentDictionary<long, long> accountIdsByPlayerId;
-        private ConcurrentDictionary<string, object> creationLocks;
+        private readonly object creationLocksSync = new();
+        private readonly Dictionary<string, CreationLock> creationLocks =
+            new(StringComparer.Ordinal);
+
+        private sealed class CreationLock
+        {
+            public readonly SemaphoreSlim Semaphore = new(1, 1);
+            public int ReferenceCount;
+        }
 
         private GM_AccountEntityMgr() => Init();
 
         public void Init()
         {
             accounts = new ConcurrentDictionary<long, GM_AccountEntity>();
-            accountIdsByUsername = new ConcurrentDictionary<string, long>(StringComparer.Ordinal);
+            accountIdsByUsername = new ConcurrentDictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             accountIdsByGuestKey = new ConcurrentDictionary<string, long>(StringComparer.Ordinal);
             accountIdsByPlayerId = new ConcurrentDictionary<long, long>();
-            creationLocks = new ConcurrentDictionary<string, object>(StringComparer.Ordinal);
         }
 
         public GM_AccountEntity Get(long accountId)
@@ -75,6 +85,38 @@ namespace Game.Core.EntityMgr
             return account == null ? null : AttachAccount(account).uAccount.accountInfo;
         }
 
+        public async Task<Account> GetOrCreateAccountAsync(string username, string password, int channel)
+        {
+            Account account = await GetAccountByUsernameAsync(username);
+            if (account != null) return account;
+
+            string lockKey = "account:" + username.ToUpperInvariant();
+            CreationLock creationLock = RetainCreationLock(lockKey);
+            await creationLock.Semaphore.WaitAsync();
+            try
+            {
+                account = await GetAccountByUsernameAsync(username);
+                if (account != null) return account;
+
+                account = await CreateAccountAsync(new AccountRegistrationCommand
+                {
+                    Username = username,
+                    Password = password,
+                    Channel = channel
+                });
+                if (account != null) return account;
+
+                // A database unique key remains the final cross-process guard. If another
+                // login-server instance won the insert race, attach the committed row.
+                return await GetAccountByUsernameAsync(username);
+            }
+            finally
+            {
+                creationLock.Semaphore.Release();
+                ReleaseCreationLock(lockKey, creationLock);
+            }
+        }
+
         public Account GetAccountByGuestKey(string guestKey)
         {
             if (string.IsNullOrWhiteSpace(guestKey)) return null;
@@ -92,18 +134,17 @@ namespace Game.Core.EntityMgr
             Account existing = GetAccountByGuestKey(guestKey);
             if (existing != null) return existing;
 
-            object creationLock = creationLocks.GetOrAdd("guest:" + guestKey, _ => new object());
+            string lockKey = "guest:" + guestKey;
+            CreationLock creationLock = RetainCreationLock(lockKey);
+            creationLock.Semaphore.Wait();
             try
             {
-                lock (creationLock)
-                {
-                    existing = GetAccountByGuestKey(guestKey);
-                    if (existing != null) return existing;
+                existing = GetAccountByGuestKey(guestKey);
+                if (existing != null) return existing;
 
-                    Account account = BuildGuestAccount(guestKey, channel);
-                    if (InsertAccount(account) != 1) return null;
-                    return AttachAccount(account).uAccount.accountInfo;
-                }
+                Account account = BuildGuestAccount(guestKey, channel);
+                if (InsertAccount(account) != 1) return null;
+                return AttachAccount(account).uAccount.accountInfo;
             }
             catch (Exception exception)
             {
@@ -112,77 +153,113 @@ namespace Game.Core.EntityMgr
             }
             finally
             {
-                creationLocks.TryRemove("guest:" + guestKey, out _);
+                creationLock.Semaphore.Release();
+                ReleaseCreationLock(lockKey, creationLock);
             }
         }
 
-        public Account CreateAccount(ReqRegisterUser request)
+        private CreationLock RetainCreationLock(string key)
+        {
+            lock (creationLocksSync)
+            {
+                if (!creationLocks.TryGetValue(key, out CreationLock creationLock))
+                {
+                    creationLock = new CreationLock();
+                    creationLocks.Add(key, creationLock);
+                }
+
+                creationLock.ReferenceCount++;
+                return creationLock;
+            }
+        }
+
+        private void ReleaseCreationLock(string key, CreationLock creationLock)
+        {
+            lock (creationLocksSync)
+            {
+                creationLock.ReferenceCount--;
+                if (creationLock.ReferenceCount == 0 &&
+                    creationLocks.TryGetValue(key, out CreationLock current) &&
+                    ReferenceEquals(current, creationLock))
+                {
+                    creationLocks.Remove(key);
+                    creationLock.Semaphore.Dispose();
+                }
+            }
+        }
+
+        public Account CreateAccount(AccountRegistrationCommand command)
         {
             try
             {
-                Account account = BuildAccount(request);
+                Account account = BuildAccount(command);
                 if (InsertAccount(account) != 1) return null;
                 return AttachAccount(account).uAccount.accountInfo;
             }
             catch (Exception exception)
             {
-                logger.Error(exception, $"Create account failed: username[{request?.uname}]");
+                logger.Error(exception, $"Create account failed: username[{command?.Username}]");
                 return null;
             }
         }
 
-        public async Task<Account> CreateAccountAsync(ReqRegisterUser request)
+        public async Task<Account> CreateAccountAsync(AccountRegistrationCommand command)
         {
             try
             {
-                Account account = BuildAccount(request);
+                Account account = BuildAccount(command);
                 if (await InsertAccountAsync(account) != 1) return null;
                 return AttachAccount(account).uAccount.accountInfo;
             }
             catch (Exception exception)
             {
-                logger.Error(exception, $"Create account failed: username[{request?.uname}]");
+                logger.Error(exception, $"Create account failed: username[{command?.Username}]");
                 return null;
             }
         }
 
-        public bool UpgradeGuestAccount(
-            long accountId,
-            string username,
-            string passwordHash,
-            string nickname,
-            out Account account)
+        public Account UpgradeGuestAccount(GuestAccountUpgradeCommand command)
         {
-            account = GetAccountById(accountId);
-            if (account == null || account.is_guest != 1) return false;
+            Account account = GetAccountById(command.AccountId);
+            if (account == null || account.is_guest != 1) return null;
 
-            GM_AccountEntity entity = accounts[accountId];
+            GM_AccountEntity entity = accounts[command.AccountId];
             lock (entity.syncRoot)
             {
                 string oldGuestKey = account.guest_key;
+                string passwordHash = UtilsHelper.Md5(command.Password);
                 try
                 {
                     if (UpdateGuestAccountInDatabase(
-                            accountId, username, passwordHash, nickname) != 1)
+                            command.AccountId,
+                            command.Username,
+                            passwordHash,
+                            command.Nickname) != 1)
                     {
-                        return false;
+                        return null;
                     }
                 }
                 catch (Exception exception)
                 {
-                    logger.Error(exception, $"Upgrade guest account failed: accountId[{accountId}]");
-                    return false;
+                    logger.Error(exception, $"Upgrade guest account failed: accountId[{command.AccountId}]");
+                    return null;
                 }
 
                 account.is_guest = 0;
                 account.guest_key = string.Empty;
-                account.uname = username;
+                account.uname = command.Username;
                 account.upwd = passwordHash;
-                account.unick = nickname;
+                account.unick = command.Nickname;
                 if (!string.IsNullOrEmpty(oldGuestKey)) accountIdsByGuestKey.TryRemove(oldGuestKey, out _);
-                accountIdsByUsername[username] = accountId;
-                return true;
+                accountIdsByUsername[command.Username] = command.AccountId;
+                return account;
             }
+        }
+
+        public bool VerifyPassword(Account account, string password)
+        {
+            return account != null && !string.IsNullOrEmpty(password) &&
+                   string.Equals(account.upwd, UtilsHelper.Md5(password), StringComparison.Ordinal);
         }
 
         public Player GetPlayerById(long playerId)
@@ -339,7 +416,7 @@ namespace Game.Core.EntityMgr
             };
         }
 
-        private static Account BuildAccount(ReqRegisterUser request)
+        private static Account BuildAccount(AccountRegistrationCommand command)
         {
             int face = GameUtils.Random(0, 6);
             return new Account
@@ -347,13 +424,13 @@ namespace Game.Core.EntityMgr
                 uid = IdGenerator.GetNextId(),
                 guest_key = string.Empty,
                 is_guest = 0,
-                uchannel = request.channal,
+                uchannel = command.Channel,
                 unick = "用户" + GameUtils.Random(1000, 10000),
                 uface = face,
                 usex = face < 3 ? 1 : 0,
                 status = 0,
-                uname = request.uname,
-                upwd = UtilsHelper.Md5(request.upwd)
+                uname = command.Username,
+                upwd = UtilsHelper.Md5(command.Password)
             };
         }
 

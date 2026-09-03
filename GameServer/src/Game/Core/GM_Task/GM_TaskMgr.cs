@@ -1,6 +1,4 @@
-﻿
-
-using Framework.Core.Utils;
+﻿using Framework.Core.Utils;
 using Game.Core.Db;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;

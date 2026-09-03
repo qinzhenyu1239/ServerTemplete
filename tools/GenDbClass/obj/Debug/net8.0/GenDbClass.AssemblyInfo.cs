@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GenDbClass")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+166235c48a6977d423903e850143723405c40891")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f0427efae92c33b8572723a7e1b831a5a2b476b1")]
 [assembly: System.Reflection.AssemblyProductAttribute("GenDbClass")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GenDbClass")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

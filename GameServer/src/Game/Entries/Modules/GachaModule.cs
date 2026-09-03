@@ -74,7 +74,8 @@ namespace Game.Entries.Modules
                 };
             }
 
-            return GM_GachaMgr.Instance.GetPoolInfo(playerId, pool);
+            GachaPoolInfoResult result = GM_GachaMgr.Instance.GetPoolInfo(playerId, pool);
+            return MapPoolInfoResponse(result);
         }
 
         public ResGachaDraw HandlerDraw(IdSession session, ReqGachaDraw request, long playerId)
@@ -121,7 +122,79 @@ namespace Game.Entries.Modules
                 };
             }
 
-            return GM_GachaMgr.Instance.Draw(playerId, pool, request.drawCount);
+            GachaDrawResult result = GM_GachaMgr.Instance.Draw(playerId, pool, request.drawCount);
+            return MapDrawResponse(result);
+        }
+
+        private static ResGetGachaPoolInfo MapPoolInfoResponse(GachaPoolInfoResult result)
+        {
+            if (result.Status != GachaOperationStatus.Success)
+            {
+                return new ResGetGachaPoolInfo
+                {
+                    status = (int)Respones.GachaFailed,
+                    errorMessage = "Failed to query gacha pool information."
+                };
+            }
+
+            return new ResGetGachaPoolInfo
+            {
+                status = (int)Respones.OK,
+                poolId = result.PoolId,
+                smallPityCount = result.SmallPityCount,
+                smallPityMax = result.SmallPityMax,
+                bigPityCount = result.BigPityCount,
+                bigPityMax = result.BigPityMax,
+                totalDrawCount = result.TotalDrawCount,
+                ticketItemId = result.TicketItemId,
+                ticketQuantity = result.TicketQuantity,
+                diamondItemId = result.DiamondItemId,
+                diamondQuantity = result.DiamondQuantity,
+                diamondCostPerDraw = result.DiamondCostPerDraw,
+                ownedCharacterIds = result.OwnedCharacterIds?.ToList() ?? new List<int>()
+            };
+        }
+
+        private static ResGachaDraw MapDrawResponse(GachaDrawResult result)
+        {
+            if (result.Status == GachaOperationStatus.ResourceNotEnough)
+            {
+                return new ResGachaDraw
+                {
+                    status = (int)Respones.GachaResourceNotEnough,
+                    errorMessage = "Gacha currency is not enough."
+                };
+            }
+            if (result.Status != GachaOperationStatus.Success)
+            {
+                return new ResGachaDraw
+                {
+                    status = (int)Respones.GachaFailed,
+                    errorMessage = "Gacha draw failed and was rolled back."
+                };
+            }
+
+            return new ResGachaDraw
+            {
+                status = (int)Respones.OK,
+                batchId = result.BatchId,
+                usedTicketCount = result.UsedTicketCount,
+                usedDiamondCount = result.UsedDiamondCount,
+                ticketQuantity = result.TicketQuantity,
+                diamondQuantity = result.DiamondQuantity,
+                smallPityCount = result.SmallPityCount,
+                bigPityCount = result.BigPityCount,
+                totalDrawCount = result.TotalDrawCount,
+                results = result.Rewards?.Select(reward => new GachaResultItem
+                {
+                    drawIndex = reward.DrawIndex,
+                    characterId = reward.CharacterId,
+                    rarity = reward.Rarity,
+                    isNewCharacter = reward.IsNewCharacter,
+                    fragmentItemId = reward.FragmentItemId,
+                    fragmentNum = reward.FragmentNum
+                }).ToList() ?? new List<GachaResultItem>()
+            };
         }
 
         private static IReadOnlyDictionary<int, GachaPoolDefinition> BuildPools(

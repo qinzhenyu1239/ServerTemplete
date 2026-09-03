@@ -3,7 +3,6 @@ using Game.Core.Db;
 using Game.Core.EntityMgr;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
-using Game.Datas.Messages;
 using SqlSugar;
 using System;
 using System.Collections.Concurrent;
@@ -19,12 +18,22 @@ namespace Game.Core.GM_Gacha
     public sealed class GM_GachaMgr
     {
         public static readonly GM_GachaMgr Instance = new GM_GachaMgr();
-        private readonly ConcurrentDictionary<long, object> playerLocks = new ConcurrentDictionary<long, object>();
+        private readonly ConcurrentDictionary<long, PlayerLockEntry> playerLocks =
+            new ConcurrentDictionary<long, PlayerLockEntry>();
         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         private GM_GachaMgr() { }
 
-        public ResGetGachaPoolInfo GetPoolInfo(long playerId, GachaPoolDefinition pool)
+        public GachaPoolInfoResult GetPoolInfo(long playerId, GachaPoolDefinition pool)
+        {
+            using PlayerLockLease playerLock = AcquirePlayerLock(playerId);
+            lock (playerLock.SyncRoot)
+            {
+                return GetPoolInfoLocked(playerId, pool);
+            }
+        }
+
+        private GachaPoolInfoResult GetPoolInfoLocked(long playerId, GachaPoolDefinition pool)
         {
             try
             {
@@ -42,44 +51,41 @@ namespace Game.Core.GM_Gacha
                 PutGachaState(playerId, state);
                 ReplaceCharacters(playerId, ownedCharacterIds);
 
-                return new ResGetGachaPoolInfo
+                return new GachaPoolInfoResult
                 {
-                    status = (int)Respones.OK,
-                    poolId = pool.PoolId,
-                    smallPityCount = state.small_pity_count,
-                    smallPityMax = pool.SmallPityCount,
-                    bigPityCount = state.big_pity_count,
-                    bigPityMax = pool.BigPityCount,
-                    totalDrawCount = state.total_draw_count,
-                    ticketItemId = pool.TicketItemId,
-                    ticketQuantity = ticketQuantity,
-                    diamondItemId = pool.DiamondItemId,
-                    diamondQuantity = diamondQuantity,
-                    diamondCostPerDraw = pool.DiamondCostPerDraw,
-                    ownedCharacterIds = ownedCharacterIds
+                    Status = GachaOperationStatus.Success,
+                    PoolId = pool.PoolId,
+                    SmallPityCount = state.small_pity_count,
+                    SmallPityMax = pool.SmallPityCount,
+                    BigPityCount = state.big_pity_count,
+                    BigPityMax = pool.BigPityCount,
+                    TotalDrawCount = state.total_draw_count,
+                    TicketItemId = pool.TicketItemId,
+                    TicketQuantity = ticketQuantity,
+                    DiamondItemId = pool.DiamondItemId,
+                    DiamondQuantity = diamondQuantity,
+                    DiamondCostPerDraw = pool.DiamondCostPerDraw,
+                    OwnedCharacterIds = ownedCharacterIds
                 };
             }
             catch (Exception exception)
             {
                 logger.Error(exception, $"Failed to query gacha pool {pool.PoolId} for player {playerId}.");
                 InvalidateComponents(playerId);
-                return new ResGetGachaPoolInfo
-                {
-                    status = (int)Respones.GachaFailed,
-                    errorMessage = "Failed to query gacha pool information."
-                };
+                return new GachaPoolInfoResult { Status = GachaOperationStatus.Failed };
             }
         }
 
-        public ResGachaDraw Draw(long playerId, GachaPoolDefinition pool, int drawCount)
+        public GachaDrawResult Draw(long playerId, GachaPoolDefinition pool, int drawCount)
         {
-            lock (playerLocks.GetOrAdd(playerId, _ => new object()))
+            using PlayerLockLease playerLock = AcquirePlayerLock(playerId);
+            lock (playerLock.SyncRoot)
             {
                 return DrawLocked(playerId, pool, drawCount);
             }
         }
 
-        private ResGachaDraw DrawLocked(long playerId, GachaPoolDefinition pool, int drawCount)
+        private GachaDrawResult DrawLocked(long playerId, GachaPoolDefinition pool, int drawCount)
         {
             using SqlSugarClient db = DBService.Instance.GetGameInstance();
             try
@@ -96,18 +102,14 @@ namespace Game.Core.GM_Gacha
                 if (diamondQuantity < usedDiamonds)
                 {
                     db.Ado.RollbackTran();
-                    return new ResGachaDraw
-                    {
-                        status = (int)Respones.GachaResourceNotEnough,
-                        errorMessage = "Gacha currency is not enough."
-                    };
+                    return new GachaDrawResult { Status = GachaOperationStatus.ResourceNotEnough };
                 }
 
                 DeductItem(db, playerId, pool.TicketItemId, usedTickets);
                 DeductItem(db, playerId, pool.DiamondItemId, usedDiamonds);
 
                 long batchId = IdGenerator.GetNextId();
-                var results = new List<GachaResultItem>(drawCount);
+                var results = new List<GachaDrawRewardResult>(drawCount);
                 var fragmentChanges = new Dictionary<int, long>();
                 var newCharacters = new HashSet<int>();
 
@@ -140,14 +142,14 @@ namespace Game.Core.GM_Gacha
                     if (rarity == pool.SmallPityRarity) state.small_pity_count = 0;
                     if (rarity == pool.BigPityRarity) state.big_pity_count = 0;
 
-                    results.Add(new GachaResultItem
+                    results.Add(new GachaDrawRewardResult
                     {
-                        drawIndex = index,
-                        characterId = reward.CharacterId,
-                        rarity = rarity,
-                        isNewCharacter = isNewCharacter,
-                        fragmentItemId = fragmentItemId,
-                        fragmentNum = fragmentNum
+                        DrawIndex = index,
+                        CharacterId = reward.CharacterId,
+                        Rarity = rarity,
+                        IsNewCharacter = isNewCharacter,
+                        FragmentItemId = fragmentItemId,
+                        FragmentNum = fragmentNum
                     });
 
                     InsertGachaRecord(db, new Player_gacha_record
@@ -177,18 +179,18 @@ namespace Game.Core.GM_Gacha
                     playerId, state, pool, remainingTickets, remainingDiamonds,
                     fragmentChanges, newCharacters);
 
-                return new ResGachaDraw
+                return new GachaDrawResult
                 {
-                    status = (int)Respones.OK,
-                    batchId = batchId,
-                    usedTicketCount = usedTickets,
-                    usedDiamondCount = usedDiamonds,
-                    ticketQuantity = remainingTickets,
-                    diamondQuantity = remainingDiamonds,
-                    smallPityCount = state.small_pity_count,
-                    bigPityCount = state.big_pity_count,
-                    totalDrawCount = state.total_draw_count,
-                    results = results
+                    Status = GachaOperationStatus.Success,
+                    BatchId = batchId,
+                    UsedTicketCount = usedTickets,
+                    UsedDiamondCount = usedDiamonds,
+                    TicketQuantity = remainingTickets,
+                    DiamondQuantity = remainingDiamonds,
+                    SmallPityCount = state.small_pity_count,
+                    BigPityCount = state.big_pity_count,
+                    TotalDrawCount = state.total_draw_count,
+                    Rewards = results
                 };
             }
             catch (Exception exception)
@@ -197,11 +199,34 @@ namespace Game.Core.GM_Gacha
                 catch (Exception rollbackException) { logger.Error(rollbackException); }
                 logger.Error(exception, $"Gacha draw failed for player {playerId}, pool {pool.PoolId}.");
                 InvalidateComponents(playerId);
-                return new ResGachaDraw
+                return new GachaDrawResult { Status = GachaOperationStatus.Failed };
+            }
+        }
+
+        private PlayerLockLease AcquirePlayerLock(long playerId)
+        {
+            while (true)
+            {
+                PlayerLockEntry entry = playerLocks.GetOrAdd(playerId, _ => new PlayerLockEntry());
+                lock (entry.LifecycleGate)
                 {
-                    status = (int)Respones.GachaFailed,
-                    errorMessage = "Gacha draw failed and was rolled back."
-                };
+                    if (entry.IsRemoved) continue;
+                    entry.ReferenceCount++;
+                    return new PlayerLockLease(this, playerId, entry);
+                }
+            }
+        }
+
+        private void ReleasePlayerLock(long playerId, PlayerLockEntry entry)
+        {
+            lock (entry.LifecycleGate)
+            {
+                entry.ReferenceCount--;
+                if (entry.ReferenceCount != 0) return;
+
+                entry.IsRemoved = true;
+                ((ICollection<KeyValuePair<long, PlayerLockEntry>>)playerLocks)
+                    .Remove(new KeyValuePair<long, PlayerLockEntry>(playerId, entry));
             }
         }
 
@@ -496,6 +521,38 @@ namespace Game.Core.GM_Gacha
             entity.uItem.quantities = null;
             entity.uCharacter.characterIds = null;
             GachaComponent.Invalidate(entity);
+        }
+
+        private sealed class PlayerLockEntry
+        {
+            public object LifecycleGate { get; } = new object();
+            public object SyncRoot { get; } = new object();
+            public int ReferenceCount { get; set; }
+            public bool IsRemoved { get; set; }
+        }
+
+        private sealed class PlayerLockLease : IDisposable
+        {
+            private GM_GachaMgr owner;
+            private readonly long playerId;
+            private readonly PlayerLockEntry entry;
+
+            public PlayerLockLease(GM_GachaMgr owner, long playerId, PlayerLockEntry entry)
+            {
+                this.owner = owner;
+                this.playerId = playerId;
+                this.entry = entry;
+            }
+
+            public object SyncRoot => entry.SyncRoot;
+
+            public void Dispose()
+            {
+                GM_GachaMgr currentOwner = owner;
+                if (currentOwner == null) return;
+                owner = null;
+                currentOwner.ReleasePlayerLock(playerId, entry);
+            }
         }
 
     }

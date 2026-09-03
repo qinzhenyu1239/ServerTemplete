@@ -4,6 +4,7 @@ using Framework.Core.task;
 using Game.Core.Configs;
 using Game.Core.Db;
 using Game.Core.EntityMgr;
+using Game.Core.GM_Auth;
 using Game.Core.GM_Backpack;
 using Game.Core.GM_Bonues;
 using Game.Core.GM_MailMessage;
@@ -116,7 +117,7 @@ namespace Game
         {
             if (role == ServerRole.ServerZone)
             {
-                HttpServerZoneModule.Instance.Init();
+                ServerZoneModule.Instance.Init();
                 return;
             }
 
@@ -125,14 +126,14 @@ namespace Game
             GM_AccountEntityMgr.Instance.Init();
             if (role == ServerRole.Login)
             {
-                AuthSessionModule.Instance.Init();
+                GM_AuthSessionMgr.Instance.Init();
                 return;
             }
 
             ConfigMgr.Instance.Init();
             GachaModule.Instance.Init();
-            HttpServerZoneModule.Instance.Init();
-            HttpServerDirectConnModule.Instance.Init();
+            ServerZoneModule.Instance.Init();
+            ServerDirectConnModule.Instance.Init();
             RuleProcesserFactory.Init();
             GM_EntityMgr.Instance.Init();
             GM_SkillMgr.Instance.Init();
@@ -144,7 +145,7 @@ namespace Game
             GM_BackpackMgr.Instance.Init();
             GM_TradingMgr.Instance.Init();
             PlayerModule.Instance.Init();
-            AuthSessionModule.Instance.Init();
+            GM_AuthSessionMgr.Instance.Init();
             LogicWorkerPool.Instance.Start();
             LogicServerFactory.Instance.Init();
         }
