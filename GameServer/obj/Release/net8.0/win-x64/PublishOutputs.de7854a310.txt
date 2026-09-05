@@ -1,12 +1,17 @@
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\GameServer.exe
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\BonuesRuleA.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\BuffAConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\Character.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\CharactorConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\ClientMachineIdConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\CollectTask.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\ExchangeTrading.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\GachaPoolConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\GachaPoolRewardConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\GatewayConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\HttpServerZone.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\Item.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\Item.csv.2c1afc6793a2483ea7c734e058dc7c7b.tmp
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\LogicServerInst.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\MapConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\MapItemBase.csv
@@ -15,6 +20,7 @@ D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\Order
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\ServerDirectConnConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\SkillAConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\SkillBConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\Trap.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\WeaponGoods.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\WearGoods.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\ZoneConfig.csv

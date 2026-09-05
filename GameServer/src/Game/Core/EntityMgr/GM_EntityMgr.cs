@@ -24,6 +24,18 @@ namespace Game.Core.EntityMgr
             this.players = new ConcurrentDictionary<long, GM_PlayerEntity>();
         }
 
+        public bool BindPlayerSession(IdSession session, long accountId, long playerId, int job) {
+            if (session == null || accountId <= 0 || playerId <= 0 || job <= 0 ||
+                session.accountId != accountId) {
+                return false;
+            }
+
+            session.playerId = playerId;
+            session.accountIdAndJob = GM_AccountEntityMgr.Instance.PlayerKey(accountId, job);
+            AddPlayer(session, playerId);
+            return true;
+        }
+
         public int AddPlayer(IdSession s, long playerId) {
             GM_PlayerEntity player = null;
             if (this.players.ContainsKey(playerId)) {

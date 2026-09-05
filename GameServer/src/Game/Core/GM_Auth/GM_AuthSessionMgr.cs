@@ -37,7 +37,8 @@ namespace Game.Core.GM_Auth
         private byte[] ticketHmacKey;
         private long processStartedAtUnixSeconds;
         private long nextCleanupAtUnixSeconds;
-        private string gameSessionNotifyUrl;
+        private IReadOnlyDictionary<int, string> gameSessionNotificationUrls =
+            new Dictionary<int, string>();
 
         private sealed class LoginSession
         {
@@ -45,6 +46,7 @@ namespace Game.Core.GM_Auth
             public string SessionId { get; init; }
             public long SessionVersion { get; init; }
             public long ExpiresAtUnixSeconds { get; init; }
+            public int GameServerId { get; set; }
         }
 
         private sealed class AcceptedGameSession
@@ -59,7 +61,7 @@ namespace Game.Core.GM_Auth
             public int ReferenceCount;
         }
 
-        public void Init()
+        public void Init(IReadOnlyDictionary<int, string> notificationUrls = null)
         {
             accessLifetime = TimeSpan.FromMinutes(ReadPositiveInt("AuthAccessTokenMinutes", 30));
             ticketLifetime = TimeSpan.FromSeconds(ReadPositiveInt("GameTicketSeconds", 60));
@@ -76,7 +78,9 @@ namespace Game.Core.GM_Auth
             }
 
             ticketHmacKey = Encoding.UTF8.GetBytes(secret);
-            gameSessionNotifyUrl = ConfigurationManager.AppSettings["GameSessionNotifyUrl"];
+            gameSessionNotificationUrls = notificationUrls == null
+                ? new Dictionary<int, string>()
+                : new Dictionary<int, string>(notificationUrls);
             processStartedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             nextCleanupAtUnixSeconds = processStartedAtUnixSeconds + 60;
         }
@@ -86,6 +90,9 @@ namespace Game.Core.GM_Auth
             if (accountId <= 0) throw new ArgumentOutOfRangeException(nameof(accountId));
 
             LoginSessionCreationLock accountLock = RetainLoginSessionLock(accountId);
+            LoginSession session;
+            LoginSession previousSession;
+            string accessToken;
             try
             {
                 lock (accountLock.Sync)
@@ -94,11 +101,11 @@ namespace Game.Core.GM_Auth
                     CleanupExpiredEntries(now);
 
                     string sessionId = CreateRandomToken();
-                    string accessToken = CreateRandomToken();
+                    accessToken = CreateRandomToken();
                     long nowMilliseconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     long sessionVersion = sessionVersions.AddOrUpdate(
                         accountId, nowMilliseconds, (_, previous) => Math.Max(nowMilliseconds, previous + 1));
-                    var session = new LoginSession
+                    session = new LoginSession
                     {
                         AccountId = accountId,
                         SessionId = sessionId,
@@ -107,15 +114,17 @@ namespace Game.Core.GM_Auth
                     };
 
                     accessSessions[HashToken(accessToken)] = session;
+                    currentSessions.TryGetValue(accountId, out previousSession);
                     currentSessions[accountId] = session;
-                    NotifyGameServerSessionChanged(session);
-                    return accessToken;
                 }
             }
             finally
             {
                 ReleaseLoginSessionLock(accountId, accountLock);
             }
+
+            NotifyGameServerSessionChanged(session, previousSession?.GameServerId ?? 0);
+            return accessToken;
         }
 
         private LoginSessionCreationLock RetainLoginSessionLock(long accountId)
@@ -155,26 +164,47 @@ namespace Game.Core.GM_Auth
                 return new IssueGameTicketResult { Status = AuthOperationStatus.InvalidAccessToken };
             }
 
-            long issuedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long expiresAt = issuedAt + (long)ticketLifetime.TotalSeconds;
-            string nonce = CreateRandomToken();
-            string payload = string.Join("|",
-                validation.AccountId.ToString(CultureInfo.InvariantCulture),
-                validation.SessionId,
-                validation.SessionVersion.ToString(CultureInfo.InvariantCulture),
-                serverId.ToString(CultureInfo.InvariantCulture),
-                issuedAt.ToString(CultureInfo.InvariantCulture),
-                expiresAt.ToString(CultureInfo.InvariantCulture),
-                nonce);
-
-            string encodedPayload = Base64UrlEncode(Encoding.UTF8.GetBytes(payload));
-            byte[] signature = HMACSHA256.HashData(ticketHmacKey, Encoding.ASCII.GetBytes(encodedPayload));
-            return new IssueGameTicketResult
+            long accountId = validation.AccountId;
+            LoginSessionCreationLock accountLock = RetainLoginSessionLock(accountId);
+            try
             {
-                Status = AuthOperationStatus.Success,
-                Ticket = TicketVersion + "." + encodedPayload + "." + Base64UrlEncode(signature),
-                ExpiresAtUnixSeconds = expiresAt
-            };
+                lock (accountLock.Sync)
+                {
+                    validation = ValidateAccessToken(accessToken);
+                    if (!validation.IsSuccess ||
+                        !currentSessions.TryGetValue(validation.AccountId, out LoginSession session) ||
+                        !string.Equals(session.SessionId, validation.SessionId, StringComparison.Ordinal))
+                    {
+                        return new IssueGameTicketResult { Status = AuthOperationStatus.InvalidAccessToken };
+                    }
+
+                    session.GameServerId = serverId;
+                    long issuedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    long expiresAt = issuedAt + (long)ticketLifetime.TotalSeconds;
+                    string nonce = CreateRandomToken();
+                    string payload = string.Join("|",
+                        validation.AccountId.ToString(CultureInfo.InvariantCulture),
+                        validation.SessionId,
+                        validation.SessionVersion.ToString(CultureInfo.InvariantCulture),
+                        serverId.ToString(CultureInfo.InvariantCulture),
+                        issuedAt.ToString(CultureInfo.InvariantCulture),
+                        expiresAt.ToString(CultureInfo.InvariantCulture),
+                        nonce);
+
+                    string encodedPayload = Base64UrlEncode(Encoding.UTF8.GetBytes(payload));
+                    byte[] signature = HMACSHA256.HashData(ticketHmacKey, Encoding.ASCII.GetBytes(encodedPayload));
+                    return new IssueGameTicketResult
+                    {
+                        Status = AuthOperationStatus.Success,
+                        Ticket = TicketVersion + "." + encodedPayload + "." + Base64UrlEncode(signature),
+                        ExpiresAtUnixSeconds = expiresAt
+                    };
+                }
+            }
+            finally
+            {
+                ReleaseLoginSessionLock(accountId, accountLock);
+            }
         }
 
         public GameAuthenticationResult AuthenticateGameSession(
@@ -379,9 +409,15 @@ namespace Game.Core.GM_Auth
             return true;
         }
 
-        private void NotifyGameServerSessionChanged(LoginSession session)
+        private void NotifyGameServerSessionChanged(LoginSession session, int previousGameServerId)
         {
-            if (string.IsNullOrWhiteSpace(gameSessionNotifyUrl)) return;
+            if (previousGameServerId <= 0) return;
+            if (!gameSessionNotificationUrls.TryGetValue(previousGameServerId, out string notificationUrl))
+            {
+                logger.Warn(
+                    $"Cannot invalidate account[{session.AccountId}] session: game server[{previousGameServerId}] is not configured.");
+                return;
+            }
 
             long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             string nonce = CreateRandomToken();
@@ -403,7 +439,7 @@ namespace Game.Core.GM_Auth
             try
             {
                 using var content = new StringContent(requestBody, Encoding.UTF8, "text/plain");
-                using HttpResponseMessage response = InternalHttpClient.PostAsync(gameSessionNotifyUrl, content)
+                using HttpResponseMessage response = InternalHttpClient.PostAsync(notificationUrl, content)
                     .GetAwaiter().GetResult();
                 string responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (!response.IsSuccessStatusCode || !string.Equals(responseBody, "OK", StringComparison.Ordinal))

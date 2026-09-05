@@ -23,12 +23,16 @@ namespace Game.Entries.Modules
 
         public void Init()
         {
-            List<GachaPoolConfig> poolConfigs =
-                ExcelUtils.GetConfigDatas<GachaPoolConfig>(nameof(GachaPoolConfig));
-            List<GachaPoolRewardConfig> rewardConfigs =
+            List<GachaPoolRewardConfig> poolConfigs =
                 ExcelUtils.GetConfigDatas<GachaPoolRewardConfig>(nameof(GachaPoolRewardConfig));
-            var characterIds = new HashSet<int>(
-                ExcelUtils.GetConfigDatas<CharactorConfig>(nameof(CharactorConfig)).Select(item => item.ID));
+            List<GachaPoolConfig> rewardConfigs =
+                ExcelUtils.GetConfigDatas<GachaPoolConfig>(nameof(GachaPoolConfig));
+            List<int> characterIdValues = ExcelUtils.GetConfigDatas<Character>(nameof(Character))
+                .Select(ParseCharacterId)
+                .ToList();
+            if (characterIdValues.Count != characterIdValues.Distinct().Count())
+                throw new InvalidOperationException("Character config contains duplicate CardID values.");
+            var characterIds = new HashSet<int>(characterIdValues);
             var itemIds = new HashSet<int>(
                 ExcelUtils.GetConfigDatas<Item>(nameof(Item)).Select(item => item.id));
 
@@ -198,50 +202,62 @@ namespace Game.Entries.Modules
         }
 
         private static IReadOnlyDictionary<int, GachaPoolDefinition> BuildPools(
-            IReadOnlyCollection<GachaPoolConfig> poolConfigs,
-            IReadOnlyCollection<GachaPoolRewardConfig> rewardConfigs,
+            IReadOnlyCollection<GachaPoolRewardConfig> poolConfigs,
+            IReadOnlyCollection<GachaPoolConfig> rewardConfigs,
             IReadOnlySet<int> characterIds,
             IReadOnlySet<int> itemIds)
         {
             var result = new Dictionary<int, GachaPoolDefinition>();
-            foreach (GachaPoolConfig config in poolConfigs)
+            foreach (GachaPoolRewardConfig config in poolConfigs)
             {
                 if (config.poolID <= 0 || result.ContainsKey(config.poolID))
                     throw new InvalidOperationException($"Invalid or duplicate gacha pool id: {config.poolID}.");
-                if (config.smallPityCount <= 0 || config.bigPityCount <= 0 ||
-                    config.ticketItemID <= 0 || config.diamondItemID <= 0 ||
-                    config.diamondCostPerDraw <= 0)
-                    throw new InvalidOperationException($"Gacha pool {config.poolID} has invalid pity or cost settings.");
-                if (!itemIds.Contains(config.ticketItemID) || !itemIds.Contains(config.diamondItemID))
+                int smallPityRarity = ParsePositiveInteger(config.smallPityRarity, "smallPityRarity", config.poolID);
+                int smallPityCount = ParsePositiveInteger(config.smallPityCount, "smallPityCount", config.poolID);
+                int bigPityRarity = ParsePositiveInteger(config.bigPityRarity, "bigPityRarity", config.poolID);
+                int bigPityCount = ParsePositiveInteger(config.bigPityCount, "bigPityCount", config.poolID);
+                int ticketItemId = ParsePositiveInteger(config.ticketItemID, "ticketItemID", config.poolID);
+                int diamondItemId = ParsePositiveInteger(config.diamondItemID, "diamondItemID", config.poolID);
+                int diamondCostPerDraw = ParsePositiveInteger(config.diamondCostPerDraw, "diamondCostPerDraw", config.poolID);
+                if (!itemIds.Contains(ticketItemId) || !itemIds.Contains(diamondItemId))
                     throw new InvalidOperationException($"Gacha pool {config.poolID} references an unknown payment item.");
 
                 List<int> rarities = ParsePositiveIntegers(config.rarities, "rarities", config.poolID);
                 List<int> rarityWeights = ParsePositiveIntegers(config.rarityWeights, "rarityWeights", config.poolID);
                 if (rarities.Count != rarityWeights.Count || rarities.Distinct().Count() != rarities.Count)
                     throw new InvalidOperationException($"Gacha pool {config.poolID} rarity and weight settings do not match.");
-                if (!rarities.Contains(config.smallPityRarity) || !rarities.Contains(config.bigPityRarity))
+                if (!rarities.Contains(smallPityRarity) || !rarities.Contains(bigPityRarity))
                     throw new InvalidOperationException($"Gacha pool {config.poolID} pity rarity is not present in rarities.");
 
-                Dictionary<int, IReadOnlyList<GachaRewardDefinition>> rewardsByRarity = rewardConfigs
-                    .Where(item => item.poolID == config.poolID)
-                    .GroupBy(item => item.rarity)
-                    .ToDictionary(
-                        group => group.Key,
-                        group => (IReadOnlyList<GachaRewardDefinition>)group.Select(item =>
-                        {
-                            if (item.weight <= 0 || item.fragmentNum <= 0 ||
-                                !characterIds.Contains(item.cardID) || !itemIds.Contains(item.fragmentItemID))
-                                throw new InvalidOperationException(
-                                    $"Gacha pool {config.poolID} has an invalid reward row {item.ID}.");
-                            return new GachaRewardDefinition
-                            {
-                                CharacterId = item.cardID,
-                                FragmentItemId = item.fragmentItemID,
-                                FragmentNum = item.fragmentNum,
-                                Rarity = item.rarity,
-                                Weight = item.weight
-                            };
-                        }).ToList());
+                var mutableRewards = new Dictionary<int, List<GachaRewardDefinition>>();
+                foreach (GachaPoolConfig item in rewardConfigs.Where(item => item.poolID == config.poolID))
+                {
+                    int characterId = ParsePositiveInteger(item.cardID, "cardID", config.poolID, item.ID);
+                    int fragmentItemId = ParsePositiveInteger(item.fragmentItemID, "fragmentItemID", config.poolID, item.ID);
+                    int rarity = ParsePositiveInteger(item.rarity, "rarity", config.poolID, item.ID);
+                    int weight = ParsePositiveInteger(item.weight, "weight", config.poolID, item.ID);
+                    int fragmentNum = ParsePositiveInteger(item.fragmentNum, "fragmentNum", config.poolID, item.ID);
+                    if ((!characterIds.Contains(characterId) && !itemIds.Contains(characterId)) ||
+                        !itemIds.Contains(fragmentItemId))
+                        throw new InvalidOperationException(
+                            $"Gacha pool {config.poolID} has an invalid reward row {item.ID}.");
+
+                    if (!mutableRewards.TryGetValue(rarity, out List<GachaRewardDefinition> rewards))
+                    {
+                        rewards = new List<GachaRewardDefinition>();
+                        mutableRewards.Add(rarity, rewards);
+                    }
+                    rewards.Add(new GachaRewardDefinition
+                    {
+                        CharacterId = characterId,
+                        FragmentItemId = fragmentItemId,
+                        FragmentNum = fragmentNum,
+                        Rarity = rarity,
+                        Weight = weight
+                    });
+                }
+                Dictionary<int, IReadOnlyList<GachaRewardDefinition>> rewardsByRarity = mutableRewards
+                    .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<GachaRewardDefinition>)pair.Value);
 
                 foreach (int rarity in rarities)
                 {
@@ -254,13 +270,13 @@ namespace Game.Entries.Modules
                 result.Add(config.poolID, new GachaPoolDefinition
                 {
                     PoolId = config.poolID,
-                    SmallPityRarity = config.smallPityRarity,
-                    SmallPityCount = config.smallPityCount,
-                    BigPityRarity = config.bigPityRarity,
-                    BigPityCount = config.bigPityCount,
-                    TicketItemId = config.ticketItemID,
-                    DiamondItemId = config.diamondItemID,
-                    DiamondCostPerDraw = config.diamondCostPerDraw,
+                    SmallPityRarity = smallPityRarity,
+                    SmallPityCount = smallPityCount,
+                    BigPityRarity = bigPityRarity,
+                    BigPityCount = bigPityCount,
+                    TicketItemId = ticketItemId,
+                    DiamondItemId = diamondItemId,
+                    DiamondCostPerDraw = diamondCostPerDraw,
                     Rarities = rarities,
                     RarityWeights = rarityWeights,
                     RewardsByRarity = rewardsByRarity
@@ -282,6 +298,28 @@ namespace Game.Entries.Modules
                 result.Add(parsed);
             }
             return result;
+        }
+
+        private static int ParseCharacterId(Character config)
+        {
+            if (config != null && int.TryParse(config.CardID?.Trim(), out int characterId) &&
+                characterId > 0)
+            {
+                return characterId;
+            }
+
+            throw new InvalidOperationException(
+                $"Character config row {config?.ID ?? "<unknown>"} has an invalid CardID.");
+        }
+
+        private static int ParsePositiveInteger(string value, string field, int poolId, int rowId = 0)
+        {
+            if (int.TryParse(value?.Trim(), out int parsed) && parsed > 0)
+                return parsed;
+
+            string row = rowId > 0 ? $" reward row {rowId}" : string.Empty;
+            throw new InvalidOperationException(
+                $"Gacha pool {poolId}{row} has an invalid {field} setting.");
         }
     }
 }

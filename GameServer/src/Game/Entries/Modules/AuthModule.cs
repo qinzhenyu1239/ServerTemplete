@@ -1,8 +1,12 @@
+using Framework.Core.Utils;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Auth;
 using Game.Datas.DBEntities;
+using Game.Datas.Excels;
 using Game.Datas.Messages;
 using System;
+using System.Collections.Generic;
+using System.Configuration;
 using System.Threading.Tasks;
 
 namespace Game.Entries.Modules
@@ -14,6 +18,41 @@ namespace Game.Entries.Modules
     public sealed class AuthModule
     {
         public static AuthModule Instance { get; } = new AuthModule();
+
+        private IReadOnlyDictionary<int, string> gameSessionNotificationUrls;
+
+        public void Init()
+        {
+            var urls = new Dictionary<int, string>();
+            foreach (HttpServerZone zone in ExcelUtils.GetConfigDatas<HttpServerZone>(nameof(HttpServerZone)))
+            {
+                if (zone.ID <= 0 || string.IsNullOrWhiteSpace(zone.HttpWebsite) ||
+                    !Uri.TryCreate(zone.HttpWebsite, UriKind.Absolute, out Uri website) ||
+                    (website.Scheme != Uri.UriSchemeHttp && website.Scheme != Uri.UriSchemeHttps))
+                {
+                    throw new ConfigurationErrorsException(
+                        $"HttpServerZone[{zone.ID}] must define an absolute HTTP/HTTPS HttpWebsite.");
+                }
+
+                string baseUrl = zone.HttpWebsite.EndsWith("/", StringComparison.Ordinal)
+                    ? zone.HttpWebsite
+                    : zone.HttpWebsite + "/";
+                if (!urls.TryAdd(zone.ID,
+                        new Uri(new Uri(baseUrl, UriKind.Absolute), "Internal/InvalidateAccountSession").ToString()))
+                {
+                    throw new ConfigurationErrorsException($"Duplicate HttpServerZone ID[{zone.ID}].");
+                }
+            }
+
+            if (urls.Count == 0)
+            {
+                throw new ConfigurationErrorsException(
+                    "HttpServerZone must contain at least one game server for session invalidation.");
+            }
+
+            gameSessionNotificationUrls = urls;
+            GM_AuthSessionMgr.Instance.Init(gameSessionNotificationUrls);
+        }
 
         private static void CopyAccountInfo(Account account, AccountInfo accountInfo)
         {
@@ -179,7 +218,8 @@ namespace Game.Entries.Modules
 
         public ResIssueGameTicket HandlerReqIssueGameTicket(ReqIssueGameTicket request)
         {
-            if (request == null || request.serverId <= 0)
+            if (request == null || request.serverId <= 0 || gameSessionNotificationUrls == null ||
+                !gameSessionNotificationUrls.ContainsKey(request.serverId))
             {
                 return new ResIssueGameTicket { status = (int)Respones.InvalidParams };
             }

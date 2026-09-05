@@ -41,6 +41,13 @@ namespace Game.Core.GM_Auth
         public int Channel { get; init; }
     }
 
+    public sealed class PlayerCreationCommand
+    {
+        public int Job { get; init; }
+        public string Name { get; init; }
+        public int Sex { get; init; }
+    }
+
     public sealed class GuestAccountUpgradeCommand
     {
         public long AccountId { get; init; }

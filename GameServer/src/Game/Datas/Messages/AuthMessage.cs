@@ -101,17 +101,7 @@ namespace Game.Datas.Messages
         [ProtoMember(3, IsRequired = true)]
         public int channal;
     }
-
-    [ProtoContract]
-    [MessageMeta((short)Module.AUTH, (short)Cmd.eUserLoginReq)]
-    public class ReqUserLogin : Message
-    {
-        [ProtoMember(1, IsRequired = true)]
-        public string uname;
-
-        [ProtoMember(2, IsRequired = true)]
-        public string upwd;
-    }
+    
 
 
     [ProtoContract]
@@ -154,7 +144,18 @@ namespace Game.Datas.Messages
         [ProtoMember(2)]
         public string errorStr; // reason;
     }
+    
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eUserLoginReq)]
+    public class ReqUserLogin : Message
+    {
+        [ProtoMember(1, IsRequired = true)]
+        public string uname;
 
+        [ProtoMember(2, IsRequired = true)]
+        public string upwd;
+    }
+    
     [ProtoContract]
     [MessageMeta((short)Module.AUTH, (short)Cmd.eUserLoginRes)]
     public class ResUserLogin : Message

@@ -1,5 +1,7 @@
 using Framework.Core.Net;
+using Game.Core.EntityMgr;
 using Game.Core.GM_Auth;
+using Game.Datas.DBEntities;
 using Game.Datas.Messages;
 using System;
 using System.Configuration;
@@ -54,6 +56,41 @@ namespace Game.Entries.Modules
             {
                 response.status = (int)Respones.AccountIsNotLogin;
                 response.errorMessage = "Game authentication failed.";
+                SessionMgr.Instance.CloseAfterNextResponse(session);
+                return response;
+            }
+
+            var creationCommand = new PlayerCreationCommand
+            {
+                Job = 1,
+                Name = $"Player_{result.AccountId}",
+                Sex = 0
+            };
+            Player player = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
+                result.AccountId,
+                creationCommand);
+            if (player == null)
+            {
+                response.status = (int)Respones.SystemErr;
+                response.errorMessage = "Failed to load or create the default player.";
+                SessionMgr.Instance.CloseAfterNextResponse(session);
+                return response;
+            }
+            if (player.status != 0)
+            {
+                response.status = (int)Respones.PlayerIsFreeze;
+                response.errorMessage = "The player is frozen.";
+                SessionMgr.Instance.CloseAfterNextResponse(session);
+                return response;
+            }
+            if (!GM_EntityMgr.Instance.BindPlayerSession(
+                    session,
+                    result.AccountId,
+                    player.id,
+                    player.job))
+            {
+                response.status = (int)Respones.SystemErr;
+                response.errorMessage = "Failed to bind the default player session.";
                 SessionMgr.Instance.CloseAfterNextResponse(session);
                 return response;
             }

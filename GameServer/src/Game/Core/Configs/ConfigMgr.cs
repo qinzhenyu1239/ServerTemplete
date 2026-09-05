@@ -28,7 +28,9 @@ namespace Game.Core.Configs
 
 
             ExcelUtils.ReadConfigData<BuffAConfig>();
+            ExcelUtils.ReadConfigData<BaseInventory>();
             ExcelUtils.ReadConfigData<CharactorConfig>();
+            ExcelUtils.ReadConfigData<Character>();
             ExcelUtils.ReadConfigData<GachaPoolConfig>();
             ExcelUtils.ReadConfigData<GachaPoolRewardConfig>();
             ExcelUtils.ReadConfigData<Item>();

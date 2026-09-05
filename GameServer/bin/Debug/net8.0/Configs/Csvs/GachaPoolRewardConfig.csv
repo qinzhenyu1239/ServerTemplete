@@ -1,13 +1,4 @@
-数据ID（不重复）,卡池ID,卡牌ID,道具碎片ID,稀有度,权重,重复角色碎片数量
-int,int,int,int,int,int,int
-ID,poolID,cardID,fragmentItemID,rarity,weight,fragmentNum
-1,1,10001,91001,1,40,1
-2,1,10002,91002,1,40,1
-3,1,10003,91003,1,40,1
-4,1,20001,91004,1,40,1
-5,1,20002,91005,2,30,1
-6,1,20003,91006,2,30,1
-7,1,30001,91007,2,30,1
-8,1,30002,91008,3,20,1
-9,1,30003,91009,3,20,1
-10,1,50001,91010,4,10,1
+不重复ID,卡池ID,备注,小保底稀有度,小保底次数,大保底稀有度,大保底次数,稀有度,稀有度概率,抽卡券ID,钻石ID,每抽钻石消耗
+int,int,string,string,string,string,string,string,string,string,string,string
+ID,poolID,remark,smallPityRarity,smallPityCount,bigPityRarity,bigPityCount,rarities,rarityWeights,ticketItemID,diamondItemID,diamondCostPerDraw
+1,1,标准卡池,3,30,4,50,"1,2,3,4","40,30,20,10",10001,10002,1

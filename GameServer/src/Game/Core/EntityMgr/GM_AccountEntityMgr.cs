@@ -2,9 +2,10 @@ using Framework.Core.Utils;
 using Game.Core.Db;
 using Game.Core.GM_Auth;
 using Game.Datas.DBEntities;
+using Game.Datas.Excels;
 using Game.Datas.GMEntities;
-using Game.Datas.Messages;
 using Game.Utils;
+using SqlSugar;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -286,9 +287,11 @@ namespace Game.Core.EntityMgr
             return player == null ? null : AttachPlayer(player);
         }
 
-        public Player GetOrCreatePlayer(long accountId, ReqSelectPlayer request)
+        public Player GetOrCreatePlayer(long accountId, PlayerCreationCommand command)
         {
-            Player player = GetPlayerByAccountId(accountId, request.job);
+            if (accountId <= 0 || command == null || command.Job <= 0) return null;
+
+            Player player = GetPlayerByAccountId(accountId, command.Job);
             if (player != null) return player;
 
             GM_AccountEntity entity = GetOrAddEntity(accountId);
@@ -298,13 +301,44 @@ namespace Game.Core.EntityMgr
                 player = LoadPlayerByAccountId(accountId);
                 if (player != null) return AttachPlayer(player);
 
-                player = BuildPlayer(accountId, request);
+                player = BuildPlayer(accountId, command);
+                using SqlSugarClient db = DBService.Instance.GetGameInstance();
+                bool transactionStarted = false;
                 try
                 {
-                    if (InsertPlayer(player) != 1) return null;
+                    IReadOnlyList<InitialPlayerItem> initialItems = LoadInitialPlayerItems();
+                    db.Ado.BeginTran();
+                    transactionStarted = true;
+                    if (db.Insertable(player).ExecuteCommand() != 1)
+                        throw new InvalidOperationException("Insert player failed.");
+
+                    foreach (InitialPlayerItem item in initialItems)
+                    {
+                        int insertedItems = db.Ado.ExecuteCommand(
+                            "INSERT INTO player_item (player_id, item_id, quantity) " +
+                            "VALUES (@playerId, @itemId, @quantity)",
+                            new SugarParameter("@playerId", player.id),
+                            new SugarParameter("@itemId", item.ItemId),
+                            new SugarParameter("@quantity", item.Quantity));
+                        if (insertedItems != 1)
+                            throw new InvalidOperationException(
+                                $"Insert initial player item {item.ItemId} failed.");
+                    }
+
+                    db.Ado.CommitTran();
+                    transactionStarted = false;
                 }
                 catch (Exception exception)
                 {
+                    if (transactionStarted)
+                    {
+                        try { db.Ado.RollbackTran(); }
+                        catch (Exception rollbackException)
+                        {
+                            logger.Error(rollbackException,
+                                $"Rollback player creation failed: accountId[{accountId}]");
+                        }
+                    }
                     logger.Error(exception, $"Create player failed: accountId[{accountId}]");
                     return null;
                 }
@@ -434,12 +468,12 @@ namespace Game.Core.EntityMgr
             };
         }
 
-        private static Player BuildPlayer(long accountId, ReqSelectPlayer request) => new Player
+        private static Player BuildPlayer(long accountId, PlayerCreationCommand command) => new Player
         {
             id = IdGenerator.GetNextId(),
             accountId = accountId,
-            job = request.job,
-            name = request.uname,
+            job = command.Job,
+            name = command.Name,
             HP = 100,
             MP = 0,
             status = 0,
@@ -447,9 +481,48 @@ namespace Game.Core.EntityMgr
             level = 1,
             ucoin = 100,
             umoney = 0,
-            usex = request.usex,
+            usex = command.Sex,
             vipRightJson = string.Empty
         };
+
+        private static IReadOnlyList<InitialPlayerItem> LoadInitialPlayerItems()
+        {
+            List<BaseInventory> configs =
+                ExcelUtils.GetConfigDatas<BaseInventory>(nameof(BaseInventory));
+            if (configs.Count == 0)
+                throw new InvalidOperationException("BaseInventory config is empty.");
+
+            var itemIds = new HashSet<int>();
+            var result = new List<InitialPlayerItem>(configs.Count);
+            foreach (BaseInventory config in configs)
+            {
+                if (config == null ||
+                    !int.TryParse(config.ItemID?.Trim(), out int itemId) || itemId <= 0 ||
+                    !long.TryParse(config.ItemCount?.Trim(), out long quantity) || quantity <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"BaseInventory row {config?.ID ?? "<unknown>"} is invalid.");
+                }
+                if (!itemIds.Add(itemId))
+                    throw new InvalidOperationException(
+                        $"BaseInventory contains duplicate ItemID {itemId}.");
+
+                result.Add(new InitialPlayerItem(itemId, quantity));
+            }
+            return result;
+        }
+
+        private sealed class InitialPlayerItem
+        {
+            public int ItemId { get; }
+            public long Quantity { get; }
+
+            public InitialPlayerItem(int itemId, long quantity)
+            {
+                ItemId = itemId;
+                Quantity = quantity;
+            }
+        }
 
         private static Account LoadAccountById(long accountId) =>
             DBService.Instance.GetAuthInstance().Queryable<Account>()
@@ -497,9 +570,6 @@ namespace Game.Core.EntityMgr
         private static Player LoadPlayerByAccountId(long accountId) =>
             DBService.Instance.GetGameInstance().Queryable<Player>()
                 .First(it => it.accountId == accountId);
-
-        private static int InsertPlayer(Player player) =>
-            DBService.Instance.GetGameInstance().Insertable(player).ExecuteCommand();
 
         private static int UpdatePlayerInDatabase(Player player) =>
             DBService.Instance.GetGameInstance().Updateable(player)

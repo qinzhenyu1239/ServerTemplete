@@ -23,7 +23,6 @@
           "SqlSugarCore": "5.1.4.167",
           "StackExchange.Redis": "2.8.12",
           "System.Configuration.ConfigurationManager": "8.0.0",
-          "System.Runtime.Caching": "8.0.0",
           "protobuf-net": "3.2.30",
           "runtimepack.Microsoft.NETCore.App.Runtime.win-x64": "8.0.30",
           "runtimepack.Microsoft.AspNetCore.App.Runtime.win-x64": "8.0.30"
@@ -1466,7 +1465,7 @@
           "Microsoft.Win32.Registry": "4.7.0",
           "System.Configuration.ConfigurationManager": "8.0.0",
           "System.Diagnostics.DiagnosticSource": "4.7.0",
-          "System.Runtime.Caching": "8.0.0",
+          "System.Runtime.Caching": "4.7.0",
           "System.Security.Principal.Windows": "4.7.0",
           "System.Text.Encoding.CodePages": "5.0.0"
         },
@@ -2006,14 +2005,14 @@
           "runtime.any.System.Runtime": "4.3.0"
         }
       },
-      "System.Runtime.Caching/8.0.0": {
+      "System.Runtime.Caching/4.7.0": {
         "dependencies": {
           "System.Configuration.ConfigurationManager": "8.0.0"
         },
         "runtime": {
-          "runtimes/win/lib/net8.0/System.Runtime.Caching.dll": {
-            "assemblyVersion": "8.0.0.0",
-            "fileVersion": "8.0.23.53103"
+          "runtimes/win/lib/netstandard2.0/System.Runtime.Caching.dll": {
+            "assemblyVersion": "4.0.1.0",
+            "fileVersion": "4.700.19.56404"
           }
         }
       },
@@ -2699,12 +2698,12 @@
       "path": "system.runtime/4.3.1",
       "hashPath": "system.runtime.4.3.1.nupkg.sha512"
     },
-    "System.Runtime.Caching/8.0.0": {
+    "System.Runtime.Caching/4.7.0": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-4TmlmvGp4kzZomm7J2HJn6IIx0UUrQyhBDyb5O1XiunZlQImXW+B8b7W/sTPcXhSf9rp5NR5aDtQllwbB5elOQ==",
-      "path": "system.runtime.caching/8.0.0",
-      "hashPath": "system.runtime.caching.8.0.0.nupkg.sha512"
+      "sha512": "sha512-NdvNRjTPxYvIEhXQszT9L9vJhdQoX6AQ0AlhjTU+5NqFQVuacJTfhPVAvtGWNA2OJCqRiR/okBcZgMwI6MqcZg==",
+      "path": "system.runtime.caching/4.7.0",
+      "hashPath": "system.runtime.caching.4.7.0.nupkg.sha512"
     },
     "System.Runtime.CompilerServices.Unsafe/6.0.0": {
       "type": "package",

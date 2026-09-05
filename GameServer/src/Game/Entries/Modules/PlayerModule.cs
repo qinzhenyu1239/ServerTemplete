@@ -12,6 +12,7 @@ using Game.Core.GM_MailMessage;
 using Game.Core.GM_Rank;
 using Game.Core.GM_Backpack;
 using Game.Core.GM_Trading;
+using Game.Core.GM_Auth;
 using Framework.Core.task;
 using System.Threading.Tasks.Sources;
 using Game.LogicServer;
@@ -122,7 +123,9 @@ namespace Game.Entries.Modules
                 return res;
             }
 
-            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(accountId, req);
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
+                accountId,
+                new PlayerCreationCommand { Job = req.job, Name = req.uname, Sex = req.usex });
             if (p == null)
             {
                 res.status = (int)Respones.SystemErr;
@@ -175,7 +178,9 @@ namespace Game.Entries.Modules
                 return res;
             }
 
-            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(accountId, req);
+            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
+                accountId,
+                new PlayerCreationCommand { Job = req.job, Name = req.uname, Sex = req.usex });
             if (p == null)
             {
                 res.status = (int)Respones.SystemErr;

@@ -126,7 +126,7 @@ namespace Game
             GM_AccountEntityMgr.Instance.Init();
             if (role == ServerRole.Login)
             {
-                GM_AuthSessionMgr.Instance.Init();
+                AuthModule.Instance.Init();
                 return;
             }
 

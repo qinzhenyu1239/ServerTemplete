@@ -410,3 +410,9 @@ D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\obj\Release\net8.
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\obj\Release\net8.0\win-x64\GameServer.pdb
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\obj\Release\net8.0\win-x64\GameServer.genruntimeconfig.cache
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\obj\Release\net8.0\win-x64\ref\GameServer.dll
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\GachaPoolConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\GachaPoolRewardConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\Item.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\Trap.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\Character.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\Item.csv.2c1afc6793a2483ea7c734e058dc7c7b.tmp

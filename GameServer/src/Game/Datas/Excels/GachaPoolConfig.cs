@@ -9,15 +9,10 @@ namespace Game.Datas.Excels {
 	{
 		public int ID;
 		public int poolID;
-		public string remark;
-		public int smallPityRarity;
-		public int smallPityCount;
-		public int bigPityRarity;
-		public int bigPityCount;
-		public string rarities;
-		public string rarityWeights;
-		public int ticketItemID;
-		public int diamondItemID;
-		public int diamondCostPerDraw;
+		public string cardID;
+		public string fragmentItemID;
+		public string rarity;
+		public string weight;
+		public string fragmentNum;
 	}
 }
