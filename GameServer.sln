@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenDbClass", "tools\GenDbCl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GenExcelClass", "tools\GenExcelClass\GenExcelClass.csproj", "{991E8923-8955-4790-98B5-CC17A965CCAC}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GameServerTests", "GameServerTests\GameServerTests.csproj", "{A6A60EAA-8D27-4F03-AB3F-8B82E69E2405}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{991E8923-8955-4790-98B5-CC17A965CCAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{991E8923-8955-4790-98B5-CC17A965CCAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{991E8923-8955-4790-98B5-CC17A965CCAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6A60EAA-8D27-4F03-AB3F-8B82E69E2405}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6A60EAA-8D27-4F03-AB3F-8B82E69E2405}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6A60EAA-8D27-4F03-AB3F-8B82E69E2405}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6A60EAA-8D27-4F03-AB3F-8B82E69E2405}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

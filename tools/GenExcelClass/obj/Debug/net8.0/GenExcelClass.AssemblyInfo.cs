@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GenExcelClass")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+30491375556da3742153635c921eb2c1caf945a7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+21b8b9968238699dba14e2b2d1bf662bb9a42b6c")]
 [assembly: System.Reflection.AssemblyProductAttribute("GenExcelClass")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GenExcelClass")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

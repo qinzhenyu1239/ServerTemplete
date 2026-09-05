@@ -1,5 +1,5 @@
-﻿服务器分区,服务分区,服务分区描述,服务器地址,Tcp端口,WebSocket端口,Http端口,Http站点,是否为直连模式
+服务器分区,服务分区,服务分区描述,服务器地址,Tcp端口,WebSocket端口,Http端口,Http站点,是否为直连模式
 int,string,string,string,int,int,int,string,int
 ID,GameZone,desic,ServerIp,TcpPort,WsPort,HttpPort,HttpWebsite,useDirectConn
-1,测试服,测试服,192.168.1.100,6080,6082,6090,http://192.168.1.100:6090/,1
-2,秦振宇,秦振宇,192.168.1.21,6080,6082,6090,http://192.168.1.21:6090/,1
+1,测试服,测试服,192.168.1.100,6080,6082,6090,http://192.168.1.100:6090/,0
+2,秦振宇,秦振宇,192.168.1.21,6080,6082,6090,http://192.168.1.21:6090/,0

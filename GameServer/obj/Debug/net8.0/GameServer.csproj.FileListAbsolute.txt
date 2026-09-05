@@ -375,7 +375,6 @@ C:\Users\Windows\AppData\Local\Temp\CodexGameServerCharacterValidationBuild\Game
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerCharacterValidationBuild\GameServer.dll
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerCharacterValidationBuild\GameServer.pdb
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\Character.csv
-D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\Item.csv.2c1afc6793a2483ea7c734e058dc7c7b.tmp
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\Configs\Csvs\BaseInventory.csv
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\Configs\Csvs\BonuesRuleA.csv
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\Configs\Csvs\BuffAConfig.csv
@@ -411,3 +410,5 @@ C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\GameServer
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\GameServer.runtimeconfig.json
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\GameServer.dll
 C:\Users\Windows\AppData\Local\Temp\CodexGameServerBaseInventoryBuild\GameServer.pdb
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\BaseInventory.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Debug\net8.0\Configs\Csvs\StarLevel.csv

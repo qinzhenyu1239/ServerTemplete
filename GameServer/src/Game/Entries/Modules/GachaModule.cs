@@ -27,16 +27,18 @@ namespace Game.Entries.Modules
                 ExcelUtils.GetConfigDatas<GachaPoolRewardConfig>(nameof(GachaPoolRewardConfig));
             List<GachaPoolConfig> rewardConfigs =
                 ExcelUtils.GetConfigDatas<GachaPoolConfig>(nameof(GachaPoolConfig));
-            List<int> characterIdValues = ExcelUtils.GetConfigDatas<Character>(nameof(Character))
-                .Select(ParseCharacterId)
-                .ToList();
-            if (characterIdValues.Count != characterIdValues.Distinct().Count())
+            List<KeyValuePair<int, int>> characterPieceValues =
+                ExcelUtils.GetConfigDatas<Character>(nameof(Character))
+                    .Select(ParseCharacterPiece)
+                    .ToList();
+            if (characterPieceValues.Select(pair => pair.Key).Distinct().Count() != characterPieceValues.Count)
                 throw new InvalidOperationException("Character config contains duplicate CardID values.");
-            var characterIds = new HashSet<int>(characterIdValues);
+            Dictionary<int, int> characterPieces = characterPieceValues.ToDictionary(
+                pair => pair.Key, pair => pair.Value);
             var itemIds = new HashSet<int>(
                 ExcelUtils.GetConfigDatas<Item>(nameof(Item)).Select(item => item.id));
 
-            pools = BuildPools(poolConfigs, rewardConfigs, characterIds, itemIds);
+            pools = BuildPools(poolConfigs, rewardConfigs, characterPieces, itemIds);
         }
 
         public ResGetGachaPoolInfo HandlerGetPoolInfo(
@@ -201,10 +203,10 @@ namespace Game.Entries.Modules
             };
         }
 
-        private static IReadOnlyDictionary<int, GachaPoolDefinition> BuildPools(
+        internal static IReadOnlyDictionary<int, GachaPoolDefinition> BuildPools(
             IReadOnlyCollection<GachaPoolRewardConfig> poolConfigs,
             IReadOnlyCollection<GachaPoolConfig> rewardConfigs,
-            IReadOnlySet<int> characterIds,
+            IReadOnlyDictionary<int, int> characterPieces,
             IReadOnlySet<int> itemIds)
         {
             var result = new Dictionary<int, GachaPoolDefinition>();
@@ -237,8 +239,8 @@ namespace Game.Entries.Modules
                     int rarity = ParsePositiveInteger(item.rarity, "rarity", config.poolID, item.ID);
                     int weight = ParsePositiveInteger(item.weight, "weight", config.poolID, item.ID);
                     int fragmentNum = ParsePositiveInteger(item.fragmentNum, "fragmentNum", config.poolID, item.ID);
-                    if ((!characterIds.Contains(characterId) && !itemIds.Contains(characterId)) ||
-                        !itemIds.Contains(fragmentItemId))
+                    if (!characterPieces.TryGetValue(characterId, out int configuredPieceItemId) ||
+                        !itemIds.Contains(fragmentItemId) || fragmentItemId != configuredPieceItemId)
                         throw new InvalidOperationException(
                             $"Gacha pool {config.poolID} has an invalid reward row {item.ID}.");
 
@@ -300,16 +302,17 @@ namespace Game.Entries.Modules
             return result;
         }
 
-        private static int ParseCharacterId(Character config)
+        private static KeyValuePair<int, int> ParseCharacterPiece(Character config)
         {
             if (config != null && int.TryParse(config.CardID?.Trim(), out int characterId) &&
-                characterId > 0)
+                characterId > 0 && int.TryParse(config.PieceId?.Trim(), out int pieceItemId) &&
+                pieceItemId > 0)
             {
-                return characterId;
+                return new KeyValuePair<int, int>(characterId, pieceItemId);
             }
 
             throw new InvalidOperationException(
-                $"Character config row {config?.ID ?? "<unknown>"} has an invalid CardID.");
+                $"Character config row {config?.ID ?? "<unknown>"} has an invalid CardID or PieceId.");
         }
 
         private static int ParsePositiveInteger(string value, string field, int poolId, int rowId = 0)

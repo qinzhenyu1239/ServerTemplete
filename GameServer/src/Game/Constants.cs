@@ -174,6 +174,12 @@
         eGetGachaPoolInfoRes = 76,
         eGachaDrawReq = 77,
         eGachaDrawRes = 78,
+
+        // 玩家角色查询与升星
+        eGetCharacterInfoReq = 79,
+        eGetCharacterInfoRes = 80,
+        eCharacterStarUpReq = 81,
+        eCharacterStarUpRes = 82,
     }
 
     public enum QuitReason { 
@@ -213,6 +219,12 @@
         GachaDrawCountInvalid = -121,
         GachaResourceNotEnough = -122,
         GachaFailed = -123,
+        CharacterNotOwned = -124,
+        CharacterMaxStar = -125,
+        CharacterFragmentNotEnough = -126,
+        CharacterTargetStarInvalid = -127,
+        CharacterConfigError = -128,
+        CharacterStarUpFailed = -129,
         // ...
     }
 

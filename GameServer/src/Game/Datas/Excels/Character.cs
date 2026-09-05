@@ -10,6 +10,7 @@ namespace Game.Datas.Excels {
 		public string ID;
 		public string CardID;
 		public string Name;
+		public string PieceId;
 		public string Type;
 		public string TrapLevel;
 		public string Property;
@@ -22,6 +23,12 @@ namespace Game.Datas.Excels {
 		public string Damage;
 		public string HealthMax;
 		public string Defense;
+		public string DamageUpgrade;
+		public string HealthMaxUpgrade;
+		public string DefenseUpgrade;
+		public string DamageStar;
+		public string HealthMaxStar;
+		public string DefenseStar;
 		public string Shield;
 		public string CriticalChance;
 		public string CriticalRate;

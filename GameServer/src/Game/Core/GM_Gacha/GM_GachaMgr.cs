@@ -1,11 +1,12 @@
 using Framework.Core.Utils;
 using Game.Core.Db;
+using Game.Core.Concurrency;
 using Game.Core.EntityMgr;
+using Game.Core.GM_CharacterStarUp;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
 using SqlSugar;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,15 +19,13 @@ namespace Game.Core.GM_Gacha
     public sealed class GM_GachaMgr
     {
         public static readonly GM_GachaMgr Instance = new GM_GachaMgr();
-        private readonly ConcurrentDictionary<long, PlayerLockEntry> playerLocks =
-            new ConcurrentDictionary<long, PlayerLockEntry>();
         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         private GM_GachaMgr() { }
 
         public GachaPoolInfoResult GetPoolInfo(long playerId, GachaPoolDefinition pool)
         {
-            using PlayerLockLease playerLock = AcquirePlayerLock(playerId);
+            using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
             lock (playerLock.SyncRoot)
             {
                 return GetPoolInfoLocked(playerId, pool);
@@ -78,7 +77,7 @@ namespace Game.Core.GM_Gacha
 
         public GachaDrawResult Draw(long playerId, GachaPoolDefinition pool, int drawCount)
         {
-            using PlayerLockLease playerLock = AcquirePlayerLock(playerId);
+            using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
             lock (playerLock.SyncRoot)
             {
                 return DrawLocked(playerId, pool, drawCount);
@@ -203,41 +202,25 @@ namespace Game.Core.GM_Gacha
             }
         }
 
-        private PlayerLockLease AcquirePlayerLock(long playerId)
-        {
-            while (true)
-            {
-                PlayerLockEntry entry = playerLocks.GetOrAdd(playerId, _ => new PlayerLockEntry());
-                lock (entry.LifecycleGate)
-                {
-                    if (entry.IsRemoved) continue;
-                    entry.ReferenceCount++;
-                    return new PlayerLockLease(this, playerId, entry);
-                }
-            }
-        }
-
-        private void ReleasePlayerLock(long playerId, PlayerLockEntry entry)
-        {
-            lock (entry.LifecycleGate)
-            {
-                entry.ReferenceCount--;
-                if (entry.ReferenceCount != 0) return;
-
-                entry.IsRemoved = true;
-                ((ICollection<KeyValuePair<long, PlayerLockEntry>>)playerLocks)
-                    .Remove(new KeyValuePair<long, PlayerLockEntry>(playerId, entry));
-            }
-        }
-
         private static int SelectRarity(GachaPoolDefinition pool, Player_gacha_state state)
+        {
+            long totalWeight = 0;
+            foreach (int weight in pool.RarityWeights) totalWeight = checked(totalWeight + weight);
+            return SelectRarityAtRoll(pool, state, Random.Shared.NextInt64(totalWeight));
+        }
+
+        internal static int SelectRarityAtRoll(
+            GachaPoolDefinition pool,
+            Player_gacha_state state,
+            long roll)
         {
             if (state.big_pity_count >= pool.BigPityCount) return pool.BigPityRarity;
             if (state.small_pity_count >= pool.SmallPityCount) return pool.SmallPityRarity;
 
             long totalWeight = 0;
             foreach (int weight in pool.RarityWeights) totalWeight = checked(totalWeight + weight);
-            long roll = Random.Shared.NextInt64(totalWeight);
+            if (roll < 0 || roll >= totalWeight)
+                throw new ArgumentOutOfRangeException(nameof(roll));
             for (int index = 0; index < pool.Rarities.Count; index++)
             {
                 if (roll < pool.RarityWeights[index]) return pool.Rarities[index];
@@ -251,7 +234,18 @@ namespace Game.Core.GM_Gacha
             long totalWeight = 0;
             foreach (GachaRewardDefinition reward in rewards)
                 totalWeight = checked(totalWeight + reward.Weight);
-            long roll = Random.Shared.NextInt64(totalWeight);
+            return SelectRewardAtRoll(rewards, Random.Shared.NextInt64(totalWeight));
+        }
+
+        internal static GachaRewardDefinition SelectRewardAtRoll(
+            IReadOnlyList<GachaRewardDefinition> rewards,
+            long roll)
+        {
+            long totalWeight = 0;
+            foreach (GachaRewardDefinition reward in rewards)
+                totalWeight = checked(totalWeight + reward.Weight);
+            if (roll < 0 || roll >= totalWeight)
+                throw new ArgumentOutOfRangeException(nameof(roll));
             foreach (GachaRewardDefinition reward in rewards)
             {
                 if (roll < reward.Weight) return reward;
@@ -304,11 +298,7 @@ namespace Game.Core.GM_Gacha
 
         internal void ReloadCharacterComponent(GM_PlayerEntity entity)
         {
-            entity.uCharacter.characterIds = new HashSet<int>(DBService.Instance.GetGameInstance()
-                .Queryable<Player_character>()
-                .Where(character => character.player_id == entity.uPlayer.playerInfo.id)
-                .Select(character => character.character_id)
-                .ToList());
+            GM_CharacterStarUpMgr.Instance.ReloadCharacterComponent(entity);
         }
 
         internal void ReloadGachaComponent(GM_PlayerEntity entity)
@@ -441,7 +431,13 @@ namespace Game.Core.GM_Gacha
             GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
             if (entity == null) return;
             entity.uCharacter.characterIds ??= new HashSet<int>();
-            foreach (int characterId in characterIds) entity.uCharacter.characterIds.Add(characterId);
+            entity.uCharacter.characterStars ??= new Dictionary<int, byte>();
+            foreach (int characterId in characterIds)
+            {
+                entity.uCharacter.characterIds.Add(characterId);
+                if (!entity.uCharacter.characterStars.ContainsKey(characterId))
+                    entity.uCharacter.characterStars.Add(characterId, 0);
+            }
         }
 
         private static void ReplaceCharacters(long playerId, IReadOnlyCollection<int> characterIds)
@@ -520,39 +516,8 @@ namespace Game.Core.GM_Gacha
             if (entity == null) return;
             entity.uItem.quantities = null;
             entity.uCharacter.characterIds = null;
+            entity.uCharacter.characterStars = null;
             GachaComponent.Invalidate(entity);
-        }
-
-        private sealed class PlayerLockEntry
-        {
-            public object LifecycleGate { get; } = new object();
-            public object SyncRoot { get; } = new object();
-            public int ReferenceCount { get; set; }
-            public bool IsRemoved { get; set; }
-        }
-
-        private sealed class PlayerLockLease : IDisposable
-        {
-            private GM_GachaMgr owner;
-            private readonly long playerId;
-            private readonly PlayerLockEntry entry;
-
-            public PlayerLockLease(GM_GachaMgr owner, long playerId, PlayerLockEntry entry)
-            {
-                this.owner = owner;
-                this.playerId = playerId;
-                this.entry = entry;
-            }
-
-            public object SyncRoot => entry.SyncRoot;
-
-            public void Dispose()
-            {
-                GM_GachaMgr currentOwner = owner;
-                if (currentOwner == null) return;
-                owner = null;
-                currentOwner.ReleasePlayerLock(playerId, entry);
-            }
         }
 
     }

@@ -34,6 +34,7 @@ namespace Game.Core.Configs
             ExcelUtils.ReadConfigData<GachaPoolConfig>();
             ExcelUtils.ReadConfigData<GachaPoolRewardConfig>();
             ExcelUtils.ReadConfigData<Item>();
+            ExcelUtils.ReadConfigData<StarLevel>();
             ExcelUtils.ReadConfigData<MapConfig>();
             ExcelUtils.ReadConfigData<MedicineGoods>();
 

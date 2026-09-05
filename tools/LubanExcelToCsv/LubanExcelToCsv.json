@@ -46,6 +46,13 @@
       "workbook": "BaseInventory.xlsx",
       "worksheet": "Sheet1",
       "outputCsv": "BaseInventory.csv"
+    }, 
+    {
+      "enabled": true,
+      "name": "StarLevel",
+      "workbook": "StarLevel.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "StarLevel.csv"
     }
   ]
 }

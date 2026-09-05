@@ -131,6 +131,7 @@ namespace Game
             }
 
             ConfigMgr.Instance.Init();
+            CharacterStarUpModule.Instance.Init();
             GachaModule.Instance.Init();
             ServerZoneModule.Instance.Init();
             ServerDirectConnModule.Instance.Init();
