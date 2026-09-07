@@ -8,7 +8,8 @@ namespace Game.Core.GM_CharacterStarUp
         NotOwned,
         FragmentNotEnough,
         TargetStarInvalid,
-        Failed
+        Failed,
+        OperationConflict
     }
 
     public sealed class CharacterStarUpDefinition
@@ -33,6 +34,7 @@ namespace Game.Core.GM_CharacterStarUp
 
     public sealed class CharacterStarUpResult
     {
+        public string OperationId { get; init; }
         public CharacterStarUpStatus Status { get; init; }
         public int CharacterId { get; init; }
         public int RequestedStar { get; init; }
@@ -43,5 +45,7 @@ namespace Game.Core.GM_CharacterStarUp
         public int PieceItemId { get; init; }
         public long RemainingPieceQuantity { get; init; }
         public bool IsMaxStar { get; init; }
+        public int NextStar { get; init; }
+        public int NextPieceCount { get; init; }
     }
 }

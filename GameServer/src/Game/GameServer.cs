@@ -5,6 +5,7 @@ using Game.Core.Configs;
 using Game.Core.Db;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Auth;
+using Game.Core.Idempotency;
 using Game.Core.GM_Backpack;
 using Game.Core.GM_Bonues;
 using Game.Core.GM_MailMessage;
@@ -147,6 +148,7 @@ namespace Game
             GM_TradingMgr.Instance.Init();
             PlayerModule.Instance.Init();
             GM_AuthSessionMgr.Instance.Init();
+            EconomicOperationCleanupService.Instance.Start();
             LogicWorkerPool.Instance.Start();
             LogicServerFactory.Instance.Init();
         }
@@ -170,6 +172,7 @@ namespace Game
             RedisService.Instance.Shutdown();
             if (role == ServerRole.Login) return;
 
+            EconomicOperationCleanupService.Instance.Stop();
             LogicWorkerPool.Instance.Stop();
             TaskWorkerPool.Instance.Stop();
             bool isGateway = role == ServerRole.Gateway;

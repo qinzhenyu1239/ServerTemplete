@@ -1,6 +1,8 @@
 using Game.Core.GM_CharacterStarUp;
 using Game.Datas.Excels;
 using Game.Entries.Modules;
+using Game.Core.EntityMgr;
+using GameServerTests.Gacha;
 
 namespace GameServerTests.CharacterStarUp;
 
@@ -56,6 +58,39 @@ public sealed class CharacterStarUpConfigurationTests
         Assert.Throws<InvalidOperationException>(() =>
             CharacterStarUpModule.BuildDefinitions(Characters(), Stars(1, 0),
                 new[] { new Item { id = 99999 } }, expectedMaxStar: 1));
+    }
+
+    [Fact]
+    public void GetCharacterInfo_UsesLoadedOnlineComponentsWithoutDatabaseAccess()
+    {
+        const long playerId = -991001;
+        CharacterStarUpDefinition definition = new()
+        {
+            CharacterId = 20001,
+            PieceItemId = 30001,
+            MaxStar = 2,
+            PieceCounts = new Dictionary<int, int> { [0] = 1, [1] = 2, [2] = 0 }
+        };
+
+        GM_EntityMgr.Instance.Init();
+        var entity = GachaMySqlTestEnvironment.AddOnlinePlayer(
+            playerId, new Dictionary<int, long> { [30001] = 17 });
+        entity.uCharacter.characterIds.Add(20001);
+        entity.uCharacter.characterStars[20001] = 1;
+        try
+        {
+            CharacterStarUpInfoResult result =
+                GM_CharacterStarUpMgr.Instance.GetCharacterInfo(playerId, definition);
+
+            Assert.Equal(CharacterStarUpStatus.Success, result.Status);
+            Assert.Equal(1, result.Star);
+            Assert.Equal(17, result.PieceQuantity);
+            Assert.Equal(2, result.NextPieceCount);
+        }
+        finally
+        {
+            GM_EntityMgr.Instance.RemovePlayer(playerId);
+        }
     }
 
     private static List<Game.Datas.Excels.Character> Characters() => new()

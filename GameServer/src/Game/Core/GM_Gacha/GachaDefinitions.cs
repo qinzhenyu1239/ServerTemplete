@@ -6,7 +6,8 @@ namespace Game.Core.GM_Gacha
     {
         Success,
         ResourceNotEnough,
-        Failed
+        Failed,
+        OperationConflict
     }
 
     public sealed class GachaRewardDefinition
@@ -62,6 +63,7 @@ namespace Game.Core.GM_Gacha
 
     public sealed class GachaDrawResult
     {
+        public string OperationId { get; init; }
         public GachaOperationStatus Status { get; init; }
         public long BatchId { get; init; }
         public int UsedTicketCount { get; init; }

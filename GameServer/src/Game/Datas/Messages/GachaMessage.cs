@@ -39,6 +39,7 @@ namespace Game.Datas.Messages
     {
         [ProtoMember(1, IsRequired = true)] public int poolId;
         [ProtoMember(2, IsRequired = true)] public int drawCount;
+        [ProtoMember(3)] public string operationId;
     }
 
     [ProtoContract]
@@ -67,5 +68,6 @@ namespace Game.Datas.Messages
         [ProtoMember(9)] public int bigPityCount;
         [ProtoMember(10)] public long totalDrawCount;
         [ProtoMember(11)] public List<GachaResultItem> results = new List<GachaResultItem>();
+        [ProtoMember(12)] public string operationId;
     }
 }

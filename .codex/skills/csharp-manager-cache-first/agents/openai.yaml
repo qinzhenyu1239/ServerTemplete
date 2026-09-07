@@ -1,0 +1,4 @@
+interface:
+  display_name: "C# Manager Cache-First Pattern"
+  short_description: "Standardize cache-first locked manager queries"
+  default_prompt: "Use $csharp-manager-cache-first to implement or refactor this CSharpGameServer manager query."

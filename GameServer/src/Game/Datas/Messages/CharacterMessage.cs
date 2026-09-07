@@ -32,6 +32,7 @@ namespace Game.Datas.Messages
     {
         [ProtoMember(1, IsRequired = true)] public int characterId;
         [ProtoMember(2, IsRequired = true)] public int targetStar;
+        [ProtoMember(3)] public string operationId;
     }
 
     [ProtoContract]
@@ -49,5 +50,8 @@ namespace Game.Datas.Messages
         [ProtoMember(9)] public int pieceItemId;
         [ProtoMember(10)] public long remainingPieceQuantity;
         [ProtoMember(11)] public bool isMaxStar;
+        [ProtoMember(12)] public int nextStar;
+        [ProtoMember(13)] public int nextPieceCount;
+        [ProtoMember(14)] public string operationId;
     }
 }

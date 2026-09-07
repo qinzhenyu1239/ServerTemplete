@@ -180,6 +180,10 @@
         eGetCharacterInfoRes = 80,
         eCharacterStarUpReq = 81,
         eCharacterStarUpRes = 82,
+
+        // 已鉴权游戏连接心跳
+        eHeartbeatReq = 83,
+        eHeartbeatRes = 84,
     }
 
     public enum QuitReason { 
@@ -225,6 +229,7 @@
         CharacterTargetStarInvalid = -127,
         CharacterConfigError = -128,
         CharacterStarUpFailed = -129,
+        EconomicOperationConflict = -130,
         // ...
     }
 

@@ -1,6 +1,8 @@
 using Game.Core.Db;
 using Game.Core.Concurrency;
 using Game.Core.EntityMgr;
+using Game.Core.GM_Item;
+using Game.Core.Idempotency;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
 using SqlSugar;
@@ -25,50 +27,52 @@ namespace Game.Core.GM_CharacterStarUp
             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
             lock (playerLock.SyncRoot)
             {
-                try
-                {
-                    using SqlSugarClient db = DBService.Instance.GetGameInstance();
-                    Player_character character = db.Queryable<Player_character>()
-                        .Where(row => row.player_id == playerId && row.character_id == definition.CharacterId)
-                        .First();
-                    if (character == null)
-                        return new CharacterStarUpInfoResult
-                        {
-                            Status = CharacterStarUpStatus.NotOwned,
-                            CharacterId = definition.CharacterId,
-                            PieceItemId = definition.PieceItemId
-                        };
+                return GetCharacterInfoLocked(playerId, definition);
+            }
+        }
 
-                    long quantity = GetItemQuantity(db, playerId, definition.PieceItemId);
-                    SyncCommittedComponents(playerId, definition.CharacterId, character.star,
-                        definition.PieceItemId, quantity);
-                    return CreateInfo(definition, character.star, quantity);
-                }
-                catch (Exception exception)
-                {
-                    logger.Error(exception,
-                        $"Failed to query character {definition.CharacterId} for player {playerId}.");
-                    InvalidateComponents(playerId);
-                    return new CharacterStarUpInfoResult
-                    {
-                        Status = CharacterStarUpStatus.Failed,
-                        CharacterId = definition.CharacterId,
-                        PieceItemId = definition.PieceItemId
-                    };
-                }
+        private CharacterStarUpInfoResult GetCharacterInfoLocked(
+            long playerId, CharacterStarUpDefinition definition)
+        {
+            try
+            {
+                CharacterInfoSnapshot character = GetCharacterState(playerId, definition.CharacterId);
+                if (character == null)
+                    return CreateInfoError(CharacterStarUpStatus.NotOwned, definition);
+
+                long pieceQuantity = GM_ItemMgr.Instance.GetQuantity(
+                    playerId, definition.PieceItemId);
+                return CreateInfo(definition, character.Star, pieceQuantity);
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception,
+                    $"Failed to query character {definition.CharacterId} for player {playerId}.");
+                InvalidateComponents(playerId);
+                return CreateInfoError(CharacterStarUpStatus.Failed, definition);
             }
         }
 
         public CharacterStarUpResult StarUp(
             long playerId, CharacterStarUpDefinition definition, int targetStar) =>
-            StarUpCore(playerId, definition, targetStar, null);
+            StarUpCore(playerId, definition, targetStar, null, null);
+
+        public CharacterStarUpResult StarUp(
+            long playerId, CharacterStarUpDefinition definition, int targetStar, string operationId) =>
+            StarUpCore(playerId, definition, targetStar, operationId, null);
 
         internal CharacterStarUpResult StarUpForTest(
             long playerId, CharacterStarUpDefinition definition, int targetStar, Action afterDeduction) =>
-            StarUpCore(playerId, definition, targetStar, afterDeduction);
+            StarUpCore(playerId, definition, targetStar, null, afterDeduction);
+
+        internal CharacterStarUpResult StarUpForTest(
+            long playerId, CharacterStarUpDefinition definition, int targetStar,
+            string operationId, Action afterDeduction) =>
+            StarUpCore(playerId, definition, targetStar, operationId, afterDeduction);
 
         private CharacterStarUpResult StarUpCore(
-            long playerId, CharacterStarUpDefinition definition, int targetStar, Action afterDeduction)
+            long playerId, CharacterStarUpDefinition definition, int targetStar,
+            string operationId, Action afterDeduction)
         {
             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
             lock (playerLock.SyncRoot)
@@ -77,6 +81,19 @@ namespace Game.Core.GM_CharacterStarUp
                 try
                 {
                     db.Ado.BeginTran();
+                    if (operationId != null)
+                    {
+                        string requestHash = OperationRequestHasher.Compute(
+                            "character-star-up", definition.CharacterId, targetStar);
+                        CharacterStarUpResult stored = CharacterStarUpOperationRepository.Instance.TryBegin(
+                            db, playerId, operationId, definition.CharacterId, targetStar, requestHash);
+                        if (stored != null)
+                        {
+                            db.Ado.CommitTran();
+                            return stored;
+                        }
+                        db.Ado.ExecuteCommand("SAVEPOINT character_starup_operation_started");
+                    }
                     Player_character character = db.Ado.SqlQuery<Player_character>(
                             "SELECT id, player_id, character_id, star FROM player_character " +
                             "WHERE player_id=@playerId AND character_id=@characterId FOR UPDATE",
@@ -85,37 +102,43 @@ namespace Game.Core.GM_CharacterStarUp
                         .SingleOrDefault();
                     if (character == null)
                     {
-                        db.Ado.RollbackTran();
-                        return CreateStarUpResult(CharacterStarUpStatus.NotOwned, definition,
-                            targetStar, 0, 0, false, 0, 0);
+                        CharacterStarUpResult result = CreateStarUpResult(CharacterStarUpStatus.NotOwned,
+                            definition, targetStar, 0, 0, false, 0, 0, operationId);
+                        FinishBusinessResult(db, playerId, operationId, result, false);
+                        return result;
                     }
 
                     int previousStar = character.star;
                     if (targetStar <= previousStar)
                     {
                         long unchangedQuantity = GetItemQuantity(db, playerId, definition.PieceItemId);
-                        db.Ado.CommitTran();
+                        CharacterStarUpResult result = CreateStarUpResult(CharacterStarUpStatus.Success,
+                            definition, targetStar, previousStar, previousStar, false, 0,
+                            unchangedQuantity, operationId);
+                        FinishBusinessResult(db, playerId, operationId, result, true);
                         SyncCommittedComponents(playerId, definition.CharacterId, character.star,
                             definition.PieceItemId, unchangedQuantity);
-                        return CreateStarUpResult(CharacterStarUpStatus.Success, definition,
-                            targetStar, previousStar, previousStar, false, 0, unchangedQuantity);
+                        return result;
                     }
 
                     if (targetStar != previousStar + 1 || targetStar > definition.MaxStar ||
                         !definition.PieceCounts.TryGetValue(previousStar, out int cost) || cost <= 0)
                     {
-                        db.Ado.RollbackTran();
-                        return CreateStarUpResult(CharacterStarUpStatus.TargetStarInvalid, definition,
+                        CharacterStarUpResult result = CreateStarUpResult(CharacterStarUpStatus.TargetStarInvalid, definition,
                             targetStar, previousStar, previousStar, false, 0,
-                            GetItemQuantity(db, playerId, definition.PieceItemId));
+                            GetItemQuantity(db, playerId, definition.PieceItemId), operationId);
+                        FinishBusinessResult(db, playerId, operationId, result, false);
+                        return result;
                     }
 
                     Player_item item = LockItem(db, playerId, definition.PieceItemId);
                     if (item.quantity < cost)
                     {
-                        db.Ado.RollbackTran();
-                        return CreateStarUpResult(CharacterStarUpStatus.FragmentNotEnough, definition,
-                            targetStar, previousStar, previousStar, false, 0, item.quantity);
+                        CharacterStarUpResult result = CreateStarUpResult(CharacterStarUpStatus.FragmentNotEnough,
+                            definition, targetStar, previousStar, previousStar, false, 0,
+                            item.quantity, operationId);
+                        FinishBusinessResult(db, playerId, operationId, result, false);
+                        return result;
                     }
 
                     int itemAffected = db.Ado.ExecuteCommand(
@@ -139,12 +162,20 @@ namespace Game.Core.GM_CharacterStarUp
                     if (characterAffected != 1)
                         throw new InvalidOperationException("Failed to update character star.");
 
-                    db.Ado.CommitTran();
                     long remaining = item.quantity - cost;
+                    CharacterStarUpResult success = CreateStarUpResult(CharacterStarUpStatus.Success,
+                        definition, targetStar, previousStar, targetStar, true, cost, remaining, operationId);
+                    FinishBusinessResult(db, playerId, operationId, success, true);
                     SyncCommittedComponents(playerId, definition.CharacterId, checked((byte)targetStar),
                         definition.PieceItemId, remaining);
-                    return CreateStarUpResult(CharacterStarUpStatus.Success, definition,
-                        targetStar, previousStar, targetStar, true, cost, remaining);
+                    return success;
+                }
+                catch (IdempotentOperationConflictException)
+                {
+                    try { db.Ado.RollbackTran(); }
+                    catch (Exception rollbackException) { logger.Error(rollbackException); }
+                    return CreateStarUpResult(CharacterStarUpStatus.OperationConflict, definition,
+                        targetStar, 0, 0, false, 0, 0, operationId);
                 }
                 catch (Exception exception)
                 {
@@ -154,7 +185,7 @@ namespace Game.Core.GM_CharacterStarUp
                         $"Character star-up failed for player {playerId}, character {definition.CharacterId}.");
                     InvalidateComponents(playerId);
                     return CreateStarUpResult(CharacterStarUpStatus.Failed, definition,
-                        targetStar, 0, 0, false, 0, 0);
+                        targetStar, 0, 0, false, 0, 0, operationId);
                 }
             }
         }
@@ -168,6 +199,37 @@ namespace Game.Core.GM_CharacterStarUp
             entity.uCharacter.characterIds = characters.Select(row => row.character_id).ToHashSet();
             entity.uCharacter.characterStars = characters.ToDictionary(row => row.character_id, row => row.star);
         }
+
+        private CharacterInfoSnapshot GetCharacterState(long playerId, int characterId)
+        {
+            GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
+            if (entity != null)
+            {
+                if (entity.uCharacter.characterStars == null)
+                    ReloadCharacterComponent(entity);
+                if (!entity.uCharacter.characterStars.TryGetValue(
+                        characterId, out byte star))
+                    return null;
+
+                return new CharacterInfoSnapshot { Star = star };
+            }
+
+            using SqlSugarClient db = DBService.Instance.GetGameInstance();
+            Player_character character = db.Queryable<Player_character>()
+                .Where(row => row.player_id == playerId && row.character_id == characterId)
+                .First();
+            return character == null
+                ? null
+                : new CharacterInfoSnapshot { Star = character.star };
+        }
+
+        private static CharacterStarUpInfoResult CreateInfoError(
+            CharacterStarUpStatus status, CharacterStarUpDefinition definition) => new()
+        {
+            Status = status,
+            CharacterId = definition.CharacterId,
+            PieceItemId = definition.PieceItemId
+        };
 
         private static CharacterStarUpInfoResult CreateInfo(
             CharacterStarUpDefinition definition, int star, long quantity)
@@ -190,19 +252,54 @@ namespace Game.Core.GM_CharacterStarUp
 
         private static CharacterStarUpResult CreateStarUpResult(
             CharacterStarUpStatus status, CharacterStarUpDefinition definition, int requestedStar,
-            int previousStar, int currentStar, bool didUpgrade, int consumed, long remaining) => new()
+            int previousStar, int currentStar, bool didUpgrade, int consumed, long remaining,
+            string operationId = null)
         {
-            Status = status,
-            CharacterId = definition.CharacterId,
-            RequestedStar = requestedStar,
-            PreviousStar = previousStar,
-            CurrentStar = currentStar,
-            DidUpgrade = didUpgrade,
-            ConsumedPieceCount = consumed,
-            PieceItemId = definition.PieceItemId,
-            RemainingPieceQuantity = remaining,
-            IsMaxStar = currentStar >= definition.MaxStar
-        };
+            bool hasAuthoritativeState = status != CharacterStarUpStatus.NotOwned &&
+                                         status != CharacterStarUpStatus.Failed;
+            bool isMaxStar = hasAuthoritativeState && currentStar >= definition.MaxStar;
+            int nextStar = hasAuthoritativeState
+                ? (isMaxStar ? currentStar : currentStar + 1)
+                : 0;
+            int nextCost = hasAuthoritativeState && !isMaxStar &&
+                           definition.PieceCounts.TryGetValue(currentStar, out int cost)
+                ? cost
+                : 0;
+
+            return new CharacterStarUpResult
+            {
+                OperationId = operationId,
+                Status = status,
+                CharacterId = definition.CharacterId,
+                RequestedStar = requestedStar,
+                PreviousStar = previousStar,
+                CurrentStar = currentStar,
+                DidUpgrade = didUpgrade,
+                ConsumedPieceCount = consumed,
+                PieceItemId = definition.PieceItemId,
+                RemainingPieceQuantity = remaining,
+                IsMaxStar = isMaxStar,
+                NextStar = nextStar,
+                NextPieceCount = nextCost
+            };
+        }
+
+        private static void FinishBusinessResult(
+            SqlSugarClient db, long playerId, string operationId,
+            CharacterStarUpResult result, bool commitLegacy)
+        {
+            if (operationId != null)
+            {
+                if (!commitLegacy)
+                    db.Ado.ExecuteCommand(
+                        "ROLLBACK TO SAVEPOINT character_starup_operation_started");
+                CharacterStarUpOperationRepository.Instance.Complete(
+                    db, playerId, operationId, result);
+                db.Ado.CommitTran();
+            }
+            else if (commitLegacy) db.Ado.CommitTran();
+            else db.Ado.RollbackTran();
+        }
 
         private static Player_item LockItem(SqlSugarClient db, long playerId, int itemId)
         {
@@ -231,12 +328,14 @@ namespace Game.Core.GM_CharacterStarUp
         {
             GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
             if (entity == null) return;
-            entity.uCharacter.characterIds ??= new HashSet<int>();
-            entity.uCharacter.characterStars ??= new Dictionary<int, byte>();
-            entity.uCharacter.characterIds.Add(characterId);
-            entity.uCharacter.characterStars[characterId] = star;
-            entity.uItem.quantities ??= new Dictionary<int, long>();
-            entity.uItem.quantities[itemId] = quantity;
+            if (entity.uCharacter.characterIds != null &&
+                entity.uCharacter.characterStars != null)
+            {
+                entity.uCharacter.characterIds.Add(characterId);
+                entity.uCharacter.characterStars[characterId] = star;
+            }
+            if (entity.uItem.quantities != null)
+                entity.uItem.quantities[itemId] = quantity;
         }
 
         private static void InvalidateComponents(long playerId)
@@ -246,6 +345,11 @@ namespace Game.Core.GM_CharacterStarUp
             entity.uCharacter.characterIds = null;
             entity.uCharacter.characterStars = null;
             entity.uItem.quantities = null;
+        }
+
+        private sealed class CharacterInfoSnapshot
+        {
+            public byte Star { get; set; }
         }
 
     }

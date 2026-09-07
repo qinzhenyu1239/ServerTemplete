@@ -3,6 +3,8 @@ using Game.Core.Db;
 using Game.Core.Concurrency;
 using Game.Core.EntityMgr;
 using Game.Core.GM_CharacterStarUp;
+using Game.Core.GM_Item;
+using Game.Core.Idempotency;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
 using SqlSugar;
@@ -38,7 +40,7 @@ namespace Game.Core.GM_Gacha
             {
                 Player_gacha_state state = GetGachaState(playerId, pool.PoolId) ??
                                            NewState(playerId, pool.PoolId);
-                Dictionary<int, long> quantities = GetQuantities(
+                Dictionary<int, long> quantities = GM_ItemMgr.Instance.GetQuantities(
                     playerId, pool.TicketItemId, pool.DiamondItemId);
                 long ticketQuantity = GetQuantity(quantities, pool.TicketItemId);
                 long diamondQuantity = GetQuantity(quantities, pool.DiamondItemId);
@@ -76,20 +78,38 @@ namespace Game.Core.GM_Gacha
         }
 
         public GachaDrawResult Draw(long playerId, GachaPoolDefinition pool, int drawCount)
+            => Draw(playerId, pool, drawCount, null);
+
+        public GachaDrawResult Draw(
+            long playerId, GachaPoolDefinition pool, int drawCount, string operationId)
         {
             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
             lock (playerLock.SyncRoot)
             {
-                return DrawLocked(playerId, pool, drawCount);
+                return DrawLocked(playerId, pool, drawCount, operationId);
             }
         }
 
-        private GachaDrawResult DrawLocked(long playerId, GachaPoolDefinition pool, int drawCount)
+        private GachaDrawResult DrawLocked(
+            long playerId, GachaPoolDefinition pool, int drawCount, string operationId)
         {
             using SqlSugarClient db = DBService.Instance.GetGameInstance();
             try
             {
                 db.Ado.BeginTran();
+                if (operationId != null)
+                {
+                    string requestHash = OperationRequestHasher.Compute(
+                        "gacha", pool.PoolId, drawCount);
+                    GachaDrawResult stored = GachaOperationRepository.Instance.TryBegin(
+                        db, playerId, operationId, pool.PoolId, drawCount, requestHash);
+                    if (stored != null)
+                    {
+                        db.Ado.CommitTran();
+                        return stored;
+                    }
+                    db.Ado.ExecuteCommand("SAVEPOINT gacha_operation_started");
+                }
                 Player_gacha_state state = LockGachaState(db, playerId, pool.PoolId);
                 Dictionary<int, long> quantities = LockPaymentItems(
                     db, playerId, pool.TicketItemId, pool.DiamondItemId);
@@ -100,8 +120,19 @@ namespace Game.Core.GM_Gacha
                 int usedDiamonds = checked((drawCount - usedTickets) * pool.DiamondCostPerDraw);
                 if (diamondQuantity < usedDiamonds)
                 {
-                    db.Ado.RollbackTran();
-                    return new GachaDrawResult { Status = GachaOperationStatus.ResourceNotEnough };
+                    var insufficientResult = new GachaDrawResult
+                    {
+                        OperationId = operationId,
+                        Status = GachaOperationStatus.ResourceNotEnough
+                    };
+                    if (operationId == null) db.Ado.RollbackTran();
+                    else
+                    {
+                        db.Ado.ExecuteCommand("ROLLBACK TO SAVEPOINT gacha_operation_started");
+                        GachaOperationRepository.Instance.Complete(db, playerId, operationId, insufficientResult);
+                        db.Ado.CommitTran();
+                    }
+                    return insufficientResult;
                 }
 
                 DeductItem(db, playerId, pool.TicketItemId, usedTickets);
@@ -170,16 +201,11 @@ namespace Game.Core.GM_Gacha
                 }
 
                 UpdateGachaState(db, state);
-                db.Ado.CommitTran();
-
                 long remainingTickets = ticketQuantity - usedTickets;
                 long remainingDiamonds = diamondQuantity - usedDiamonds;
-                SyncCommittedComponents(
-                    playerId, state, pool, remainingTickets, remainingDiamonds,
-                    fragmentChanges, newCharacters);
-
-                return new GachaDrawResult
+                var result = new GachaDrawResult
                 {
+                    OperationId = operationId,
                     Status = GachaOperationStatus.Success,
                     BatchId = batchId,
                     UsedTicketCount = usedTickets,
@@ -191,6 +217,24 @@ namespace Game.Core.GM_Gacha
                     TotalDrawCount = state.total_draw_count,
                     Rewards = results
                 };
+                if (operationId != null)
+                    GachaOperationRepository.Instance.Complete(db, playerId, operationId, result);
+                db.Ado.CommitTran();
+
+                SyncCommittedComponents(
+                    playerId, state, pool, remainingTickets, remainingDiamonds,
+                    fragmentChanges, newCharacters);
+                return result;
+            }
+            catch (IdempotentOperationConflictException)
+            {
+                try { db.Ado.RollbackTran(); }
+                catch (Exception rollbackException) { logger.Error(rollbackException); }
+                return new GachaDrawResult
+                {
+                    OperationId = operationId,
+                    Status = GachaOperationStatus.OperationConflict
+                };
             }
             catch (Exception exception)
             {
@@ -198,7 +242,11 @@ namespace Game.Core.GM_Gacha
                 catch (Exception rollbackException) { logger.Error(rollbackException); }
                 logger.Error(exception, $"Gacha draw failed for player {playerId}, pool {pool.PoolId}.");
                 InvalidateComponents(playerId);
-                return new GachaDrawResult { Status = GachaOperationStatus.Failed };
+                return new GachaDrawResult
+                {
+                    OperationId = operationId,
+                    Status = GachaOperationStatus.Failed
+                };
             }
         }
 
@@ -287,15 +335,6 @@ namespace Game.Core.GM_Gacha
         private static long GetQuantity(IReadOnlyDictionary<int, long> quantities, int itemId) =>
             quantities != null && quantities.TryGetValue(itemId, out long value) ? value : 0;
 
-        internal void ReloadItemComponent(GM_PlayerEntity entity)
-        {
-            entity.uItem.quantities = DBService.Instance.GetGameInstance()
-                .Queryable<Player_item>()
-                .Where(item => item.player_id == entity.uPlayer.playerInfo.id)
-                .ToList()
-                .ToDictionary(item => item.item_id, item => item.quantity);
-        }
-
         internal void ReloadCharacterComponent(GM_PlayerEntity entity)
         {
             GM_CharacterStarUpMgr.Instance.ReloadCharacterComponent(entity);
@@ -309,27 +348,6 @@ namespace Game.Core.GM_Gacha
                 .ToList()
                 .ToDictionary(state => state.pool_id, state => state);
             entity.uGacha.isLoaded = true;
-        }
-
-        private static Dictionary<int, long> GetQuantities(long playerId, params int[] itemIds)
-        {
-            GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
-            if (entity != null)
-            {
-                if (entity.uItem.quantities == null) Instance.ReloadItemComponent(entity);
-                return itemIds.ToDictionary(
-                    itemId => itemId,
-                    itemId => entity.uItem.quantities.TryGetValue(itemId, out long value) ? value : 0);
-            }
-
-            using SqlSugarClient db = DBService.Instance.GetGameInstance();
-            Dictionary<int, long> stored = db.Queryable<Player_item>()
-                .Where(item => item.player_id == playerId && itemIds.Contains(item.item_id))
-                .ToList()
-                .ToDictionary(item => item.item_id, item => item.quantity);
-            return itemIds.ToDictionary(
-                itemId => itemId,
-                itemId => stored.TryGetValue(itemId, out long value) ? value : 0);
         }
 
         private static Dictionary<int, long> LockPaymentItems(
@@ -388,7 +406,7 @@ namespace Game.Core.GM_Gacha
         {
             GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
             if (entity == null) return;
-            entity.uItem.quantities ??= new Dictionary<int, long>();
+            if (entity.uItem.quantities == null) return;
             entity.uItem.quantities[ticketItemId] = tickets;
             entity.uItem.quantities[diamondItemId] = diamonds;
             foreach (KeyValuePair<int, long> change in fragmentChanges)
@@ -430,8 +448,8 @@ namespace Game.Core.GM_Gacha
         {
             GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
             if (entity == null) return;
-            entity.uCharacter.characterIds ??= new HashSet<int>();
-            entity.uCharacter.characterStars ??= new Dictionary<int, byte>();
+            if (entity.uCharacter.characterIds == null ||
+                entity.uCharacter.characterStars == null) return;
             foreach (int characterId in characterIds)
             {
                 entity.uCharacter.characterIds.Add(characterId);

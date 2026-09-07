@@ -92,6 +92,8 @@ internal static class GachaMySqlTestEnvironment
     {
         await ExecuteNonQueryAsync(
             connection,
+            $"DELETE FROM player_gacha_operation WHERE player_id={playerId};" +
+            $"DELETE FROM player_character_starup_operation WHERE player_id={playerId};" +
             $"DELETE FROM player_gacha_record WHERE player_id={playerId};" +
             $"DELETE FROM player_character WHERE player_id={playerId};" +
             $"DELETE FROM player_gacha_state WHERE player_id={playerId};" +

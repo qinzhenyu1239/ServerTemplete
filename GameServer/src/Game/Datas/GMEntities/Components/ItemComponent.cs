@@ -1,4 +1,4 @@
-using Game.Core.GM_Gacha;
+using Game.Core.GM_Item;
 using System.Collections.Generic;
 
 namespace Game.Datas.GMEntities
@@ -12,7 +12,12 @@ namespace Game.Datas.GMEntities
 
         public static void Reload(GM_PlayerEntity entity)
         {
-            GM_GachaMgr.Instance.ReloadItemComponent(entity);
+            GM_ItemMgr.Instance.ReloadItemComponent(entity);
+        }
+
+        public static void EnsureLoaded(GM_PlayerEntity entity)
+        {
+            GM_ItemMgr.Instance.EnsureLoaded(entity);
         }
     }
 }

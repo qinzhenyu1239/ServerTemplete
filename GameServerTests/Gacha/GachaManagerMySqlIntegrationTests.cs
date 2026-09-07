@@ -8,6 +8,161 @@ public sealed class GachaManagerMySqlIntegrationTests
 {
     [DatabaseFact]
     [Trait("Category", "Database")]
+    public async Task SameOperation_ReturnsOriginalResultWithoutSecondDebit()
+    {
+        long playerId = GachaMySqlTestEnvironment.PlayerId(1);
+        string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+        GachaPoolDefinition pool = CreateDeterministicPool(910000);
+        await using MySqlConnection connection =
+            await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+        await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        try
+        {
+            await SeedItemsAsync(connection, playerId, pool, tickets: 2, diamonds: 0);
+            GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+            string operationId = Guid.NewGuid().ToString("N");
+
+            GachaDrawResult first = GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId);
+            GachaDrawResult duplicate = GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId);
+
+            Assert.Equal(GachaOperationStatus.Success, first.Status);
+            Assert.Equal(first.BatchId, duplicate.BatchId);
+            Assert.Equal(first.Rewards.Single().CharacterId, duplicate.Rewards.Single().CharacterId);
+            Assert.Equal(1, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
+            Assert.Equal(1, await PlayerRowCountAsync(connection, "player_gacha_record", playerId));
+            Assert.Equal(1, await PlayerRowCountAsync(connection, "player_gacha_operation", playerId));
+        }
+        finally
+        {
+            if (!GachaMySqlTestEnvironment.KeepDatabaseData)
+                await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        }
+    }
+
+    [DatabaseFact]
+    [Trait("Category", "Database")]
+    public async Task ConcurrentSameOperation_ReturnsOneCommittedDrawTwice()
+    {
+        long playerId = GachaMySqlTestEnvironment.PlayerId(4);
+        string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+        GachaPoolDefinition pool = CreateDeterministicPool(910030);
+        await using MySqlConnection connection =
+            await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+        await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        try
+        {
+            await SeedItemsAsync(connection, playerId, pool, tickets: 2, diamonds: 0);
+            GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+            string operationId = Guid.NewGuid().ToString("N");
+            GachaDrawResult[] results = await Task.WhenAll(
+                Task.Run(() => GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId)),
+                Task.Run(() => GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId)));
+            Assert.All(results, result => Assert.Equal(GachaOperationStatus.Success, result.Status));
+            Assert.Equal(results[0].BatchId, results[1].BatchId);
+            Assert.Equal(1, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
+            Assert.Equal(1, await PlayerRowCountAsync(connection, "player_gacha_record", playerId));
+        }
+        finally
+        {
+            if (!GachaMySqlTestEnvironment.KeepDatabaseData)
+                await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        }
+    }
+
+    [DatabaseFact]
+    [Trait("Category", "Database")]
+    public async Task SameOperationId_IsIndependentAcrossPlayers()
+    {
+        long firstPlayerId = GachaMySqlTestEnvironment.PlayerId(5);
+        long secondPlayerId = GachaMySqlTestEnvironment.PlayerId(6);
+        string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+        GachaPoolDefinition pool = CreateDeterministicPool(910040);
+        await using MySqlConnection connection =
+            await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+        await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, firstPlayerId);
+        await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, secondPlayerId);
+        try
+        {
+            await SeedItemsAsync(connection, firstPlayerId, pool, tickets: 1, diamonds: 0);
+            await SeedItemsAsync(connection, secondPlayerId, pool, tickets: 1, diamonds: 0);
+            GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+            string operationId = Guid.NewGuid().ToString("N");
+            Assert.Equal(GachaOperationStatus.Success,
+                GM_GachaMgr.Instance.Draw(firstPlayerId, pool, 1, operationId).Status);
+            Assert.Equal(GachaOperationStatus.Success,
+                GM_GachaMgr.Instance.Draw(secondPlayerId, pool, 1, operationId).Status);
+        }
+        finally
+        {
+            if (!GachaMySqlTestEnvironment.KeepDatabaseData)
+            {
+                await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, firstPlayerId);
+                await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, secondPlayerId);
+            }
+        }
+    }
+
+
+    [DatabaseFact]
+    [Trait("Category", "Database")]
+    public async Task ReusedOperationWithDifferentParameters_ReturnsConflict()
+    {
+        long playerId = GachaMySqlTestEnvironment.PlayerId(2);
+        string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+        GachaPoolDefinition pool = CreateDeterministicPool(910010);
+        await using MySqlConnection connection =
+            await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+        await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        try
+        {
+            await SeedItemsAsync(connection, playerId, pool, tickets: 10, diamonds: 0);
+            GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+            string operationId = Guid.NewGuid().ToString("N");
+            Assert.Equal(GachaOperationStatus.Success,
+                GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId).Status);
+            Assert.Equal(GachaOperationStatus.OperationConflict,
+                GM_GachaMgr.Instance.Draw(playerId, pool, 10, operationId).Status);
+            Assert.Equal(9, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
+        }
+        finally
+        {
+            if (!GachaMySqlTestEnvironment.KeepDatabaseData)
+                await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        }
+    }
+
+    [DatabaseFact]
+    [Trait("Category", "Database")]
+    public async Task StoredInsufficientResult_DoesNotChangeAfterResourcesIncrease()
+    {
+        long playerId = GachaMySqlTestEnvironment.PlayerId(3);
+        string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+        GachaPoolDefinition pool = CreateDeterministicPool(910020);
+        await using MySqlConnection connection =
+            await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+        await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        try
+        {
+            await SeedItemsAsync(connection, playerId, pool, tickets: 0, diamonds: 0);
+            GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+            string operationId = Guid.NewGuid().ToString("N");
+            Assert.Equal(GachaOperationStatus.ResourceNotEnough,
+                GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId).Status);
+            await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
+                $"UPDATE player_item SET quantity=5 WHERE player_id={playerId} AND item_id={pool.TicketItemId};");
+            Assert.Equal(GachaOperationStatus.ResourceNotEnough,
+                GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId).Status);
+            Assert.Equal(5, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
+        }
+        finally
+        {
+            if (!GachaMySqlTestEnvironment.KeepDatabaseData)
+                await GachaMySqlTestEnvironment.ResetPlayerAsync(connection, playerId);
+        }
+    }
+
+    [DatabaseFact]
+    [Trait("Category", "Database")]
     public async Task SingleDraw_KeepsResponseDatabaseAndOnlineComponentsConsistent()
     {
         long playerId = GachaMySqlTestEnvironment.PlayerId(10);
@@ -172,6 +327,7 @@ public sealed class GachaManagerMySqlIntegrationTests
             Assert.Equal(0, await PlayerRowCountAsync(connection, "player_character", playerId));
             Assert.Equal(0, await PlayerRowCountAsync(connection, "player_gacha_state", playerId));
             Assert.Equal(0, await PlayerRowCountAsync(connection, "player_gacha_record", playerId));
+            Assert.Equal(0, await PlayerRowCountAsync(connection, "player_gacha_operation", playerId));
         }
         finally
         {
@@ -195,13 +351,15 @@ public sealed class GachaManagerMySqlIntegrationTests
             await SeedItemsAsync(connection, playerId, pool, tickets: 1, diamonds: 0);
             GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
 
-            GachaDrawResult result = GM_GachaMgr.Instance.Draw(playerId, pool, 1);
+            GachaDrawResult result = GM_GachaMgr.Instance.Draw(
+                playerId, pool, 1, Guid.NewGuid().ToString("N"));
 
             Assert.Equal(GachaOperationStatus.Failed, result.Status);
             Assert.Equal(1, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
             Assert.Equal(0, await PlayerRowCountAsync(connection, "player_character", playerId));
             Assert.Equal(0, await PlayerRowCountAsync(connection, "player_gacha_state", playerId));
             Assert.Equal(0, await PlayerRowCountAsync(connection, "player_gacha_record", playerId));
+            Assert.Equal(0, await PlayerRowCountAsync(connection, "player_gacha_operation", playerId));
         }
         finally
         {

@@ -2,6 +2,7 @@ using Framework.Core.Net;
 using Framework.Core.Utils;
 using Game.Core.EntityMgr;
 using Game.Core.GM_CharacterStarUp;
+using Game.Core.Idempotency;
 using Game.Datas.DBEntities;
 using Game.Datas.Excels;
 using Game.Datas.Messages;
@@ -68,18 +69,17 @@ namespace Game.Entries.Modules
                 return ErrorStarUp(Respones.AccountIsNotLogin, "Player is not logged in.", request);
             if (request == null || request.characterId <= 0 || request.targetStar <= 0)
                 return ErrorStarUp(Respones.InvalidParams, "Invalid character star-up request.", request);
+            if (!OperationIdValidator.IsValid(request.operationId))
+                return ErrorStarUp(Respones.InvalidParams,
+                    "operationId is required and must be a 32-character lowercase UUID.", request);
             if (definitions == null)
                 return ErrorStarUp(Respones.CharacterConfigError,
                     "Character module is not initialized.", request);
             if (!definitions.TryGetValue(request.characterId, out CharacterStarUpDefinition definition))
                 return ErrorStarUp(Respones.CharacterConfigError,
                     "Character configuration does not exist.", request);
-            if (request.targetStar > definition.MaxStar)
-                return ErrorStarUp(Respones.InvalidParams,
-                    "Target star exceeds the configured maximum.", request);
-
             return MapStarUp(GM_CharacterStarUpMgr.Instance.StarUp(
-                playerId, definition, request.targetStar));
+                playerId, definition, request.targetStar, request.operationId));
         }
 
         internal static IReadOnlyDictionary<int, CharacterStarUpDefinition> BuildDefinitions(
@@ -183,6 +183,7 @@ namespace Game.Entries.Modules
                 CharacterStarUpStatus.NotOwned => Respones.CharacterNotOwned,
                 CharacterStarUpStatus.FragmentNotEnough => Respones.CharacterFragmentNotEnough,
                 CharacterStarUpStatus.TargetStarInvalid => Respones.CharacterTargetStarInvalid,
+                CharacterStarUpStatus.OperationConflict => Respones.EconomicOperationConflict,
                 CharacterStarUpStatus.Failed => Respones.CharacterStarUpFailed,
                 _ => Respones.OK
             };
@@ -192,11 +193,14 @@ namespace Game.Entries.Modules
                 Respones.CharacterFragmentNotEnough => "Character fragments are not enough.",
                 Respones.CharacterTargetStarInvalid => "Only the next configured star can be upgraded.",
                 Respones.CharacterStarUpFailed => "Character star-up failed and was rolled back.",
+                Respones.EconomicOperationConflict =>
+                    "operationId was already used with different parameters.",
                 _ => null
             };
             return new ResCharacterStarUp
             {
                 status = (int)response,
+                operationId = result.OperationId,
                 errorMessage = error,
                 characterId = result.CharacterId,
                 requestedStar = result.RequestedStar,
@@ -206,7 +210,9 @@ namespace Game.Entries.Modules
                 consumedPieceCount = result.ConsumedPieceCount,
                 pieceItemId = result.PieceItemId,
                 remainingPieceQuantity = result.RemainingPieceQuantity,
-                isMaxStar = result.IsMaxStar
+                isMaxStar = result.IsMaxStar,
+                nextStar = result.NextStar,
+                nextPieceCount = result.NextPieceCount
             };
         }
 
@@ -216,7 +222,8 @@ namespace Game.Entries.Modules
             status = (int)response,
             errorMessage = message,
             characterId = request?.characterId ?? 0,
-            requestedStar = request?.targetStar ?? 0
+            requestedStar = request?.targetStar ?? 0,
+            operationId = request?.operationId
         };
     }
 }

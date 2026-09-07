@@ -2,6 +2,7 @@ using Framework.Core.Net;
 using Framework.Core.Utils;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Gacha;
+using Game.Core.Idempotency;
 using Game.Datas.DBEntities;
 using Game.Datas.Excels;
 using Game.Datas.Messages;
@@ -111,6 +112,15 @@ namespace Game.Entries.Modules
                     errorMessage = "Draw count must be 1 or 10."
                 };
             }
+            if (!OperationIdValidator.IsValid(request.operationId))
+            {
+                return new ResGachaDraw
+                {
+                    status = (int)Respones.InvalidParams,
+                    errorMessage = "operationId is required and must be a 32-character lowercase UUID.",
+                    operationId = request.operationId
+                };
+            }
             if (pools == null)
             {
                 return new ResGachaDraw
@@ -128,7 +138,8 @@ namespace Game.Entries.Modules
                 };
             }
 
-            GachaDrawResult result = GM_GachaMgr.Instance.Draw(playerId, pool, request.drawCount);
+            GachaDrawResult result = GM_GachaMgr.Instance.Draw(
+                playerId, pool, request.drawCount, request.operationId);
             return MapDrawResponse(result);
         }
 
@@ -168,7 +179,17 @@ namespace Game.Entries.Modules
                 return new ResGachaDraw
                 {
                     status = (int)Respones.GachaResourceNotEnough,
-                    errorMessage = "Gacha currency is not enough."
+                    errorMessage = "Gacha currency is not enough.",
+                    operationId = result.OperationId
+                };
+            }
+            if (result.Status == GachaOperationStatus.OperationConflict)
+            {
+                return new ResGachaDraw
+                {
+                    status = (int)Respones.EconomicOperationConflict,
+                    errorMessage = "operationId was already used with different parameters.",
+                    operationId = result.OperationId
                 };
             }
             if (result.Status != GachaOperationStatus.Success)
@@ -176,13 +197,15 @@ namespace Game.Entries.Modules
                 return new ResGachaDraw
                 {
                     status = (int)Respones.GachaFailed,
-                    errorMessage = "Gacha draw failed and was rolled back."
+                    errorMessage = "Gacha draw failed and was rolled back.",
+                    operationId = result.OperationId
                 };
             }
 
             return new ResGachaDraw
             {
                 status = (int)Respones.OK,
+                operationId = result.OperationId,
                 batchId = result.BatchId,
                 usedTicketCount = result.UsedTicketCount,
                 usedDiamondCount = result.UsedDiamondCount,
