@@ -1,0 +1,48 @@
+[2026-09-05 12:18:05.5298] Gacha draw failed for player -1788581882774, pool 910005. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.5419] Gacha draw failed for player -1788581882754, pool 910003. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <TenDraw_UsesTicketsThenDiamonds_AndPersistsEveryReward>d__2.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.5774] Gacha draw failed for player -1788581882744, pool 910002. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <TwoDraws_ConvertDuplicateCharacterToFragments>d__1.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.5797] Gacha draw failed for player -1788581882744, pool 910002. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <TwoDraws_ConvertDuplicateCharacterToFragments>d__1.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.5797] Gacha draw failed for player -1788581882784, pool 910006. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <>c__DisplayClass5_0.<ConcurrentDraws_WithOneTicket_OnlyOneSucceeds>b__1 => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.5797] Gacha draw failed for player -1788581882784, pool 910006. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <>c__DisplayClass5_0.<ConcurrentDraws_WithOneTicket_OnlyOneSucceeds>b__0 => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.6046] Gacha draw failed for player -1788581882734, pool 910001. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <SingleDraw_KeepsResponseDatabaseAndOnlineComponentsConsistent>d__0.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:18:05.6128] Gacha draw failed for player -1788581882794, pool 910007. ServerId is used as the Snowflake workerId and must be between 0 and 1023. 
+ <PityDraws_ResetAndPersistConfiguredCounters>d__6.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:19:13.6642] Gacha draw failed for player -1788581951113, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:20:15.4724] Gacha draw failed for player -1788582012901, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:21:55.2326] Gacha draw failed for player -1788582112619, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:37:55.8153] Gacha draw failed for player -1788583072994, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 12:41:02.8526] Gacha draw failed for player -1788583260070, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 16:52:34.8761] Gacha draw failed for player -1788598351111, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 16:55:05.2123] Gacha draw failed for player -1788598502193, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-05 17:17:23.9345] Gacha draw failed for player -1788599841053, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+

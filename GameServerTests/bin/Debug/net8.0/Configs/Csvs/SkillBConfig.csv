@@ -1,0 +1,4 @@
+﻿唯一ID,技能名字,技能介绍,技能动画,图标icon,技能特效,技能杀伤半径,技能时间,技能时间戳,固定伤害值,伤害比例,几级以下秒杀
+string,string,string,string,string,string,float,float,string,float,float,int
+ID,SkillName,SkillDesic,AnimName,Icon,SkillEffectName,AttackR,SkillDuration,TimeLine,FixDamage,DamageRate,seckill
+2000001,火球雨,很NB的一项技能，命中目标后，伤害极大,attack,defualt,90001,2,0.7,Init|0.0|Calc|0.4|End|0.7,0,1.5,0

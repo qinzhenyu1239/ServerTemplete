@@ -1,0 +1,15 @@
+[2026-09-07 10:26:58.8350] Character star-up failed for player -1788748015846, character 920001. forced 
+ <FailureAfterDeduction_RollsBackFragmentsAndStar>d__3.MoveNext => GM_CharacterStarUpMgr.StarUpForTest => GM_CharacterStarUpMgr.StarUpCore 
+
+[2026-09-07 10:31:56.1582] Character star-up failed for player -1788748313741, character 920001. forced 
+ <FailureAfterDeduction_RollsBackFragmentsAndStar>d__3.MoveNext => GM_CharacterStarUpMgr.StarUpForTest => GM_CharacterStarUpMgr.StarUpCore 
+
+[2026-09-07 10:34:25.4053] Character star-up failed for player -1788748462826, character 920001. forced 
+ <FailureAfterDeduction_RollsBackFragmentsAndStar>d__3.MoveNext => GM_CharacterStarUpMgr.StarUpForTest => GM_CharacterStarUpMgr.StarUpCore 
+
+[2026-09-07 10:46:26.6407] Character star-up failed for player -1788749184093, character 920001. forced 
+ <FailureAfterDeduction_RollsBackFragmentsAndStar>d__3.MoveNext => GM_CharacterStarUpMgr.StarUpForTest => GM_CharacterStarUpMgr.StarUpCore 
+
+[2026-09-07 11:48:44.1622] Character star-up failed for player -1788752921481, character 920001. forced 
+ <FailureAfterDeduction_RollsBackFragmentsAndStar>d__3.MoveNext => GM_CharacterStarUpMgr.StarUpForTest => GM_CharacterStarUpMgr.StarUpCore 
+

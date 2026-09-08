@@ -1,0 +1,15 @@
+[2026-09-07 10:26:58.6278] Gacha draw failed for player -1788748015766, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-07 10:31:56.2333] Gacha draw failed for player -1788748313661, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-07 10:34:25.4820] Gacha draw failed for player -1788748462746, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-07 10:46:26.8531] Gacha draw failed for player -1788749184013, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+
+[2026-09-07 11:48:44.2383] Gacha draw failed for player -1788752921401, pool 910005. Arithmetic operation resulted in an overflow. 
+ <FailureAfterPayment_RollsBackPaymentCharacterStateAndRecord>d__4.MoveNext => GM_GachaMgr.Draw => GM_GachaMgr.DrawLocked 
+

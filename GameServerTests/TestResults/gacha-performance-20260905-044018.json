@@ -1,0 +1,43 @@
+{
+  "generatedAtUtc": "2026-09-05T04:40:24.168919Z",
+  "database": "ugame_10001",
+  "recordCount": 100000,
+  "concurrentPlayers": 32,
+  "drawsPerPlayer": 10,
+  "historyIndexApplied": true,
+  "indexMigrationMilliseconds": 38.8626,
+  "historySeedMilliseconds": 1771.2756,
+  "history": {
+    "rowCount": 100000,
+    "recentPageAverageMilliseconds": 0.62224,
+    "keysetPageAverageMilliseconds": 0.7170099999999999,
+    "deepOffsetPageMilliseconds": 51.3248,
+    "selectedIndex": "idx_gacha_player_created_id",
+    "indexColumns": "player_id,created_at,id"
+  },
+  "distinctPlayers": {
+    "successCount": 320,
+    "totalMilliseconds": 662.4128,
+    "requestsPerSecond": 483.0824525129949,
+    "averageMilliseconds": 22.500952500000004,
+    "p95Milliseconds": 8.889,
+    "p99Milliseconds": 541.4992,
+    "maximumMilliseconds": 547.7843
+  },
+  "samePlayer": {
+    "successCount": 32,
+    "totalMilliseconds": 67.7311,
+    "requestsPerSecond": 472.456522926691,
+    "averageMilliseconds": 19.851962499999996,
+    "p95Milliseconds": 27.635,
+    "p99Milliseconds": 27.6808,
+    "maximumMilliseconds": 27.6808
+  },
+  "retainedData": false,
+  "playerIds": {
+    "historyPlayerId": -1788583219862,
+    "distinctPlayerIdStart": -1788583220893,
+    "distinctPlayerIdEnd": -1788583220862,
+    "samePlayerId": -1788583221862
+  }
+}

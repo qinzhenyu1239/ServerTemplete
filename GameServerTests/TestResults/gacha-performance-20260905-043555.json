@@ -1,0 +1,40 @@
+{
+  "generatedAtUtc": "2026-09-05T04:35:58.6709224Z",
+  "database": "ugame_10001",
+  "recordCount": 100,
+  "concurrentPlayers": 2,
+  "drawsPerPlayer": 2,
+  "historySeedMilliseconds": 8.7576,
+  "history": {
+    "rowCount": 100,
+    "recentPageAverageMilliseconds": 0.47901,
+    "keysetPageAverageMilliseconds": 0.37565,
+    "deepOffsetPageMilliseconds": 0.232,
+    "selectedIndex": "idx_player_record"
+  },
+  "distinctPlayers": {
+    "successCount": 4,
+    "totalMilliseconds": 385.0384,
+    "requestsPerSecond": 10.388574230518307,
+    "averageMilliseconds": 191.602225,
+    "p95Milliseconds": 376.9739,
+    "p99Milliseconds": 376.9739,
+    "maximumMilliseconds": 376.9739
+  },
+  "samePlayer": {
+    "successCount": 2,
+    "totalMilliseconds": 7.9906,
+    "requestsPerSecond": 250.29409556228566,
+    "averageMilliseconds": 6.145250000000001,
+    "p95Milliseconds": 7.6363,
+    "p99Milliseconds": 7.6363,
+    "maximumMilliseconds": 7.6363
+  },
+  "retainedData": false,
+  "playerIds": {
+    "historyPlayerId": -1788582956363,
+    "distinctPlayerIdStart": -1788582957364,
+    "distinctPlayerIdEnd": -1788582957363,
+    "samePlayerId": -1788582958363
+  }
+}
