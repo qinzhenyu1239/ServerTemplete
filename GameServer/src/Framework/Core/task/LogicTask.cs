@@ -14,6 +14,7 @@ namespace Framework.Core.task
         public short cmd;
         public object msg;
         public long playerId;
+        public long requestId;
     }
 
     public class LogicTask : AbstractDistributeTask
@@ -30,7 +31,7 @@ namespace Framework.Core.task
         public Queue<LogicEvent> eventQueue;
 
 
-        public void PushEvent(IdSession s, long playerId, short module, short cmd, object msg)
+        public void PushEvent(IdSession s, long playerId, short module, short cmd, object msg, long requestId = 0)
         {
             LogicEvent e = new LogicEvent();
             e.module = module;
@@ -38,6 +39,7 @@ namespace Framework.Core.task
             e.msg = msg;
             e.s = s;
             e.playerId = playerId;
+            e.requestId = requestId;
 
             lock (this.eventQueue)
             {

@@ -24,139 +24,171 @@
     {
         // 游客登录
         eGuestLoginReq = 1,
-        eGuestLoginRes,
+        eGuestLoginRes = 2,
 
         // 用户名注册,
-        eRegisterUserReq,
-        eRegisterUserRes,
+        eRegisterUserReq = 3,
+        eRegisterUserRes = 4,
 
         // 用户登录
-        eUserLoginReq,
-        eUserLoginRes,
+        eUserLoginReq = 1001,
+        eUserLoginRes = 1002,
+
+        // 登录服签发游戏服一次性票据
+        eIssueGameTicketReq = 1003,
+        eIssueGameTicketRes = 1004,
+
+        // TCP/WebSocket 连接游戏服后的首包鉴权
+        eGameAuthenticateReq = 1005,
+        eGameAuthenticateRes = 1006,
+
+        // 登录服通知游戏服淘汰旧认证会话
+        eInvalidateAccountSessionReq = 1007,
 
         // 游客账号升级
-        eGuestUpgradeReq,
-        eGuestUpgradeRes,
+        eGuestUpgradeReq = 7,
+        eGuestUpgradeRes = 8,
 
         // 拉取玩家游戏数据
-        ePullingPlayerDataReq,
-        ePullingPlayerDataRes,
+        ePullingPlayerDataReq = 9,
+        ePullingPlayerDataRes = 10,
 
         // 领取每日登录奖励
-        eRecvLoginBonuesReq,
-        eRecvLoginBonuesRes,
+        eRecvLoginBonuesReq = 11,
+        eRecvLoginBonuesRes = 12,
 
         // 拉取玩家的奖励数据
-        ePullingBonuesListReq,
-        ePullingBonuesListRes,
+        ePullingBonuesListReq = 13,
+        ePullingBonuesListRes = 14,
 
         // 领取玩家的奖励
-        eRecvBonuesReq,
-        eRecvBonuesRes,
+        eRecvBonuesReq = 15,
+        eRecvBonuesRes = 16,
 
         // 玩家选择角色
-        eSelectPlayerReq,
-        eSelectPlayerRes,
+        eSelectPlayerReq = 17,
+        eSelectPlayerRes = 18,
 
         // 拉取玩家的任务数据
-        ePullingTaskListReq,
-        ePullingTaskListRes,
+        ePullingTaskListReq = 19,
+        ePullingTaskListRes = 20,
 
         // 拉取玩家的邮件消息
-        ePullingMailMsgReq,
-        ePullingMailMsgRes,
+        ePullingMailMsgReq = 21,
+        ePullingMailMsgRes = 22,
 
         // 玩家更新邮件消息状态
-        eUpdateMailMsgReq,
-        eUpdategMailMsgRes,
+        eUpdateMailMsgReq = 23,
+        eUpdategMailMsgRes = 24,
 
         // 玩家拉取排行
-        ePullingRankReq,
-        ePullingRankRes,
+        ePullingRankReq = 25,
+        ePullingRankRes = 26,
 
         // 玩家拉取背包数据
-        ePullingPackDataReq,
-        ePullingPackDataRes,
+        ePullingPackDataReq = 27,
+        ePullingPackDataRes = 28,
 
         // 玩家交易兑换
-        eExchangeProductReq,
-        eExchangeProductRes,
+        eExchangeProductReq = 29,
+        eExchangeProductRes = 30,
 
         // 玩家获取逻辑服实例Id
-        eEnterLogicServerReq,
-        eEnterLogicServerRes,
+        eEnterLogicServerReq = 31,
+        eEnterLogicServerRes = 32,
 
         // 玩家离开逻辑服实例
-        eExitLogicServerReq,
-        eExitLogicServerRes,
+        eExitLogicServerReq = 33,
+        eExitLogicServerRes = 34,
 
         // 玩家的坐下
-        eSitdownReq,
-        eSitdownRes,
+        eSitdownReq = 35,
+        eSitdownRes = 36,
 
         // 玩家站起
-        eStandupReq,
-        eStandupRes,
+        eStandupReq = 37,
+        eStandupRes = 38,
 
         // 玩家发送聊天消息
-        eTalkMsgReq,
-        eTalkMsgRes,
+        eTalkMsgReq = 39,
+        eTalkMsgRes = 40,
 
         // 玩家准备好
-        ePlayerIsReadyReq,
-        ePlayerIsReadyRes,
+        ePlayerIsReadyReq = 41,
+        ePlayerIsReadyRes = 42,
 
         // 玩家的游戏操作
-        ePlayerOptReq,
-        ePlayerOptRes,
+        ePlayerOptReq = 43,
+        ePlayerOptRes = 44,
 
         // 房间模式: 服务器主动通知
-        eEnterRoomRes,
-        eUserArrivedSeatRes,
-        eUserExitSeatRes,
-        eRoundReadyRes,
-        eRoundStartedRes,
-        eRoundCheckOutRes,
-        eRoundClearRes,
-        eReconnRoomRes,
-        ePlayerEscapeRes,
-        eFrameSyncDataRes, // 帧同步，同步所有的玩家操作到客户端;
+        eEnterRoomRes = 45,
+        eUserArrivedSeatRes = 46,
+        eUserExitSeatRes = 47,
+        eRoundReadyRes = 48,
+        eRoundStartedRes = 49,
+        eRoundCheckOutRes = 50,
+        eRoundClearRes = 51,
+        eReconnRoomRes = 52,
+        ePlayerEscapeRes = 53,
+        eFrameSyncDataRes = 54, // 帧同步，同步所有的玩家操作到客户端;
 
         // 开放世界的命令
         // 玩家出生的请求;
-        ePlayerSpawnReq,
-        ePlayerSpawnRes,
+        ePlayerSpawnReq = 55,
+        ePlayerSpawnRes = 56,
 
-        eNavToDstReq,
-        eNavToDstRes,
+        eNavToDstReq = 57,
+        eNavToDstRes = 58,
 
-        eNavInDirReq,
-        eNavInDirRes,
+        eNavInDirReq = 59,
+        eNavInDirRes = 60,
 
-        eStartSkillReq,
-        eStartSkillRes,
+        eStartSkillReq = 61,
+        eStartSkillRes = 62,
 
-        eStartBuffReq,
-        eStartBuffRes,
+        eStartBuffReq = 63,
+        eStartBuffRes = 64,
 
         // 开放世界: 服务器主动通知
-        eEnterAOIRes,
-        eLeaveAOIRes,
-        eSyncCharactorRes,
-        eLostHpRes,
+        eEnterAOIRes = 65,
+        eLeaveAOIRes = 66,
+        eSyncCharactorRes = 67,
+        eLostHpRes = 68,
 
         // 测试正式项目不要直接开放出来
-        eTestGetGoodReq,
-        eTestGetGoodRes,
+        eTestGetGoodReq = 69,
+        eTestGetGoodRes = 70,
 
         // 测试更新背包物品,正式项目不要直接开放出来
-        eTestUpdateGoodsReq,
-        eTestUpdateGoddsRes,
-
-
+        eTestUpdateGoodsReq = 71,
+        eTestUpdateGoddsRes = 72,
+        
         // 测试游戏逻辑服通讯命令
-        eTestLogicCmdEchoReq,
-        eTestLogicCmdEchoRes,
+        eTestLogicCmdEchoReq = 73,
+        eTestLogicCmdEchoRes = 74,
+
+        // 抽奖
+        eGetGachaPoolInfoReq = 75,
+        eGetGachaPoolInfoRes = 76,
+        eGachaDrawReq = 77,
+        eGachaDrawRes = 78,
+
+        // 玩家角色查询与升星
+        eGetCharacterInfoReq = 79,
+        eGetCharacterInfoRes = 80,
+        eCharacterStarUpReq = 81,
+        eCharacterStarUpRes = 82,
+
+        // 已鉴权游戏连接心跳
+        eHeartbeatReq = 83,
+        eHeartbeatRes = 84,
+
+        // 玩家编队查询与保存
+        eGetPlayerFormationsReq = 85,
+        eGetPlayerFormationsRes = 86,
+        eSavePlayerFormationReq = 87,
+        eSavePlayerFormationRes = 88,
     }
 
     public enum QuitReason { 
@@ -191,6 +223,20 @@
         LevelIsNotEnough = -116,
         ChipIsNotEnough = -117,
         SeatIsUsing = -118,
+        GachaPoolNotFound = -119,
+        GachaConfigError = -120,
+        GachaDrawCountInvalid = -121,
+        GachaResourceNotEnough = -122,
+        GachaFailed = -123,
+        CharacterNotOwned = -124,
+        CharacterMaxStar = -125,
+        CharacterFragmentNotEnough = -126,
+        CharacterTargetStarInvalid = -127,
+        CharacterConfigError = -128,
+        CharacterStarUpFailed = -129,
+        EconomicOperationConflict = -130,
+        FormationVersionConflict = -131,
+        FormationSaveFailed = -132,
         // ...
     }
 

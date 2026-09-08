@@ -1,0 +1,4 @@
+不重复ID,卡池ID,备注,小保底稀有度,小保底次数,大保底稀有度,大保底次数,稀有度,稀有度概率,抽卡券ID,钻石ID,每抽钻石消耗
+int,int,string,string,string,string,string,string,string,string,string,string
+ID,poolID,remark,smallPityRarity,smallPityCount,bigPityRarity,bigPityCount,rarities,rarityWeights,ticketItemID,diamondItemID,diamondCostPerDraw
+1,1,标准卡池,3,30,4,50,"1,2,3,4","40,30,20,10",10001,10002,1

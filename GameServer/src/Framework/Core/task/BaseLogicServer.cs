@@ -109,7 +109,7 @@ namespace Framework.Core.task
                     if (this.keyMethodDic.ContainsKey(e.cmd)) {
                         var ret = this.keyMethodDic[e.cmd].Invoke(this, new object[] { e.s, e.msg, e.playerId});
                         if (ret != null) {
-                            MessagePusher.PushMessage(e.s, ret as Message, e.playerId);
+                            MessagePusher.PushMessage(e.s, ret as Message, e.playerId, requestId: e.requestId);
                         }
                     }
                 }

@@ -147,6 +147,7 @@ namespace Framework.Core.Net
                 // 将数据包丢给我们的上层来进行处理;
                 IdSession s = SessionMgr.Instance.GetSessionBy(ctx.Channel);
                 IByteBuffer msg = frame.Content;
+                MessageTrafficLogger.Received(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);
                 // byte[] cmdData = new byte[msg.ReadableBytes]; // 内存池来处理,后续考虑优化;
                 // Array.Copy(msg.Array, msg.ArrayOffset, cmdData, 0, msg.ReadableBytes);
                 // MessageDispatcher.Instance.OnClientMsg(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);

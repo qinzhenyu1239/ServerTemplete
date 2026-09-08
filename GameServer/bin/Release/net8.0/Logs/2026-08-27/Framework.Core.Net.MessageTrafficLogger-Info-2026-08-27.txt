@@ -1,0 +1,12 @@
+[2026-08-27 14:32:49.9666] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57196 method=GET uri=/PullingServerZone bytes=0 
+[2026-08-27 14:32:49.9666] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57196 status=200 bytes=345 
+[2026-08-27 14:32:50.0384] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57197 method=GET uri=/PullingServerDirectConnConfig bytes=0 
+[2026-08-27 14:32:50.0384] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57197 status=404 bytes=0 
+[2026-08-27 14:32:50.0605] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57198 method=GET uri=/GetAccountId bytes=0 
+[2026-08-27 14:32:50.0605] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57198 status=404 bytes=0 
+[2026-08-27 14:32:50.0605] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57199 method=GET uri=/ReqGuestLogin bytes=0 
+[2026-08-27 14:32:50.0605] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57199 status=404 bytes=0 
+[2026-08-27 17:59:14.3109] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:52439 method=GET uri=/favicon.ico bytes=0 
+[2026-08-27 17:59:14.3109] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:52439 status=204 bytes=0 
+[2026-08-27 17:59:14.3417] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:52440 method=GET uri=/PullingServerZone bytes=0 
+[2026-08-27 17:59:14.3417] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:52440 status=404 bytes=0 

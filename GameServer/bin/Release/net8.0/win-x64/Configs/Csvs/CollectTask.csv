@@ -1,0 +1,5 @@
+﻿唯一ID,任务内容,任务的描述,开启条件,任务达成条件,完成奖励
+int,string,string,string,string,string
+ID,name,desicFormat,StartTaskCond,DoneCond,Bonues
+100001,宝石收集,收集3个宝石以后，可获得开启下一个关的权限,auto,damond=3,hp=100|exp=1000
+100002,宝石+天书,收集3宝石4本天书开启下一个关卡的权限,auto,damond=3|book=4,hp=300|exp=2000

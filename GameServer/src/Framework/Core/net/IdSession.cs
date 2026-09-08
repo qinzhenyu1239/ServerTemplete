@@ -14,6 +14,8 @@ namespace Framework.Core.Net {
 
         public long accountId = 0; // 玩家对应的账号ID;
 
+        public string authSessionId = null;
+
         public long accountIdAndJob = 0; // 玩家Id与职业所对应的key;
 
         public bool isWebSocket = false; // 当前的session是WebSocket还是TcpSocket;
@@ -35,6 +37,8 @@ namespace Framework.Core.Net {
             if (this.client == null) {
                 return;
             }
+
+            MessageTrafficLogger.Sent(this, data, offset, count);
 
             IByteBuffer buffer = Unpooled.Buffer();
             buffer.WriteBytes(data, offset, count);
@@ -66,6 +70,8 @@ namespace Framework.Core.Net {
             if (this.client == null) {
                 return;
             }
+
+            MessageTrafficLogger.Sent(this, data, 0, data?.Length ?? 0);
 
             IByteBuffer buffer = Unpooled.Buffer();
             buffer.WriteBytes(data);

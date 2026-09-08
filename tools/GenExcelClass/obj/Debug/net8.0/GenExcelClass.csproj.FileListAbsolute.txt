@@ -1,0 +1,14 @@
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\bin\Debug\net8.0\GenExcelClass.exe
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\bin\Debug\net8.0\GenExcelClass.deps.json
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\bin\Debug\net8.0\GenExcelClass.runtimeconfig.json
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\bin\Debug\net8.0\GenExcelClass.dll
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\bin\Debug\net8.0\GenExcelClass.pdb
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.GeneratedMSBuildEditorConfig.editorconfig
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.AssemblyInfoInputs.cache
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.AssemblyInfo.cs
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.csproj.CoreCompileInputs.cache
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.dll
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\refint\GenExcelClass.dll
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.pdb
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\GenExcelClass.genruntimeconfig.cache
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\tools\GenExcelClass\obj\Debug\net8.0\ref\GenExcelClass.dll

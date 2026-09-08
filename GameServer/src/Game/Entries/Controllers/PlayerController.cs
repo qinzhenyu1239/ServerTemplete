@@ -14,19 +14,12 @@ namespace Game.Entries.Controllers
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         [RequestMapping]
-        public object DoReqPullingPlayerData(IdSession s, ReqPullingPlayerData req, long accountId) {
-            
+        public object DoReqPullingPlayerData(IdSession s, ReqPullingPlayerData req, long accountId) =>
             PlayerModule.Instance.HandlerReqPullingPlayerData(s, req, accountId);
-            return null;
-        }
 
         [RequestMapping]
-        public object DoReqSelectPlayer(IdSession s, ReqSelectPlayer req, long accountId)
-        {
-
+        public object DoReqSelectPlayer(IdSession s, ReqSelectPlayer req, long accountId) =>
             PlayerModule.Instance.HandlerReqSelectPlayer(s, req, accountId);
-            return null;
-        }
 
         [RequestMapping]
         public object DoReqRecvLoginBonues(IdSession s, ReqRecvLoginBonues req, long playerId)

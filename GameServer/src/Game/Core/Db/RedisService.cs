@@ -8,17 +8,70 @@ using System.Threading.Tasks;
 
 namespace Game.Core.Db
 {
-    class RedisService
+    public class RedisService
     {
         public static RedisService Instance = new RedisService();
 
         private ConnectionStringSettings redisIpAddr;
         private ConnectionStringSettings redisPort;
 
+        private readonly object connectionLock = new object();
+        private ConnectionMultiplexer connection;
+
 
         public void Init() {
             this.redisIpAddr = ConfigurationManager.ConnectionStrings["redisIpAddr"];
             this.redisPort = ConfigurationManager.ConnectionStrings["redisPort"];
+        }
+
+        private ConnectionMultiplexer GetConnection()
+        {
+            if (connection != null && connection.IsConnected)
+            {
+                return connection;
+            }
+
+            lock (connectionLock)
+            {
+                if (connection != null && connection.IsConnected)
+                {
+                    return connection;
+                }
+
+                if (redisIpAddr == null || redisPort == null)
+                {
+                    Init();
+                }
+
+                connection?.Dispose();
+                connection = ConnectionMultiplexer.Connect(new ConfigurationOptions
+                {
+                    EndPoints = { { redisIpAddr.ConnectionString, int.Parse(redisPort.ConnectionString) } },
+                    AbortOnConnectFail = false,
+                    ConnectRetry = 3
+                });
+                return connection;
+            }
+        }
+
+        public IDatabase GetAuthDatabase()
+        {
+            return GetConnection().GetDatabase(4);
+        }
+
+        public ISubscriber GetSubscriber()
+        {
+            return GetConnection().GetSubscriber();
+        }
+
+        public void Shutdown()
+        {
+            lock (connectionLock)
+            {
+                connection?.Close();
+                connection?.Dispose();
+                connection = null;
+            }
         }
 
 

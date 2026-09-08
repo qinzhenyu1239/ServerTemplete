@@ -1,0 +1,4 @@
+interface:
+  display_name: "C# Game Server Layered Feature"
+  short_description: "Enforce Controller–Module–Manager server architecture"
+  default_prompt: "Use $csharp-game-server-feature to implement this feature through Controller, Module, GM Manager, and Entity or persistence layers."

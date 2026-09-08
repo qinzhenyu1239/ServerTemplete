@@ -1,0 +1,58 @@
+{
+  "paths": {
+    "sourceExcelDirectory": "D:\\iaowu\\MiaoWu\\Assets\\Luban\\Template\\Datas",
+    "excelCopyDirectory": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\Excels",
+    "csvOutputDirectory": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\Configs\\Csvs"
+  },
+  "tables": [
+    {
+      "enabled": true,
+      "name": "Item",
+      "workbook": "Item.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "Item.csv"
+    },
+    {
+      "enabled": true,
+      "name": "Trap",
+      "workbook": "Trap.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "Trap.csv"
+    },   
+    {
+      "enabled": true,
+      "name": "GachaPoolConfig",
+      "workbook": "GachaPoolConfig.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "GachaPoolConfig.csv"
+    }, 
+    {
+      "enabled": true,
+      "name": "GachaPoolRewardConfig",
+      "workbook": "GachaPoolRewardConfig.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "GachaPoolRewardConfig.csv"
+    }, 
+    {
+      "enabled": true,
+      "name": "Character",
+      "workbook": "Character.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "Character.csv"
+    }, 
+    {
+      "enabled": true,
+      "name": "BaseInventory",
+      "workbook": "BaseInventory.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "BaseInventory.csv"
+    }, 
+    {
+      "enabled": true,
+      "name": "StarLevel",
+      "workbook": "StarLevel.xlsx",
+      "worksheet": "Sheet1",
+      "outputCsv": "StarLevel.csv"
+    }
+  ]
+}

@@ -26,8 +26,6 @@ namespace Framework.Core.Net
     {
 
         private NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private const int HEAD_SIZE = 14; // [2, 2, 8, 2]
-
         public GameServerClientSocketHandler() : base()
         {
         }
@@ -43,10 +41,16 @@ namespace Framework.Core.Net
         
         public void OnGameServerToGatewayMsg(IdSession s, byte[] data, int offset, int count)
         {
+            if (data == null || offset < 0 || count < ProtocolPacketLayout.HeaderLength || offset > data.Length - count)
+            {
+                logger.Warn($"Invalid game-server packet: offset={offset}, count={count}, dataLength={data?.Length ?? 0}");
+                return;
+            }
             // this.logger.Debug($"On Client Recv Cmd: {s.GetRemoteAddress()}");
-            short module = UtilsHelper.ReadShortLE(data, offset + 0); // LE的方式
-            short cmd = UtilsHelper.ReadShortLE(data, offset + 2);
-            long utag = UtilsHelper.ReadLongLE(data, offset + 4);
+            short module = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.ModuleOffset); // LE的方式
+            short cmd = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.CommandOffset);
+            long utag = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RouteTagOffset);
+            long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
             // utag ===>clientSession;
             IdSession clientSession = GatewayMgr.Instance.GetClientSession(utag/*, module, cmd*/);
             if (clientSession == null)  {
@@ -56,48 +60,48 @@ namespace Framework.Core.Net
 
             if (cmd == (short)Cmd.eGuestLoginRes)
             {
-                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
                 ResGuestLogin res = msg as ResGuestLogin;
                 clientSession.accountId = res.accountIdOrOpenId;
                 res.accountIdOrOpenId = 0;
-                MessagePusher.PushMessage(clientSession, msg, 0, 0);
+                MessagePusher.PushMessage(clientSession, msg, 0, 0, requestId);
                 return;
             }
             else if (cmd == (short)Cmd.eUserLoginRes)
             {
-                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
                 ResUserLogin res = msg as ResUserLogin;
                 clientSession.accountId = res.accountIdOrOpenId;
                 res.accountIdOrOpenId = 0;
-                MessagePusher.PushMessage(clientSession, msg, 0, 0);
+                MessagePusher.PushMessage(clientSession, msg, 0, 0, requestId);
                 return;
             }
             else if (cmd == (short)Cmd.eSelectPlayerRes)
             {
-                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
                 ResSelectPlayer res = msg as ResSelectPlayer;
                 clientSession.playerId = res.playerId;
                 res.playerId = 0;
-                MessagePusher.PushMessage(clientSession, msg, 0, 0);
+                MessagePusher.PushMessage(clientSession, msg, 0, 0, requestId);
                 return;
             }
             else if (cmd == (short)Cmd.ePullingPlayerDataRes)
             {
-                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
                 ResPullingPlayerData res = msg as ResPullingPlayerData;
                 clientSession.playerId = res.playerId;
                 res.playerId = 0;
-                MessagePusher.PushMessage(clientSession, msg, 0, 0);
+                MessagePusher.PushMessage(clientSession, msg, 0, 0, requestId);
                 return;
             }
             else if (cmd == (short)Cmd.eEnterLogicServerRes)
             {
-                short logicServerId = UtilsHelper.ReadShortLE(data, offset + 12);
+                short logicServerId = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.LogicServerIdOffset);
                 clientSession.logicServerId = logicServerId;
             }
             else if (cmd == (short)Cmd.eExitLogicServerRes)
             { // 这里要判断是否正常离开,所以还是从GameServer传递过来;
-                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+                Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
                 ResExitLogicServer res = msg as ResExitLogicServer;
                 if (res.status == (int)Respones.OK) {
                     clientSession.logicServerId = -1;
@@ -105,8 +109,8 @@ namespace Framework.Core.Net
             }
 
             // 客户端不需要utag, 我们清理掉;
-            UtilsHelper.WriteULongLE(data, offset + 4, 0);
-            UtilsHelper.WriteShortLE(data, offset + 12, 0);
+            UtilsHelper.WriteULongLE(data, offset + ProtocolPacketLayout.RouteTagOffset, 0);
+            UtilsHelper.WriteShortLE(data, offset + ProtocolPacketLayout.LogicServerIdOffset, 0);
 
             clientSession.Send(data, offset, count);
         }
@@ -119,6 +123,7 @@ namespace Framework.Core.Net
             IdSession s = SessionMgr.Instance.GetSessionBy(channel);
 
             // 游戏服务器发送数据过来到网关;
+            MessageTrafficLogger.Received(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);
             this.OnGameServerToGatewayMsg(s, msg.Array, msg.ArrayOffset, msg.ReadableBytes);
             // end
         }
@@ -326,8 +331,9 @@ namespace Framework.Core.Net
         }
 
         public async void SendMsgToGameServer(IdSession clientSession, byte[] data, int offset, int count) {
-            short module = UtilsHelper.ReadShortLE(data, offset + 0); // LE的方式
-            short cmd = UtilsHelper.ReadShortLE(data, offset + 2);
+            short module = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.ModuleOffset); // LE的方式
+            short cmd = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.CommandOffset);
+            long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
 
 
 
@@ -335,25 +341,25 @@ namespace Framework.Core.Net
             macheineId = (macheineId & 0x0000ff00) >> 8;
             clientSession.machineId = (short)macheineId; // 网关模式断线后能知道在那个机器上游戏并断线
             module = (short)(module & 0x00ff);
-            UtilsHelper.WriteShortLE(data, offset + 0, module);
+            UtilsHelper.WriteShortLE(data, offset + ProtocolPacketLayout.ModuleOffset, module);
 
             if (cmd == (short)Cmd.eEnterLogicServerReq) {
                 if (clientSession.playerId == 0) {
-                    long openId = UtilsHelper.ReadLongLE(data, offset + 4);
+                    long openId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RouteTagOffset);
                     clientSession.playerId = await HttpUtils.HttpPost(httpPlayerServerUrl, openId);
                 }
             }
             long utag = GetClientUtag(clientSession, module, cmd);
-            UtilsHelper.WriteULongLE(data, offset + 4, (ulong)utag);
+            UtilsHelper.WriteULongLE(data, offset + ProtocolPacketLayout.RouteTagOffset, (ulong)utag);
             // utag = UtilsHelper.ReadLongLE(data, offset + 4);
             short logicServerId = (short)clientSession.logicServerId;
-            UtilsHelper.WriteShortLE(data, offset + 12, (short)logicServerId);
+            UtilsHelper.WriteShortLE(data, offset + ProtocolPacketLayout.LogicServerIdOffset, (short)logicServerId);
 
             if (cmd == (short)Cmd.eEnterLogicServerReq) {
                 if (logicServerId != -1) {
                     ResEnterLogicServer res = new ResEnterLogicServer();
                     res.status = (int)Respones.InOtherLogicServerInst;
-                    MessagePusher.PushMessage(clientSession, res, 0, 0);
+                    MessagePusher.PushMessage(clientSession, res, 0, 0, requestId);
                     return;
                 }
             }
@@ -397,4 +403,3 @@ namespace Framework.Core.Net
         }
     }
 }
-

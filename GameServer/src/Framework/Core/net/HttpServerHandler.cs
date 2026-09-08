@@ -8,6 +8,7 @@ namespace Framework.Core.Net {
     using System.Collections.Generic;
     using System.IO;
     using System.Reflection.Metadata;
+    using System.Threading.Tasks;
 
     sealed class HttpServerHandler : ChannelHandlerAdapter {
 
@@ -16,14 +17,8 @@ namespace Framework.Core.Net {
 
         public override void ChannelRead(IChannelHandlerContext ctx, object message) {
             if (message is IFullHttpRequest) {
-                try
-                {
-                    this.Process(ctx, message as IFullHttpRequest);
-                }
-                finally
-                {
-                    ReferenceCountUtil.Release(message);
-                }
+                _ = this.ProcessAndReleaseAsync(ctx, message as IFullHttpRequest, message).ContinueWith(
+                    task => this.HandleAsyncFailure(ctx, task), TaskScheduler.Default);
             }
             else if (message is IHttpRequest request)
             {
@@ -47,18 +42,9 @@ namespace Framework.Core.Net {
 
                 if (message is ILastHttpContent lastContent)
                 {
-                    try
-                    {
-                        this.Process(ctx, allConent[0] as IHttpRequest, allConent);
-                    }
-                    finally
-                    {
-                        for (int i = 0; i < allConent.Count; i++)
-                        {
-                            ReferenceCountUtil.Release(allConent[i]);
-                        }
-                    }
                     ctx.Channel.GetAttribute(RequestKey).Set(null);
+                    _ = this.ProcessAndReleaseAsync(ctx, allConent[0] as IHttpRequest, allConent).ContinueWith(
+                        task => this.HandleAsyncFailure(ctx, task), TaskScheduler.Default);
                 }
             }
             else
@@ -67,12 +53,44 @@ namespace Framework.Core.Net {
             }
         }
 
-        private void Process(IChannelHandlerContext ctx, IFullHttpRequest request) {
-            HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request);
+        private async Task ProcessAndReleaseAsync(IChannelHandlerContext ctx, IFullHttpRequest request, object message) {
+            try
+            {
+                MessageTrafficLogger.HttpReceived(
+                    ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                    request.Method.ToString(), request.Uri, request.Content.ReadableBytes);
+                await HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request);
+            }
+            finally
+            {
+                ReferenceCountUtil.Release(message);
+            }
         }
 
-        void Process(IChannelHandlerContext ctx, IHttpRequest request, List<object> allContent) {
-            HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request, allContent);
+        private async Task ProcessAndReleaseAsync(IChannelHandlerContext ctx, IHttpRequest request, List<object> allContent) {
+            try
+            {
+                int contentLength = 0;
+                foreach (object item in allContent)
+                {
+                    if (item is IHttpContent content) contentLength += content.Content.ReadableBytes;
+                }
+                MessageTrafficLogger.HttpReceived(
+                    ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                    request.Method.ToString(), request.Uri, contentLength);
+                await HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request, allContent);
+            }
+            finally
+            {
+                foreach (object item in allContent) ReferenceCountUtil.Release(item);
+            }
+        }
+
+        private void HandleAsyncFailure(IChannelHandlerContext ctx, Task task)
+        {
+            if (!task.IsFaulted) return;
+            logger.Error(task.Exception?.GetBaseException(), "HTTP request processing failed");
+            ctx.CloseAsync();
         }
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception) => context.CloseAsync();

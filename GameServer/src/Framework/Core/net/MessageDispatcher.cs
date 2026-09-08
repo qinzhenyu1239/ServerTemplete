@@ -15,8 +15,6 @@ using System.Text;
 namespace Framework.Core.Net {
     class MessageDispatcher {
 
-        private const int HEAD_SIZE = 14; // [Module2×Ö½Ú, 2×Ö½ÚCmd, utag8×Ö½Ú, 2×Ö½ÚLogicServerId]
-
         public static MessageDispatcher Instance = new MessageDispatcher();
 
         private NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
@@ -42,7 +40,14 @@ namespace Framework.Core.Net {
             return module + "_" + cmd;
         }
 
-        public void Init() {  // ³õÊ¼»¯
+        private bool IsValidPacket(byte[] data, int offset, int count)
+        {
+            bool valid = data != null && offset >= 0 && count >= ProtocolPacketLayout.HeaderLength && offset <= data.Length - count;
+            if (!valid) logger.Warn($"Invalid business packet: offset={offset}, count={count}, dataLength={data?.Length ?? 0}");
+            return valid;
+        }
+
+        public void Init() {  // åˆå§‹åŒ–
             IEnumerable<Type> controllers = TypeScanner.ListTypesWithAttribute(typeof(Controller));
             foreach (Type controller in controllers) {
                 try
@@ -64,7 +69,7 @@ namespace Framework.Core.Net {
                         MODULE_CMD_HANDLERS.TryGetValue(key, out CmdExecutor cmdExecutor);
                         
                         if (cmdExecutor != null) {
-                            logger.Warn($"module[{module}] cmd[{cmd}] ÖØ¸´×¢²á´¦ÀíÆ÷");
+                            logger.Warn($"module[{module}] cmd[{cmd}] é‡å¤æ³¨å†Œå¤„ç†å™¨");
                             return;
                         }
 
@@ -81,7 +86,7 @@ namespace Framework.Core.Net {
             }
         }
 
-        // ÓĞĞÂµÄ¿Í»§¶Ë½øÀ´
+        // æœ‰æ–°çš„å®¢æˆ·ç«¯è¿›æ¥
         public void OnClientEnter(IdSession s, bool isWebSocket = false) {
             string socketType = (isWebSocket) ? "WebSocket" : "TcpSocket";
             this.logger.Debug($"On Client Enter[({socketType})]: {s.GetRemoteAddress()}");
@@ -93,10 +98,11 @@ namespace Framework.Core.Net {
             this.logger.Debug($"On Client Enter[({socketType})]: {s.GetRemoteAddress()}");
         }
 
-        // ÓĞ¿Í»§¶ËÀë¿ª;
+        // æœ‰å®¢æˆ·ç«¯ç¦»å¼€;
         public void OnClientExit(IdSession s) {
             this.logger.Debug($"On Client Exit: {s.GetRemoteAddress()}");
-            if (s.logicServerId != -1) { // ËµÃ÷Íæ¼ÒÕıÔÚÓÎÏ·
+            SessionMgr.Instance.UnbindAuthenticatedAccount(s);
+            if (s.logicServerId != -1) { // è¯´æ˜ç©å®¶æ­£åœ¨æ¸¸æˆ
                 short module = (int)Game.Module.SCENE;
                 short cmd = (int)Cmd.eExitLogicServerReq;
                 ReqExitLogicServer req = new ReqExitLogicServer();
@@ -132,30 +138,32 @@ namespace Framework.Core.Net {
             return result;
         }
 
-        // ÊÕµ½Íø¹ØµÄÏûÏ¢
+        // æ”¶åˆ°ç½‘å…³çš„æ¶ˆæ¯
         public void OnGatewayToGameServerMsg(IdSession s, byte[] data, int offset, int count)
         {
-            short module = UtilsHelper.ReadShortLE(data, offset + 0); // LEµÄ·½Ê½
-            short cmd = UtilsHelper.ReadShortLE(data, offset + 2);
+            if (!IsValidPacket(data, offset, count)) return;
+            short module = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.ModuleOffset); // LEçš„æ–¹å¼
+            short cmd = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.CommandOffset);
 
-            // Íø¹Ø,¿ÉÄÜÒªÓÃµ½utag, ÔİÊ±±£Áô;
-            long utag = UtilsHelper.ReadLongLE(data, offset + 4);
-            short logicServerId = UtilsHelper.ReadShortLE(data, offset + 12);
+            // ç½‘å…³,å¯èƒ½è¦ç”¨åˆ°utag, æš‚æ—¶ä¿ç•™;
+            long routeTag = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RouteTagOffset);
+            short logicServerId = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.LogicServerIdOffset);
+            long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
 
-            Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+            Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
 
             string key = BuildKey(module, cmd);
             MODULE_CMD_HANDLERS.TryGetValue(key, out CmdExecutor cmdExecutor);
             if (cmdExecutor != null)
             {
-                // ´¦Àíº¯Êı·´ÉäÊ±ºòĞèÒªÓÃµ½µÄ²ÎÊı;
-                object[] @params = GWConvertToMethodParams(s, cmdExecutor.@params, msg, utag);
-                TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s));
+                // å¤„ç†å‡½æ•°åå°„æ—¶å€™éœ€è¦ç”¨åˆ°çš„å‚æ•°;
+                object[] @params = GWConvertToMethodParams(s, cmdExecutor.@params, msg, routeTag);
+                TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s, routeTag, requestId));
                 return;
             }
             else
-            {  // ²é¿´Ò»ÏÂÊÇ·ñÎªLogic·şÎñÊÂ¼ş,È»ºóÖ±½ÓÍ¶µİµ½Âß¼­·şÏß³Ì´¦Àí
-                LogicWorkerPool.Instance.GWPushMsgToLogicServer(utag, logicServerId, module, cmd, msg);
+            {  // æŸ¥çœ‹ä¸€ä¸‹æ˜¯å¦ä¸ºLogicæœåŠ¡äº‹ä»¶,ç„¶åç›´æ¥æŠ•é€’åˆ°é€»è¾‘æœçº¿ç¨‹å¤„ç†
+                LogicWorkerPool.Instance.GWPushMsgToLogicServer(routeTag, logicServerId, module, cmd, msg, requestId);
             }
 
         }
@@ -192,9 +200,10 @@ namespace Framework.Core.Net {
 
         public void OnClientMsgToGateway(IdSession s, byte[] data, int offset, int count)
         {
+            if (!IsValidPacket(data, offset, count)) return;
             // this.logger.Debug($"On Client Recv Cmd: {s.GetRemoteAddress()}");
             GatewayMgr.Instance.SendMsgToGameServer(s, data, offset, count);
-            // Íø¹Ø,¿ÉÄÜÒªÓÃµ½utag, ÔİÊ±±£Áô;
+            // ç½‘å…³,å¯èƒ½è¦ç”¨åˆ°utag, æš‚æ—¶ä¿ç•™;
             // long utag = UtilsHelper.ReadLongLE(data, offset + 4);
             /*
             Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
@@ -203,44 +212,53 @@ namespace Framework.Core.Net {
             MODULE_CMD_HANDLERS.TryGetValue(key, out CmdExecutor cmdExecutor);
             if (cmdExecutor != null)
             {
-                // ´¦Àíº¯Êı·´ÉäÊ±ºòĞèÒªÓÃµ½µÄ²ÎÊı;
-                // ÕâÀïÓĞBug,Òª¸ù¾İÃüÁîºÅ£¬Ä£¿éºÅ£¬À´Çø·ÖÒ»ÏÂ;
+                // å¤„ç†å‡½æ•°åå°„æ—¶å€™éœ€è¦ç”¨åˆ°çš„å‚æ•°;
+                // è¿™é‡Œæœ‰Bug,è¦æ ¹æ®å‘½ä»¤å·ï¼Œæ¨¡å—å·ï¼Œæ¥åŒºåˆ†ä¸€ä¸‹;
                 object[] @params = ConvertToMethodParams(s, cmdExecutor.@params, msg);
                 TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s));
                 return;
             }
             else
-            {  // ²é¿´Ò»ÏÂÊÇ·ñÎªLogic·şÎñÊÂ¼ş,È»ºóÖ±½ÓÍ¶µİµ½Âß¼­·şÏß³Ì´¦Àí
+            {  // æŸ¥çœ‹ä¸€ä¸‹æ˜¯å¦ä¸ºLogicæœåŠ¡äº‹ä»¶,ç„¶åç›´æ¥æŠ•é€’åˆ°é€»è¾‘æœçº¿ç¨‹å¤„ç†
                 LogicWorkerPool.Instance.PushMsgToLogicServer(s, module, cmd, msg);
             }*/
 
         }
 
-        // ÊÕµ½Ä³¸ö¿Í»§¶ËµÄÏûÏ¢;
+        // æ”¶åˆ°æŸä¸ªå®¢æˆ·ç«¯çš„æ¶ˆæ¯;
         public void OnClientMsg(IdSession s, byte[] data, int offset, int count) {
+            if (!IsValidPacket(data, offset, count)) return;
             // this.logger.Debug($"On Client Recv Cmd: {s.GetRemoteAddress()}");
 
-            short module = UtilsHelper.ReadShortLE(data, offset + 0); // LEµÄ·½Ê½
+            short module = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.ModuleOffset); // LEçš„æ–¹å¼
             module = (short)(module & 0x00ff);
-            short cmd = UtilsHelper.ReadShortLE(data, offset + 2);
+            short cmd = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.CommandOffset);
 
-            // Íø¹Ø,¿ÉÄÜÒªÓÃµ½utag, ÔİÊ±±£Áô;
-            // long utag = UtilsHelper.ReadLongLE(data, offset + 4);
+            if (s.accountId <= 0 &&
+                !(module == (short)Game.Module.AUTH && cmd == (short)Cmd.eGameAuthenticateReq))
+            {
+                logger.Warn($"Unauthenticated client attempted module[{module}] cmd[{cmd}]");
+                s.client?.CloseAsync();
+                return;
+            }
 
-            Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + HEAD_SIZE, count - HEAD_SIZE);
+            long routeTag = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RouteTagOffset);
+            long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
+
+            Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
 
             string key = BuildKey(module, cmd);
             MODULE_CMD_HANDLERS.TryGetValue(key, out CmdExecutor cmdExecutor);
             if (cmdExecutor != null)
             {
-                // ´¦Àíº¯Êı·´ÉäÊ±ºòĞèÒªÓÃµ½µÄ²ÎÊı;
-                // ÕâÀïÓĞBug,Òª¸ù¾İÃüÁîºÅ£¬Ä£¿éºÅ£¬À´Çø·ÖÒ»ÏÂ;
+                // å¤„ç†å‡½æ•°åå°„æ—¶å€™éœ€è¦ç”¨åˆ°çš„å‚æ•°;
+                // è¿™é‡Œæœ‰Bug,è¦æ ¹æ®å‘½ä»¤å·ï¼Œæ¨¡å—å·ï¼Œæ¥åŒºåˆ†ä¸€ä¸‹;
                 object[] @params = ConvertToMethodParams(s, cmdExecutor.@params, msg);
-                TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s));
+                TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s, routeTag, requestId));
                 return;
             }
-            else {  // ²é¿´Ò»ÏÂÊÇ·ñÎªLogic·şÎñÊÂ¼ş,È»ºóÖ±½ÓÍ¶µİµ½Âß¼­·şÏß³Ì´¦Àí
-                LogicWorkerPool.Instance.PushMsgToLogicServer(s, module, cmd, msg);
+            else {  // æŸ¥çœ‹ä¸€ä¸‹æ˜¯å¦ä¸ºLogicæœåŠ¡äº‹ä»¶,ç„¶åç›´æ¥æŠ•é€’åˆ°é€»è¾‘æœçº¿ç¨‹å¤„ç†
+                LogicWorkerPool.Instance.PushMsgToLogicServer(s, module, cmd, msg, requestId);
             }
         }
 

@@ -13,11 +13,17 @@ namespace Game.Core.Db
 
         private ConnectionStringSettings connAuthUserStr;
         private ConnectionStringSettings connGameDataStr;
+        private int commandTimeoutSeconds = 5;
 
 
         public void Init() {
             connAuthUserStr = ConfigurationManager.ConnectionStrings["connAuthUserStr"];
             connGameDataStr = ConfigurationManager.ConnectionStrings["connGameDataStr"];
+            if (int.TryParse(ConfigurationManager.AppSettings["DatabaseCommandTimeoutSeconds"], out int configuredTimeout) &&
+                configuredTimeout > 0)
+            {
+                commandTimeoutSeconds = configuredTimeout;
+            }
         }
 
         public SqlSugarClient GetGameInstance() {
@@ -36,6 +42,7 @@ namespace Game.Core.Db
             {
                 //Console.WriteLine(sql);
             };
+            db.Ado.CommandTimeOut = commandTimeoutSeconds;
             return db;
         }
 
@@ -55,6 +62,7 @@ namespace Game.Core.Db
             {
                 //Console.WriteLine(sql);
             };
+            db.Ado.CommandTimeOut = commandTimeoutSeconds;
             return db;
 
         }

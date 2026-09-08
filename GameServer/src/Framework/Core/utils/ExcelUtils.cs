@@ -141,7 +141,7 @@ namespace Framework.Core.Utils {
                             break;
                     }
                     fis[i].SetValue(configObj, setValue);
-                    if (hasPriKey && (fis[i].Name == "key" || fis[i].Name == "ID"))
+                    if (hasPriKey && (fis[i].Name == "key" || fis[i].Name == "ID" || fis[i].Name == "id"))
                     {
                         //只检测key和id的值，然后添加到objDic 中
                         objDic.Add(setValue.ToString(), configObj);
@@ -212,7 +212,7 @@ namespace Framework.Core.Utils {
 							break;
 					}
 					fis[i].SetValue(configObj, setValue);
-					if (hasPriKey && (fis[i].Name == "key" || fis[i].Name == "ID"))
+					if (hasPriKey && (fis[i].Name == "key" || fis[i].Name == "ID" || fis[i].Name == "id"))
 					{
 						//只检测key和id的值，然后添加到objDic 中
 						objDic.Add(setValue.ToString(), configObj);

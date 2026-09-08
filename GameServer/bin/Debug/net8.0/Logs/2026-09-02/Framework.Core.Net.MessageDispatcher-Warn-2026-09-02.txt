@@ -1,0 +1,1 @@
+[2026-09-02 14:45:24.5553] Unauthenticated client attempted module[104] cmd[75] 
