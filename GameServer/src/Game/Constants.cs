@@ -163,8 +163,7 @@
         // 测试更新背包物品,正式项目不要直接开放出来
         eTestUpdateGoodsReq = 71,
         eTestUpdateGoddsRes = 72,
-
-
+        
         // 测试游戏逻辑服通讯命令
         eTestLogicCmdEchoReq = 73,
         eTestLogicCmdEchoRes = 74,
@@ -184,6 +183,12 @@
         // 已鉴权游戏连接心跳
         eHeartbeatReq = 83,
         eHeartbeatRes = 84,
+
+        // 玩家编队查询与保存
+        eGetPlayerFormationsReq = 85,
+        eGetPlayerFormationsRes = 86,
+        eSavePlayerFormationReq = 87,
+        eSavePlayerFormationRes = 88,
     }
 
     public enum QuitReason { 
@@ -230,6 +235,8 @@
         CharacterConfigError = -128,
         CharacterStarUpFailed = -129,
         EconomicOperationConflict = -130,
+        FormationVersionConflict = -131,
+        FormationSaveFailed = -132,
         // ...
     }
 

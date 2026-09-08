@@ -37,6 +37,8 @@
 
         public GachaComponent uGacha;
 
+        public FormationComponent uFormation;
+
     }
 
     // public class GM_NPCEntity : BaseEntity {}
