@@ -1,16 +1,17 @@
 using Framework.Core.Utils;
 using Game.Core.Db;
-using Game.Core.Concurrency;
+using Framework.Core.Concurrency;
 using Game.Core.EntityMgr;
 using Game.Core.GM_CharacterStarUp;
 using Game.Core.GM_Item;
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
 using SqlSugar;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace Game.Core.GM_Gacha
 {
@@ -108,7 +109,6 @@ namespace Game.Core.GM_Gacha
                         db.Ado.CommitTran();
                         return stored;
                     }
-                    db.Ado.ExecuteCommand("SAVEPOINT gacha_operation_started");
                 }
                 Player_gacha_state state = LockGachaState(db, playerId, pool.PoolId);
                 Dictionary<int, long> quantities = LockPaymentItems(
@@ -125,13 +125,7 @@ namespace Game.Core.GM_Gacha
                         OperationId = operationId,
                         Status = GachaOperationStatus.ResourceNotEnough
                     };
-                    if (operationId == null) db.Ado.RollbackTran();
-                    else
-                    {
-                        db.Ado.ExecuteCommand("ROLLBACK TO SAVEPOINT gacha_operation_started");
-                        GachaOperationRepository.Instance.Complete(db, playerId, operationId, insufficientResult);
-                        db.Ado.CommitTran();
-                    }
+                    db.Ado.RollbackTran();
                     return insufficientResult;
                 }
 
@@ -254,7 +248,7 @@ namespace Game.Core.GM_Gacha
         {
             long totalWeight = 0;
             foreach (int weight in pool.RarityWeights) totalWeight = checked(totalWeight + weight);
-            return SelectRarityAtRoll(pool, state, Random.Shared.NextInt64(totalWeight));
+            return SelectRarityAtRoll(pool, state, SecureNextInt64(totalWeight));
         }
 
         internal static int SelectRarityAtRoll(
@@ -282,7 +276,25 @@ namespace Game.Core.GM_Gacha
             long totalWeight = 0;
             foreach (GachaRewardDefinition reward in rewards)
                 totalWeight = checked(totalWeight + reward.Weight);
-            return SelectRewardAtRoll(rewards, Random.Shared.NextInt64(totalWeight));
+            return SelectRewardAtRoll(rewards, SecureNextInt64(totalWeight));
+        }
+
+        private static long SecureNextInt64(long exclusiveUpperBound)
+        {
+            if (exclusiveUpperBound <= 0)
+                throw new ArgumentOutOfRangeException(nameof(exclusiveUpperBound));
+
+            ulong bound = (ulong)exclusiveUpperBound;
+            ulong rejectionThreshold = unchecked(0UL - bound) % bound;
+            Span<byte> randomBytes = stackalloc byte[sizeof(ulong)];
+            ulong value;
+            do
+            {
+                RandomNumberGenerator.Fill(randomBytes);
+                value = BitConverter.ToUInt64(randomBytes);
+            } while (value < rejectionThreshold);
+
+            return (long)(value % bound);
         }
 
         internal static GachaRewardDefinition SelectRewardAtRoll(

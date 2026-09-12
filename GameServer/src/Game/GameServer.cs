@@ -5,7 +5,7 @@ using Game.Core.Configs;
 using Game.Core.Db;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Auth;
-using Game.Core.Idempotency;
+using Game.Core.Maintenance;
 using Game.Core.GM_Backpack;
 using Game.Core.GM_Bonues;
 using Game.Core.GM_MailMessage;

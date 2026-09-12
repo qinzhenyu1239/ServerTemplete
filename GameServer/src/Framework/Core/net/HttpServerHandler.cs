@@ -58,7 +58,8 @@ namespace Framework.Core.Net {
             {
                 MessageTrafficLogger.HttpReceived(
                     ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
-                    request.Method.ToString(), request.Uri, request.Content.ReadableBytes);
+                    request.Method.ToString(), request.Uri,
+                    CopyReadableBytes(request.Content), 0, request.Content.ReadableBytes);
                 await HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request);
             }
             finally
@@ -71,13 +72,18 @@ namespace Framework.Core.Net {
             try
             {
                 int contentLength = 0;
+                using MemoryStream body = new MemoryStream();
                 foreach (object item in allContent)
                 {
-                    if (item is IHttpContent content) contentLength += content.Content.ReadableBytes;
+                    if (item is not IHttpContent content) continue;
+                    byte[] chunk = CopyReadableBytes(content.Content);
+                    body.Write(chunk, 0, chunk.Length);
+                    contentLength += chunk.Length;
                 }
+                byte[] bodyBytes = body.ToArray();
                 MessageTrafficLogger.HttpReceived(
                     ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
-                    request.Method.ToString(), request.Uri, contentLength);
+                    request.Method.ToString(), request.Uri, bodyBytes, 0, contentLength);
                 await HttpRouteDispatcher.Instance.OnHttpRequrestProcess(ctx, request, allContent);
             }
             finally
@@ -91,6 +97,13 @@ namespace Framework.Core.Net {
             if (!task.IsFaulted) return;
             logger.Error(task.Exception?.GetBaseException(), "HTTP request processing failed");
             ctx.CloseAsync();
+        }
+
+        private static byte[] CopyReadableBytes(DotNetty.Buffers.IByteBuffer buffer)
+        {
+            byte[] bytes = new byte[buffer.ReadableBytes];
+            buffer.GetBytes(buffer.ReaderIndex, bytes);
+            return bytes;
         }
 
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception) => context.CloseAsync();

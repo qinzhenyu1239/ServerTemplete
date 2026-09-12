@@ -1,111 +1,173 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Channels;
 
-namespace Framework.Core.task {
+namespace Framework.Core.task
+{
+    internal sealed class TaskWorker : IDisposable
+    {
+        internal readonly Channel<AbstractDistributeTask> TaskQueue;
+        internal readonly CancellationTokenSource Shutdown = new();
+        internal readonly ManualResetEventSlim Stopped = new(false);
 
-    class TaskWorker {
-        // 任务队列Task, 操作对垒，都是线程安全的;
-        public Queue<AbstractDistributeTask> taskQueue = new Queue<AbstractDistributeTask>();
-        public AutoResetEvent taskEvent = new AutoResetEvent(true);
+        internal TaskWorker(int capacity)
+        {
+            TaskQueue = Channel.CreateBounded<AbstractDistributeTask>(
+                new BoundedChannelOptions(capacity)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.Wait,
+                    AllowSynchronousContinuations = false
+                });
+        }
 
-
+        public void Dispose()
+        {
+            Shutdown.Dispose();
+            Stopped.Dispose();
+        }
     }
 
-    public class TaskWorkerPool {
-        public static TaskWorkerPool Instance = new TaskWorkerPool();
+    public class TaskWorkerPool
+    {
+        private const int DefaultQueueCapacityPerWorker = 256;
+        public static readonly TaskWorkerPool Instance = new();
 
-        private List<TaskWorker> workerPool = new List<TaskWorker>();
-        private bool Running = false;
+        private readonly object lifecycleGate = new();
+        private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private TaskWorker[] workers = Array.Empty<TaskWorker>();
+        private int running;
+        private long rejectedTaskCount;
 
-        
+        public int ThreadCount { get; private set; }
+        public int ActiveThreadCount;
+        public long RejectedTaskCount => Interlocked.Read(ref rejectedTaskCount);
+        public bool ThrowException;
 
-        public int ThreadCount = 0; // 我们一供有多少线程;
-        public int ActiveThreadCount = 0; // 多少个线程正在调度我们的任务
+        public void Start(int threadNum, int queueCapacityPerWorker = DefaultQueueCapacityPerWorker)
+        {
+            threadNum = Math.Clamp(threadNum, 1, 1000);
+            if (queueCapacityPerWorker <= 0)
+                throw new ArgumentOutOfRangeException(nameof(queueCapacityPerWorker));
 
+            lock (lifecycleGate)
+            {
+                if (Volatile.Read(ref running) != 0)
+                    throw new InvalidOperationException("Task worker pool is already running.");
 
-        public bool ThrowException = false;
+                var newWorkers = new TaskWorker[threadNum];
+                for (int index = 0; index < newWorkers.Length; index++)
+                    newWorkers[index] = new TaskWorker(queueCapacityPerWorker);
 
-        private NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+                workers = newWorkers;
+                ThreadCount = threadNum;
+                Interlocked.Exchange(ref rejectedTaskCount, 0);
+                Volatile.Write(ref running, 1);
 
-        public void Start(int ThreadNum) {
-            this.ThreadCount = ThreadNum;
-            this.ThreadCount = (this.ThreadCount < 1) ? 1 : this.ThreadCount;
-            this.ThreadCount = (this.ThreadCount > 1000) ? 1000 : this.ThreadCount;
-
-
-            Running = true;
-
-            for (int i = 0; i < this.ThreadCount; i++) {
-                var workerData = new TaskWorker();
-                this.workerPool.Add(workerData);
-
-                ThreadPool.QueueUserWorkItem(new WaitCallback(ThreadRun), workerData);
+                foreach (TaskWorker worker in newWorkers)
+                    ThreadPool.QueueUserWorkItem(ThreadRun, worker);
             }
         }
 
-        private void ExceTask(AbstractDistributeTask task) {
+        private void ExecuteTask(AbstractDistributeTask task)
+        {
             try
             {
                 task.DoAction();
             }
-            catch (Exception ex) {
-                this.logger.Error("Message handler exception:{0}, {1}, {2}, {3}", ex.InnerException, ex.Message, ex.Source, ex.StackTrace);
+            catch (Exception exception)
+            {
+                logger.Error(
+                    "Message handler exception:{0}, {1}, {2}, {3}",
+                    exception.InnerException,
+                    exception.Message,
+                    exception.Source,
+                    exception.StackTrace);
             }
         }
 
-        private void ThreadRun(Object stateInfo) {
-            TaskWorker worker = (TaskWorker)stateInfo;
+        private void ThreadRun(object state)
+        {
+            var worker = (TaskWorker)state;
+            Interlocked.Increment(ref ActiveThreadCount);
             try
             {
-                ActiveThreadCount = Interlocked.Increment(ref ActiveThreadCount);
-
-                while (Running) {
-                    if (worker.taskQueue.Count == 0) { // 等待任务队列里面有任务
-                        worker.taskEvent.WaitOne();
-                        continue;
+                while (true)
+                {
+                    AbstractDistributeTask task;
+                    try
+                    {
+                        task = worker.TaskQueue.Reader
+                            .ReadAsync(worker.Shutdown.Token)
+                            .AsTask()
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    catch (OperationCanceledException) when (worker.Shutdown.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (ChannelClosedException)
+                    {
+                        break;
                     }
 
-                    AbstractDistributeTask task = worker.taskQueue.Dequeue();
-                    TaskWorkerPool.Instance.ExceTask(task);
+                    ExecuteTask(task);
                 }
             }
-            catch
+            catch (Exception exception)
             {
+                logger.Error(exception, "Task worker stopped unexpectedly.");
             }
             finally
             {
-                ActiveThreadCount = Interlocked.Decrement(ref ActiveThreadCount);
+                Interlocked.Decrement(ref ActiveThreadCount);
+                worker.Stopped.Set();
             }
         }
 
-        public void Stop() {
-            Running = false;
+        public void Stop()
+        {
+            TaskWorker[] snapshot;
+            lock (lifecycleGate)
+            {
+                if (Interlocked.Exchange(ref running, 0) == 0) return;
+                snapshot = workers;
+                workers = Array.Empty<TaskWorker>();
+                ThreadCount = 0;
+            }
 
-            
-            while (ActiveThreadCount > 0) {
-                this.logger.Info("广播消息处理线程退出...");
-                for (int i = 0; i < this.workerPool.Count; i++) {
-                    this.workerPool[i].taskQueue.Clear();
-                    this.workerPool[i].taskEvent.Set();
+            foreach (TaskWorker worker in snapshot)
+            {
+                worker.TaskQueue.Writer.TryComplete();
+                worker.Shutdown.Cancel();
+            }
+
+            foreach (TaskWorker worker in snapshot)
+            {
+                if (!worker.Stopped.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    logger.Warn("Timed out waiting for a task worker to stop.");
+                    continue;
                 }
-                Thread.Sleep(1000);
+                worker.Dispose();
             }
-
-            
         }
 
-        public void AddTask(AbstractDistributeTask t) {
-            if (this.Running == false) {
-                return;
-            }
+        public bool AddTask(AbstractDistributeTask task)
+        {
+            if (task == null || Volatile.Read(ref running) == 0) return false;
 
-            int index = (int)(t.distributeKey % this.workerPool.Count);
+            TaskWorker[] snapshot = workers;
+            if (snapshot.Length == 0) return false;
+            int index = (int)Math.Abs(task.distributeKey % snapshot.Length);
+            if (snapshot[index].TaskQueue.Writer.TryWrite(task)) return true;
 
-            this.workerPool[index].taskQueue.Enqueue(t);
-            this.workerPool[index].taskEvent.Set();
+            long rejected = Interlocked.Increment(ref rejectedTaskCount);
+            if (rejected == 1 || rejected % 100 == 0)
+                logger.Warn($"Task queue is full; rejectedTasks={rejected}.");
+            return false;
         }
     }
-
 }
-

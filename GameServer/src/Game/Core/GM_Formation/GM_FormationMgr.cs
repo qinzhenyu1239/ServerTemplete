@@ -1,4 +1,4 @@
-using Game.Core.Concurrency;
+using Framework.Core.Concurrency;
 using Game.Core.Db;
 using Game.Core.EntityMgr;
 using Game.Datas.DBEntities;

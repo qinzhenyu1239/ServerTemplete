@@ -2,7 +2,8 @@ using Framework.Core.Net;
 using Framework.Core.Utils;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Gacha;
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
+using Framework.Core.RateLimiting;
 using Game.Datas.DBEntities;
 using Game.Datas.Excels;
 using Game.Datas.Messages;
@@ -18,6 +19,10 @@ namespace Game.Entries.Modules
     public sealed class GachaModule
     {
         public static readonly GachaModule Instance = new GachaModule();
+        private readonly TokenBucketRateLimiter<long> playerDrawLimiter =
+            new TokenBucketRateLimiter<long>(10, 2, TimeSpan.FromMinutes(10));
+        private readonly TokenBucketRateLimiter<string> ipDrawLimiter =
+            new TokenBucketRateLimiter<string>(50, 10, TimeSpan.FromMinutes(10), StringComparer.Ordinal);
         private IReadOnlyDictionary<int, GachaPoolDefinition> pools;
 
         private GachaModule() { }
@@ -118,6 +123,17 @@ namespace Game.Entries.Modules
                 {
                     status = (int)Respones.InvalidParams,
                     errorMessage = "operationId is required and must be a 32-character lowercase UUID.",
+                    operationId = request.operationId
+                };
+            }
+            string clientIp = RequestRateLimiter.GetIp(session?.client);
+            if ((!string.IsNullOrWhiteSpace(clientIp) && !ipDrawLimiter.TryAcquire(clientIp)) ||
+                !playerDrawLimiter.TryAcquire(playerId))
+            {
+                return new ResGachaDraw
+                {
+                    status = (int)Respones.RequestRateLimited,
+                    errorMessage = "Gacha requests are too frequent. Please retry shortly.",
                     operationId = request.operationId
                 };
             }

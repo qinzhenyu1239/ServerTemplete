@@ -125,6 +125,6 @@ D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\Configs\Csvs\GachaPoolConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\Configs\Csvs\GachaPoolRewardConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\Configs\Csvs\Item.csv
-D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\Configs\Csvs\Item.csv.2c1afc6793a2483ea7c734e058dc7c7b.tmp
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\Configs\Csvs\Trap.csv
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\runtimes\win\lib\netstandard2.0\System.Runtime.Caching.dll
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\Configs\Csvs\StarLevel.csv

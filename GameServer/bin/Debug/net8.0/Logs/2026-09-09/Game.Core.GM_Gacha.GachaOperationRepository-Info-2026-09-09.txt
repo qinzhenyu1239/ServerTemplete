@@ -1,0 +1,5 @@
+[2026-09-09 15:21:28.0671] idempotency_business_failure operation=gacha playerId=89251668931125248 operationId=cf133f960e154a75931ed35ce57a0da2 status=1 
+[2026-09-09 15:21:28.8605] idempotency_business_failure operation=gacha playerId=89251668931125248 operationId=fb6d29fef68f4f2db34bfa6e200778c0 status=1 
+[2026-09-09 17:01:54.8865] idempotency_business_failure operation=gacha playerId=91095575608434688 operationId=8a77a24edec342dda56c11982b8ec637 status=1 
+[2026-09-09 17:01:57.2810] idempotency_business_failure operation=gacha playerId=91095575608434688 operationId=474ad43d0c9e479396b49e738c85af42 status=1 
+[2026-09-09 17:02:02.6064] idempotency_business_failure operation=gacha playerId=91095575608434688 operationId=b447354ba6a74691a503b567437cf802 status=1 

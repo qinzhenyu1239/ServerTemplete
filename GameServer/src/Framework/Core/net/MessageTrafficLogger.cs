@@ -1,11 +1,13 @@
 using Framework.Core.Utils;
 using Framework.Core.Serializer;
+using System;
 
 namespace Framework.Core.Net
 {
     internal static class MessageTrafficLogger
     {
-        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+        private static readonly NLog.Logger SummaryLogger =
+            NLog.LogManager.GetLogger("Framework.Core.Net.MessageTrafficSummary");
 
         public static void Received(IdSession session, byte[] data, int offset, int count)
         {
@@ -17,16 +19,24 @@ namespace Framework.Core.Net
             Write("SEND", session, data, offset, count);
         }
 
-        public static void HttpReceived(string remote, string method, string uri, int count)
+        public static void HttpReceived(
+            string remote, string method, string uri, byte[] data, int offset, int count)
         {
-            WriteLine($"[MESSAGE] [RECV] " +
-                      $"transport=HTTP remote={remote} method={method} uri={uri} bytes={count}");
+            string summary = $"[MESSAGE] [RECV] " +
+                             $"transport=HTTP remote={remote} method={method} uri={uri} bytes={count}";
+            SummaryLogger.Info(summary);
         }
 
-        public static void HttpSent(string remote, int statusCode, int count)
+        public static void HttpSent(string remote, int statusCode, byte[] data, int offset, int count)
         {
-            WriteLine($"[MESSAGE] [SEND] " +
-                      $"transport=HTTP remote={remote} status={statusCode} bytes={count}");
+            string summary = $"[MESSAGE] [SEND] " +
+                             $"transport=HTTP remote={remote} status={statusCode} bytes={count}";
+            SummaryLogger.Info(summary);
+        }
+
+        public static void HttpSent(string remote, int statusCode)
+        {
+            HttpSent(remote, statusCode, Array.Empty<byte>(), 0, 0);
         }
 
         private static void Write(string direction, IdSession session, byte[] data, int offset, int count)
@@ -36,8 +46,9 @@ namespace Framework.Core.Net
 
             if (data == null || offset < 0 || count < ProtocolPacketLayout.HeaderLength || offset > data.Length - count)
             {
-                WriteLine($"[MESSAGE] [{direction}] " +
-                          $"transport={transport} remote={remote} bytes={count} invalid-header");
+                string invalidHeader = $"[MESSAGE] [{direction}] " +
+                                       $"transport={transport} remote={remote} bytes={count} invalid-header";
+                SummaryLogger.Info(invalidHeader);
                 return;
             }
 
@@ -46,10 +57,11 @@ namespace Framework.Core.Net
             long routeTag = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RouteTagOffset);
             short logicServerId = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.LogicServerIdOffset);
             long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
-
-            WriteLine($"[MESSAGE] [{direction}] " +
-                      $"transport={transport} remote={remote} module={module} cmd={cmd} " +
-                      $"routeTag={routeTag} requestId={requestId} logicServerId={logicServerId} bytes={count}");
+            string summary = $"[MESSAGE] [{direction}] " +
+                             $"transport={transport} remote={remote} module={module} cmd={cmd} " +
+                             $"routeTag={routeTag} requestId={requestId} " +
+                             $"logicServerId={logicServerId} bytes={count}";
+            SummaryLogger.Info(summary);
         }
 
         private static string GetRemoteAddress(IdSession session)
@@ -62,11 +74,6 @@ namespace Framework.Core.Net
             {
                 return "unknown";
             }
-        }
-
-        private static void WriteLine(string message)
-        {
-            Logger.Info(message);
         }
     }
 }

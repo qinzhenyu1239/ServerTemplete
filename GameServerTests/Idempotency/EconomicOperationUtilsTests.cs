@@ -1,4 +1,4 @@
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
 using Game.Core.GM_Gacha;
 
 namespace GameServerTests.Idempotency;

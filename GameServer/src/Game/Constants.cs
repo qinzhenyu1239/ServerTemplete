@@ -189,6 +189,10 @@
         eGetPlayerFormationsRes = 86,
         eSavePlayerFormationReq = 87,
         eSavePlayerFormationRes = 88,
+
+        // 玩家全部物品查询
+        eGetPlayerItemsReq = 89,
+        eGetPlayerItemsRes = 90,
     }
 
     public enum QuitReason { 
@@ -237,6 +241,7 @@
         EconomicOperationConflict = -130,
         FormationVersionConflict = -131,
         FormationSaveFailed = -132,
+        RequestRateLimited = -133,
         // ...
     }
 

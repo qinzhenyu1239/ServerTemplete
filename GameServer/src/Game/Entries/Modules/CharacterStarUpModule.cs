@@ -2,7 +2,8 @@ using Framework.Core.Net;
 using Framework.Core.Utils;
 using Game.Core.EntityMgr;
 using Game.Core.GM_CharacterStarUp;
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
+using Framework.Core.RateLimiting;
 using Game.Datas.DBEntities;
 using Game.Datas.Excels;
 using Game.Datas.Messages;
@@ -18,6 +19,10 @@ namespace Game.Entries.Modules
     public sealed class CharacterStarUpModule
     {
         public static readonly CharacterStarUpModule Instance = new CharacterStarUpModule();
+        private readonly TokenBucketRateLimiter<long> playerStarUpLimiter =
+            new(5, 2, TimeSpan.FromMinutes(10));
+        private readonly TokenBucketRateLimiter<string> ipStarUpLimiter =
+            new(50, 10, TimeSpan.FromMinutes(10), StringComparer.Ordinal);
         private IReadOnlyDictionary<int, CharacterStarUpDefinition> definitions;
 
         private CharacterStarUpModule() { }
@@ -72,6 +77,11 @@ namespace Game.Entries.Modules
             if (!OperationIdValidator.IsValid(request.operationId))
                 return ErrorStarUp(Respones.InvalidParams,
                     "operationId is required and must be a 32-character lowercase UUID.", request);
+            string clientIp = RequestRateLimiter.GetIp(session?.client);
+            if ((!string.IsNullOrWhiteSpace(clientIp) && !ipStarUpLimiter.TryAcquire(clientIp)) ||
+                !playerStarUpLimiter.TryAcquire(playerId))
+                return ErrorStarUp(Respones.RequestRateLimited,
+                    "Character star-up requests are too frequent. Please retry shortly.", request);
             if (definitions == null)
                 return ErrorStarUp(Respones.CharacterConfigError,
                     "Character module is not initialized.", request);

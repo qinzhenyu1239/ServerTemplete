@@ -1,5 +1,5 @@
 using Framework.Core.Utils;
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
 using Game.Datas.DBEntities;
 using SqlSugar;
 using System;
@@ -49,6 +49,10 @@ namespace Game.Core.GM_CharacterStarUp
 
         public void Complete(SqlSugarClient db, long playerId, string operationId, CharacterStarUpResult result)
         {
+            if (result?.Status != CharacterStarUpStatus.Success)
+                throw new ArgumentException(
+                    "Only successful character star-up operations may be persisted.", nameof(result));
+
             int affected = db.Ado.ExecuteCommand(
                 "UPDATE player_character_starup_operation SET result_status=@status,previous_star=@previousStar,current_star=@currentStar," +
                 "did_upgrade=@didUpgrade,used_fragment_num=@usedFragments,remaining_fragment_num=@remainingFragments," +
@@ -65,8 +69,6 @@ namespace Game.Core.GM_CharacterStarUp
                 new SugarParameter("@playerId", playerId), 
                 new SugarParameter("@operationId", operationId));
             if (affected != 1) throw new InvalidOperationException("Failed to complete character star-up operation.");
-            if (result.Status != CharacterStarUpStatus.Success)
-                logger.Info($"idempotency_business_failure operation=character_starup playerId={playerId} operationId={operationId} status={(int)result.Status}");
         }
 
         public int DeleteExpired(SqlSugarClient db, int batchSize = 10000) =>

@@ -6,6 +6,7 @@ using DotNetty.Transport.Channels;
 using Framework.Core.Serializer;
 using Framework.Core.task;
 using Framework.Core.Utils;
+using Framework.Core.RateLimiting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -166,7 +167,7 @@ namespace Framework.Core.Net
             // Close the non-keep-alive connection after the write operation is done.
             MessageTrafficLogger.HttpSent(
                 ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
-                HttpResponseStatus.OK.Code, buf.ReadableBytes);
+                HttpResponseStatus.OK.Code, CopyReadableBytes(buf), 0, buf.ReadableBytes);
             ctx.WriteAndFlushAsync(response);
             ctx.CloseAsync();
         }
@@ -241,11 +242,44 @@ namespace Framework.Core.Net
 
             MessageTrafficLogger.HttpSent(
                 ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
-                HttpResponseStatus.NoContent.Code,
-                0);
+                HttpResponseStatus.NoContent.Code);
             ctx.WriteAndFlushAsync(response);
             ctx.CloseAsync();
             return true;
+        }
+
+        private bool TryHandleRateLimitedRequest(IChannelHandlerContext ctx, string uri)
+        {
+            string ip = RequestRateLimiter.GetIp(ctx.Channel);
+            if (HttpRequestRateLimiter.Instance.TryAcquire(ip, GetRateLimitKind(uri))) return false;
+
+            var response = new DefaultFullHttpResponse(
+                HttpVersion.Http11, HttpResponseStatus.TooManyRequests, Unpooled.Empty, false);
+            response.Headers.Set(ContentLengthEntity, AsciiString.Cached("0"));
+            response.Headers.Set(HttpHeaderNames.RetryAfter, AsciiString.Cached("1"));
+            MessageTrafficLogger.HttpSent(
+                ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
+                HttpResponseStatus.TooManyRequests.Code);
+            ctx.WriteAndFlushAsync(response);
+            ctx.CloseAsync();
+            return true;
+        }
+
+        internal static HttpRequestRateLimitKind GetRateLimitKind(string uri)
+        {
+            if (string.Equals(uri, "/ReqIssueGameTicket", StringComparison.Ordinal))
+            {
+                return HttpRequestRateLimitKind.Ticket;
+            }
+
+            return uri switch
+            {
+                "/ReqGuestLogin" or
+                "/ReqRegisterUser" or
+                "/ReqUserLogin" or
+                "/ReqGuestUpgrade" => HttpRequestRateLimitKind.Credential,
+                _ => HttpRequestRateLimitKind.Default
+            };
         }
 
         public async Task OnHttpRequrestProcess(IChannelHandlerContext ctx, IFullHttpRequest request)
@@ -255,6 +289,7 @@ namespace Framework.Core.Net
             {
                 return;
             }
+            if (TryHandleRateLimitedRequest(ctx, uri)) return;
 
             HTTP_ROUTE_CMD_HANDLERS.TryGetValue(uri, out CmdExecutor cmdExecutor);
             if (cmdExecutor == null)
@@ -264,7 +299,7 @@ namespace Framework.Core.Net
                 var response = new DefaultFullHttpResponse(HttpVersion.Http11, HttpResponseStatus.NotFound, Unpooled.Empty, false);
                 MessageTrafficLogger.HttpSent(
                     ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
-                    HttpResponseStatus.NotFound.Code, 0);
+                    HttpResponseStatus.NotFound.Code);
                 await ctx.WriteAndFlushAsync(response);
                 await ctx.CloseAsync();
 
@@ -291,6 +326,7 @@ namespace Framework.Core.Net
             {
                 return;
             }
+            if (TryHandleRateLimitedRequest(ctx, uri)) return;
 
             HTTP_ROUTE_CMD_HANDLERS.TryGetValue(uri, out CmdExecutor cmdExecutor);
             if (cmdExecutor == null)
@@ -300,7 +336,7 @@ namespace Framework.Core.Net
                 var response = new DefaultFullHttpResponse(HttpVersion.Http11, HttpResponseStatus.NotFound, Unpooled.Empty, false);
                 MessageTrafficLogger.HttpSent(
                     ctx.Channel.RemoteAddress?.ToString() ?? "unknown",
-                    HttpResponseStatus.NotFound.Code, 0);
+                    HttpResponseStatus.NotFound.Code);
                 await ctx.WriteAndFlushAsync(response);
                 await ctx.CloseAsync();
 
@@ -316,6 +352,13 @@ namespace Framework.Core.Net
                 // 优化走线程池处理
                 // TaskWorkerPool.Instance.AddTask(HttpMessageTask.Create(cmdExecutor.handler, cmdExecutor.method, @params, ctx));
             }
+        }
+
+        private static byte[] CopyReadableBytes(IByteBuffer buffer)
+        {
+            byte[] bytes = new byte[buffer.ReadableBytes];
+            buffer.GetBytes(buffer.ReaderIndex, bytes);
+            return bytes;
         }
     }
 }

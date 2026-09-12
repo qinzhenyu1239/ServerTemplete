@@ -1,8 +1,8 @@
 using Game.Core.Db;
-using Game.Core.Concurrency;
+using Framework.Core.Concurrency;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Item;
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
 using SqlSugar;
@@ -92,7 +92,6 @@ namespace Game.Core.GM_CharacterStarUp
                             db.Ado.CommitTran();
                             return stored;
                         }
-                        db.Ado.ExecuteCommand("SAVEPOINT character_starup_operation_started");
                     }
                     Player_character character = db.Ado.SqlQuery<Player_character>(
                             "SELECT id, player_id, character_id, star FROM player_character " +
@@ -112,12 +111,10 @@ namespace Game.Core.GM_CharacterStarUp
                     if (targetStar <= previousStar)
                     {
                         long unchangedQuantity = GetItemQuantity(db, playerId, definition.PieceItemId);
-                        CharacterStarUpResult result = CreateStarUpResult(CharacterStarUpStatus.Success,
+                        CharacterStarUpResult result = CreateStarUpResult(CharacterStarUpStatus.TargetStarInvalid,
                             definition, targetStar, previousStar, previousStar, false, 0,
                             unchangedQuantity, operationId);
-                        FinishBusinessResult(db, playerId, operationId, result, true);
-                        SyncCommittedComponents(playerId, definition.CharacterId, character.star,
-                            definition.PieceItemId, unchangedQuantity);
+                        FinishBusinessResult(db, playerId, operationId, result, false);
                         return result;
                     }
 
@@ -286,19 +283,20 @@ namespace Game.Core.GM_CharacterStarUp
 
         private static void FinishBusinessResult(
             SqlSugarClient db, long playerId, string operationId,
-            CharacterStarUpResult result, bool commitLegacy)
+            CharacterStarUpResult result, bool successful)
         {
+            if (!successful)
+            {
+                db.Ado.RollbackTran();
+                return;
+            }
+
             if (operationId != null)
             {
-                if (!commitLegacy)
-                    db.Ado.ExecuteCommand(
-                        "ROLLBACK TO SAVEPOINT character_starup_operation_started");
                 CharacterStarUpOperationRepository.Instance.Complete(
                     db, playerId, operationId, result);
-                db.Ado.CommitTran();
             }
-            else if (commitLegacy) db.Ado.CommitTran();
-            else db.Ado.RollbackTran();
+            db.Ado.CommitTran();
         }
 
         private static Player_item LockItem(SqlSugarClient db, long playerId, int itemId)

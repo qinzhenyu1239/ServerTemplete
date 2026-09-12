@@ -5,6 +5,7 @@ using Framework.Core.task;
 using Framework.Core.Utils;
 using Game;
 using Game.Datas.Messages;
+using Framework.Core.RateLimiting;
 using Microsoft.CSharp.RuntimeBinder;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,16 @@ namespace Framework.Core.Net {
 
         /** [module_cmd, CmdExecutor] */
         private static Dictionary<string, CmdExecutor> MODULE_CMD_HANDLERS = new();
+
+        internal static bool IsRateLimitExempt(short module)
+        {
+            return module == (short)Game.Module.SCENE;
+        }
+
+        internal static bool IsAuthenticationRequest(short module, short cmd)
+        {
+            return module == (short)Game.Module.AUTH && cmd == (short)Cmd.eGameAuthenticateReq;
+        }
 
         public short[] GetMessageMeta(MethodInfo method) {
             foreach (ParameterInfo parameter in method.GetParameters()) {
@@ -150,6 +161,15 @@ namespace Framework.Core.Net {
             short logicServerId = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.LogicServerIdOffset);
             long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
 
+            if (!RequestRateLimiter.Instance.TryAcquireGateway(
+                    routeTag,
+                    IsRateLimitExempt(module),
+                    IsAuthenticationRequest(module, cmd)))
+            {
+                logger.Warn($"Gateway request rate limited: player[{routeTag}] module[{module}] cmd[{cmd}]");
+                return;
+            }
+
             Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
 
             string key = BuildKey(module, cmd);
@@ -158,7 +178,9 @@ namespace Framework.Core.Net {
             {
                 // 处理函数反射时候需要用到的参数;
                 object[] @params = GWConvertToMethodParams(s, cmdExecutor.@params, msg, routeTag);
-                TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s, routeTag, requestId));
+                TaskWorkerPool.Instance.AddTask(
+                    MessageTask.Create(routeTag, cmdExecutor.handler, cmdExecutor.method,
+                        @params, s, routeTag, requestId));
                 return;
             }
             else
@@ -234,6 +256,16 @@ namespace Framework.Core.Net {
             module = (short)(module & 0x00ff);
             short cmd = UtilsHelper.ReadShortLE(data, offset + ProtocolPacketLayout.CommandOffset);
 
+            if (!RequestRateLimiter.Instance.TryAcquireDirect(
+                    s,
+                    IsRateLimitExempt(module),
+                    IsAuthenticationRequest(module, cmd)))
+            {
+                logger.Warn($"Client request rate limited: player[{s.playerId}] module[{module}] cmd[{cmd}]");
+                s.client?.CloseAsync();
+                return;
+            }
+
             if (s.accountId <= 0 &&
                 !(module == (short)Game.Module.AUTH && cmd == (short)Cmd.eGameAuthenticateReq))
             {
@@ -254,7 +286,12 @@ namespace Framework.Core.Net {
                 // 处理函数反射时候需要用到的参数;
                 // 这里有Bug,要根据命令号，模块号，来区分一下;
                 object[] @params = ConvertToMethodParams(s, cmdExecutor.@params, msg);
-                TaskWorkerPool.Instance.AddTask(MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method, @params, s, routeTag, requestId));
+                if (!TaskWorkerPool.Instance.AddTask(
+                        MessageTask.Create(s.distributeKey, cmdExecutor.handler, cmdExecutor.method,
+                            @params, s, routeTag, requestId)))
+                {
+                    s.client?.CloseAsync();
+                }
                 return;
             }
             else {  // 查看一下是否为Logic服务事件,然后直接投递到逻辑服线程处理

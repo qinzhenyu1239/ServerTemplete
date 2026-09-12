@@ -1,5 +1,5 @@
 using Framework.Core.Utils;
-using Game.Core.Idempotency;
+using Framework.Core.Idempotency;
 using Game.Datas.DBEntities;
 using SqlSugar;
 using System;
@@ -49,6 +49,10 @@ namespace Game.Core.GM_Gacha
 
         public void Complete(SqlSugarClient db, long playerId, string operationId, GachaDrawResult result)
         {
+            if (result?.Status != GachaOperationStatus.Success)
+                throw new ArgumentException(
+                    "Only successful gacha operations may be persisted.", nameof(result));
+
             int affected = db.Ado.ExecuteCommand(
                 "UPDATE player_gacha_operation SET result_status=@status,batch_id=@batchId,response_json=@responseJson,completed_at=@completedAt " +
                 "WHERE player_id=@playerId AND operation_id=@operationId AND result_status=-1",
@@ -59,8 +63,6 @@ namespace Game.Core.GM_Gacha
                 new SugarParameter("@playerId", playerId),
                 new SugarParameter("@operationId", operationId));
             if (affected != 1) throw new InvalidOperationException("Failed to complete gacha operation.");
-            if (result.Status != GachaOperationStatus.Success)
-                logger.Info($"idempotency_business_failure operation=gacha playerId={playerId} operationId={operationId} status={(int)result.Status}");
         }
 
         public int DeleteExpired(SqlSugarClient db, int batchSize = 10000) =>

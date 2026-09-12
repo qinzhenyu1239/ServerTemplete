@@ -151,7 +151,7 @@ public sealed class CharacterStarUpManagerMySqlIntegrationTests
 
     [DatabaseFact]
     [Trait("Category", "Database")]
-    public async Task StoredFragmentFailure_DoesNotChangeAfterFragmentsIncrease()
+    public async Task FragmentFailure_IsNotStoredAndCanSucceedAfterFragmentsIncrease()
     {
         long playerId = GachaMySqlTestEnvironment.PlayerId(107);
         string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
@@ -166,14 +166,19 @@ public sealed class CharacterStarUpManagerMySqlIntegrationTests
             string operationId = Guid.NewGuid().ToString("N");
             Assert.Equal(CharacterStarUpStatus.FragmentNotEnough,
                 GM_CharacterStarUpMgr.Instance.StarUp(playerId, definition, 1, operationId).Status);
+            Assert.Equal(0, await GachaMySqlTestEnvironment.ReadScalarAsync(connection,
+                $"SELECT COUNT(*) FROM player_character_starup_operation WHERE player_id={playerId};"));
             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
                 $"UPDATE player_item SET quantity=10 WHERE player_id={playerId} AND item_id={definition.PieceItemId};");
             CharacterStarUpResult duplicate = GM_CharacterStarUpMgr.Instance.StarUp(
                 playerId, definition, 1, operationId);
-            Assert.Equal(CharacterStarUpStatus.FragmentNotEnough, duplicate.Status);
-            Assert.Equal(1, duplicate.RemainingPieceQuantity);
-            Assert.Equal(0, await StarAsync(connection, playerId));
-            Assert.Equal(10, await PiecesAsync(connection, playerId));
+            Assert.Equal(CharacterStarUpStatus.Success, duplicate.Status);
+            Assert.True(duplicate.DidUpgrade);
+            Assert.Equal(8, duplicate.RemainingPieceQuantity);
+            Assert.Equal(1, await StarAsync(connection, playerId));
+            Assert.Equal(8, await PiecesAsync(connection, playerId));
+            Assert.Equal(1, await GachaMySqlTestEnvironment.ReadScalarAsync(connection,
+                $"SELECT COUNT(*) FROM player_character_starup_operation WHERE player_id={playerId};"));
         }
         finally { await CleanupAsync(connection, playerId); }
     }
@@ -239,24 +244,32 @@ public sealed class CharacterStarUpManagerMySqlIntegrationTests
             Assert.Equal(3, upgraded.NextPieceCount);
             Assert.False(upgraded.IsMaxStar);
 
-            CharacterStarUpResult duplicate = GM_CharacterStarUpMgr.Instance.StarUp(playerId, definition, 1);
+            CharacterStarUpResult duplicate = GM_CharacterStarUpMgr.Instance.StarUp(
+                playerId, definition, 1, Guid.NewGuid().ToString("N"));
+            Assert.Equal(CharacterStarUpStatus.TargetStarInvalid, duplicate.Status);
             Assert.False(duplicate.DidUpgrade);
             Assert.Equal(2, duplicate.NextStar);
             Assert.Equal(3, duplicate.NextPieceCount);
             Assert.Equal(8, await PiecesAsync(connection, playerId));
+            Assert.Equal(0, await GachaMySqlTestEnvironment.ReadScalarAsync(connection,
+                $"SELECT COUNT(*) FROM player_character_starup_operation WHERE player_id={playerId};"));
 
             CharacterStarUpResult second = GM_CharacterStarUpMgr.Instance.StarUp(playerId, definition, 2);
             Assert.True(second.DidUpgrade);
             Assert.True(second.IsMaxStar);
             Assert.Equal(2, second.NextStar);
             Assert.Equal(0, second.NextPieceCount);
-            CharacterStarUpResult old = GM_CharacterStarUpMgr.Instance.StarUp(playerId, definition, 1);
+            CharacterStarUpResult old = GM_CharacterStarUpMgr.Instance.StarUp(
+                playerId, definition, 1, Guid.NewGuid().ToString("N"));
+            Assert.Equal(CharacterStarUpStatus.TargetStarInvalid, old.Status);
             Assert.False(old.DidUpgrade);
             Assert.True(old.IsMaxStar);
             Assert.Equal(2, old.NextStar);
             Assert.Equal(0, old.NextPieceCount);
             Assert.Equal(5, await PiecesAsync(connection, playerId));
             Assert.Equal(2, await StarAsync(connection, playerId));
+            Assert.Equal(0, await GachaMySqlTestEnvironment.ReadScalarAsync(connection,
+                $"SELECT COUNT(*) FROM player_character_starup_operation WHERE player_id={playerId};"));
         }
         finally { await CleanupAsync(connection, playerId); }
     }
@@ -325,9 +338,9 @@ public sealed class CharacterStarUpManagerMySqlIntegrationTests
             CharacterStarUpResult[] results = await Task.WhenAll(
                 Task.Run(() => GM_CharacterStarUpMgr.Instance.StarUp(playerId, definition, 1)),
                 Task.Run(() => GM_CharacterStarUpMgr.Instance.StarUp(playerId, definition, 1)));
-            Assert.All(results, result => Assert.Equal(CharacterStarUpStatus.Success, result.Status));
             Assert.Single(results, result => result.DidUpgrade);
-            Assert.Single(results, result => !result.DidUpgrade);
+            Assert.Single(results, result =>
+                result.Status == CharacterStarUpStatus.TargetStarInvalid && !result.DidUpgrade);
             Assert.Equal(1, await StarAsync(connection, playerId));
             Assert.Equal(8, await PiecesAsync(connection, playerId));
         }

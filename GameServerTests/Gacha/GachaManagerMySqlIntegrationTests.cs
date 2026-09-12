@@ -133,7 +133,7 @@ public sealed class GachaManagerMySqlIntegrationTests
 
     [DatabaseFact]
     [Trait("Category", "Database")]
-    public async Task StoredInsufficientResult_DoesNotChangeAfterResourcesIncrease()
+    public async Task InsufficientResult_IsNotStoredAndCanSucceedAfterResourcesIncrease()
     {
         long playerId = GachaMySqlTestEnvironment.PlayerId(3);
         string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
@@ -148,11 +148,15 @@ public sealed class GachaManagerMySqlIntegrationTests
             string operationId = Guid.NewGuid().ToString("N");
             Assert.Equal(GachaOperationStatus.ResourceNotEnough,
                 GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId).Status);
+            Assert.Equal(0, await PlayerRowCountAsync(
+                connection, "player_gacha_operation", playerId));
             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
                 $"UPDATE player_item SET quantity=5 WHERE player_id={playerId} AND item_id={pool.TicketItemId};");
-            Assert.Equal(GachaOperationStatus.ResourceNotEnough,
+            Assert.Equal(GachaOperationStatus.Success,
                 GM_GachaMgr.Instance.Draw(playerId, pool, 1, operationId).Status);
-            Assert.Equal(5, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
+            Assert.Equal(4, await ItemQuantityAsync(connection, playerId, pool.TicketItemId));
+            Assert.Equal(1, await PlayerRowCountAsync(
+                connection, "player_gacha_operation", playerId));
         }
         finally
         {
