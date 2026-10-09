@@ -14,7 +14,7 @@ using NLog;
 
 namespace Game.Core.GM_Auth
 {
-    public sealed class GM_AuthSessionMgr
+    public sealed partial class GM_AuthSessionMgr
     {
         private const string TicketVersion = "v2";
         private const string InvalidationPurpose = "session-invalidate|";
@@ -47,6 +47,7 @@ namespace Game.Core.GM_Auth
             public long SessionVersion { get; init; }
             public long ExpiresAtUnixSeconds { get; init; }
             public int GameServerId { get; set; }
+            public HashSet<int> GameServerIds { get; } = new();
         }
 
         private sealed class AcceptedGameSession
@@ -83,6 +84,7 @@ namespace Game.Core.GM_Auth
                 : new Dictionary<int, string>(notificationUrls);
             processStartedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             nextCleanupAtUnixSeconds = processStartedAtUnixSeconds + 60;
+            StartLogoutNotificationRetryLoop();
         }
 
         public string CreateLoginSession(long accountId)
@@ -179,6 +181,7 @@ namespace Game.Core.GM_Auth
                     }
 
                     session.GameServerId = serverId;
+                    session.GameServerIds.Add(serverId);
                     long issuedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                     long expiresAt = issuedAt + (long)ticketLifetime.TotalSeconds;
                     string nonce = CreateRandomToken();

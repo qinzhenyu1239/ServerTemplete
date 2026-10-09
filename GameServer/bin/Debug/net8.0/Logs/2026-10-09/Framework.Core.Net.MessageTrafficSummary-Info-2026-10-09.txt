@@ -332,3 +332,25 @@
 [2026-10-09 12:38:54.7649] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.181]:53238 module=101 cmd=84 routeTag=0 requestId=329 logicServerId=0 bytes=38 
 [2026-10-09 12:39:04.7936] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.181]:53238 module=101 cmd=83 routeTag=0 requestId=330 logicServerId=0 bytes=29 
 [2026-10-09 12:39:04.7936] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.181]:53238 module=101 cmd=84 routeTag=0 requestId=330 logicServerId=0 bytes=38 
+[2026-10-09 17:15:16.7743] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:192.168.1.100]:62106 method=POST uri=/Internal/InvalidateAccountSession bytes=244 
+[2026-10-09 17:15:16.9176] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:192.168.1.100]:62106 status=200 bytes=2 
+[2026-10-09 17:15:17.0617] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=1005 routeTag=0 requestId=1 logicServerId=0 bytes=271 
+[2026-10-09 17:15:17.8266] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=1006 routeTag=0 requestId=1 logicServerId=0 bytes=34 
+[2026-10-09 17:15:27.8701] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=83 routeTag=0 requestId=2 logicServerId=0 bytes=29 
+[2026-10-09 17:15:27.8859] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=84 routeTag=0 requestId=2 logicServerId=0 bytes=38 
+[2026-10-09 17:15:37.8731] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=83 routeTag=0 requestId=3 logicServerId=0 bytes=29 
+[2026-10-09 17:15:37.8731] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=84 routeTag=0 requestId=3 logicServerId=0 bytes=38 
+[2026-10-09 17:15:47.8774] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=83 routeTag=0 requestId=4 logicServerId=0 bytes=29 
+[2026-10-09 17:15:47.8774] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=84 routeTag=0 requestId=4 logicServerId=0 bytes=38 
+[2026-10-09 17:15:57.8803] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=83 routeTag=0 requestId=5 logicServerId=0 bytes=29 
+[2026-10-09 17:15:57.9052] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=84 routeTag=0 requestId=5 logicServerId=0 bytes=38 
+[2026-10-09 17:16:07.8797] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=83 routeTag=0 requestId=6 logicServerId=0 bytes=29 
+[2026-10-09 17:16:07.8797] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=84 routeTag=0 requestId=6 logicServerId=0 bytes=38 
+[2026-10-09 17:16:10.7295] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=104 cmd=75 routeTag=0 requestId=7 logicServerId=0 bytes=24 
+[2026-10-09 17:16:10.7586] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=104 cmd=76 routeTag=0 requestId=7 logicServerId=0 bytes=92 
+[2026-10-09 17:16:17.8813] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=83 routeTag=0 requestId=8 logicServerId=0 bytes=29 
+[2026-10-09 17:16:17.8813] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.5]:59492 module=101 cmd=84 routeTag=0 requestId=8 logicServerId=0 bytes=38 
+[2026-10-09 17:44:32.6844] [MESSAGE] [RECV] transport=TCP remote=[::ffff:192.168.1.18]:65332 module=101 cmd=1005 routeTag=0 requestId=1 logicServerId=0 bytes=270 
+[2026-10-09 17:44:32.7051] [MESSAGE] [SEND] transport=TCP remote=[::ffff:192.168.1.18]:65332 module=101 cmd=1006 routeTag=0 requestId=1 logicServerId=0 bytes=34 
+[2026-10-09 17:47:26.7000] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:192.168.1.100]:62208 method=POST uri=/Internal/InvalidateAccountSession bytes=244 
+[2026-10-09 17:47:26.7000] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:192.168.1.100]:62208 status=200 bytes=2 

@@ -250,4 +250,19 @@ namespace Game.Datas.Messages
         public string signature;
     }
 
+
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eUserLogoutReq)]
+    public sealed class ReqUserLogout : Message
+    {
+        [ProtoMember(1, IsRequired = true)] public string accessToken;
+    }
+
+    [ProtoContract]
+    [MessageMeta((short)Module.AUTH, (short)Cmd.eUserLogoutRes)]
+    public sealed class ResUserLogout : Message
+    {
+        [ProtoMember(1, IsRequired = true)] public int status;
+        [ProtoMember(2)] public string errorMessage;
+    }
 }

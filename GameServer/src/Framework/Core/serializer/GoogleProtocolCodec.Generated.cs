@@ -15,7 +15,9 @@ namespace Framework.Core.Serializer
             try
             {
                 var output = new CodedOutputStream(stream, leaveOpen: true);
-                if (source is ReqGuestLogin value0)
+                if (source is ReqUserLogout logoutRequest) WriteReqUserLogout(output, logoutRequest);
+                else if (source is ResUserLogout logoutResponse) WriteResUserLogout(output, logoutResponse);
+                else if (source is ReqGuestLogin value0)
                 {
                     WriteReqGuestLogin(output, value0);
                 }
@@ -373,7 +375,9 @@ namespace Framework.Core.Serializer
             try
             {
                 var input = new CodedInputStream(stream, leaveOpen: true);
-                if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
+                if (messageType == typeof(ReqUserLogout)) message = ReadReqUserLogout(input);
+                else if (messageType == typeof(ResUserLogout)) message = ReadResUserLogout(input);
+                else if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
                 else if (messageType == typeof(ReqGuestUpgrade)) message = ReadReqGuestUpgrade(input);
                 else if (messageType == typeof(ReqRegisterUser)) message = ReadReqRegisterUser(input);
                 else if (messageType == typeof(ResGuestLogin)) message = ReadResGuestLogin(input);
@@ -5197,5 +5201,87 @@ namespace Framework.Core.Serializer
             T value = reader(nestedInput);
             return value;
         }
+        private static void WriteReqUserLogout(CodedOutputStream output, ReqUserLogout message)
+        {
+            if (message.accessToken != null)
+            {
+                output.WriteTag(1, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.accessToken);
+            }
+        }
+
+        private static ReqUserLogout ReadReqUserLogout(CodedInputStream input)
+        {
+            var message = new ReqUserLogout();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.accessToken = input.ReadString();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqUserLogout(ReqUserLogout message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            if (message.accessToken != null)
+                size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeStringSize(message.accessToken);
+            return size;
+        }
+
+
+        private static void WriteResUserLogout(CodedOutputStream output, ResUserLogout message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+        }
+
+        private static ResUserLogout ReadResUserLogout(CodedInputStream input)
+        {
+            var message = new ResUserLogout();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResUserLogout(ResUserLogout message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            return size;
+        }
+
+
     }
 }

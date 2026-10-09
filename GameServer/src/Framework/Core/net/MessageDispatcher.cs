@@ -113,6 +113,8 @@ namespace Framework.Core.Net {
         public void OnClientExit(IdSession s) {
             this.logger.Debug($"On Client Exit: {s.GetRemoteAddress()}");
             SessionMgr.Instance.UnbindAuthenticatedAccount(s);
+            if (!s.isWebSocket && s.logicServerId == -1)
+                Game.Core.EntityMgr.GM_EntityMgr.Instance.ClearDisconnectedSession(s);
             if (s.logicServerId != -1) { // 说明玩家正在游戏
                 short module = (int)Game.Module.SCENE;
                 short cmd = (int)Cmd.eExitLogicServerReq;
@@ -278,6 +280,9 @@ namespace Framework.Core.Net {
             long requestId = UtilsHelper.ReadLongLE(data, offset + ProtocolPacketLayout.RequestIdOffset);
 
             Message msg = SerializerHelper.PbDecode(module, cmd, data, offset + ProtocolPacketLayout.HeaderLength, count - ProtocolPacketLayout.HeaderLength);
+
+            if (msg == null) return;
+            s.MarkValidActivity();
 
             string key = BuildKey(module, cmd);
             MODULE_CMD_HANDLERS.TryGetValue(key, out CmdExecutor cmdExecutor);

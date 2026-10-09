@@ -7,22 +7,28 @@ namespace Framework.Core.Net {
     public class IdSession {
 
         public IChannel client = null;
+        private long lastValidActivity = System.Diagnostics.Stopwatch.GetTimestamp();
+        public void MarkValidActivity() => System.Threading.Interlocked.Exchange(
+            ref lastValidActivity, System.Diagnostics.Stopwatch.GetTimestamp());
+        public double IdleSeconds => (System.Diagnostics.Stopwatch.GetTimestamp() -
+            System.Threading.Interlocked.Read(ref lastValidActivity)) / (double)System.Diagnostics.Stopwatch.Frequency;
+        public bool IsIdle(System.TimeSpan timeout) => IdleSeconds >= timeout.TotalSeconds;
+        
+        public long distributeKey = 0; //  ï¿½ß³Ì³Ø·Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, Ã¿ï¿½ï¿½IdSessionï¿½ï¿½ï¿½ï¿½Ó¦Î¨Ò»ï¿½Ä±ï¿½ï¿½; 
 
-        public long distributeKey = 0; //  Ïß³Ì³Ø·Ö·¢Æ÷µÄË÷Òý, Ã¿¸öIdSession¶¼¶ÔÓ¦Î¨Ò»µÄ±àºÅ; 
+        public long playerId = 0; // ï¿½ï¿½Ò¶ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½Ï·IDï¿½ï¿½;
 
-        public long playerId = 0; // Íæ¼Ò¶ÔÓ¦µÄÓÎÏ·IDºÅ;
-
-        public long accountId = 0; // Íæ¼Ò¶ÔÓ¦µÄÕËºÅID;
+        public long accountId = 0; // ï¿½ï¿½Ò¶ï¿½Ó¦ï¿½ï¿½ï¿½Ëºï¿½ID;
 
         public string authSessionId = null;
 
-        public long accountIdAndJob = 0; // Íæ¼ÒIdÓëÖ°ÒµËù¶ÔÓ¦µÄkey;
+        public long accountIdAndJob = 0; // ï¿½ï¿½ï¿½Idï¿½ï¿½Ö°Òµï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½key;
 
-        public bool isWebSocket = false; // µ±Ç°µÄsessionÊÇWebSocket»¹ÊÇTcpSocket;
+        public bool isWebSocket = false; // ï¿½ï¿½Ç°ï¿½ï¿½sessionï¿½ï¿½WebSocketï¿½ï¿½ï¿½ï¿½TcpSocket;
 
-        public int logicServerId = -1; // µ±Ç°Íæ¼Ò·ÖÅäµÄlogicServerId;
+        public int logicServerId = -1; // ï¿½ï¿½Ç°ï¿½ï¿½Ò·ï¿½ï¿½ï¿½ï¿½logicServerId;
 
-        public short machineId = -1; // Íø¹ØÄ£Ê½ÏÂÊ¹ÓÃ£¬Òª×ª·¢µÄGameServer»úÆ÷Id
+        public short machineId = -1; // ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½Ê¹ï¿½Ã£ï¿½Òª×ªï¿½ï¿½ï¿½ï¿½GameServerï¿½ï¿½ï¿½ï¿½Id
 
         public string GetIp() {
             return ((IPEndPoint)this.client.RemoteAddress).Address.ToString().Substring(7);
@@ -44,19 +50,19 @@ namespace Framework.Core.Net {
             buffer.WriteBytes(data, offset, count);
             // buffer.WriteBytes(data);
 
-            // WebSockt:  TextÎÄ±¾Ä£Ê½¶ªÆú£¬arraybuffer ¶þ½øÖÆÄ£Ê½;
+            // WebSockt:  Textï¿½Ä±ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½arraybuffer ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½;
             if (this.isWebSocket)
             {
                 BinaryWebSocketFrame f = new BinaryWebSocketFrame(buffer);
-                this.client.WriteAndFlushAsync(f); // eventLoopÏß³ÌÀïÃæ
+                this.client.WriteAndFlushAsync(f); // eventLoopï¿½ß³ï¿½ï¿½ï¿½ï¿½ï¿½
                 /*this.client.EventLoop.Execute(async () =>
                 {
                     await this.client.WriteAndFlushAsync(f);
                 });*/
             }
             else
-            {  // TcpSocketµÄSender ---> IByteBufferÊý¾Ý¶ÔÏó£¬ÔÚPipelineÀïÃæ´¦Àí;
-                this.client.WriteAndFlushAsync(buffer); // eventLoopÏß³ÌÀïÃæ
+            {  // TcpSocketï¿½ï¿½Sender ---> IByteBufferï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½ï¿½ï¿½Pipelineï¿½ï¿½ï¿½æ´¦ï¿½ï¿½;
+                this.client.WriteAndFlushAsync(buffer); // eventLoopï¿½ß³ï¿½ï¿½ï¿½ï¿½ï¿½
                 /*this.client.EventLoop.Execute(async () =>
                 {
                     // this.client.WriteAndFlushAsync(buffer);
@@ -76,17 +82,17 @@ namespace Framework.Core.Net {
             IByteBuffer buffer = Unpooled.Buffer();
             buffer.WriteBytes(data);
 
-            // WebSockt:  TextÎÄ±¾Ä£Ê½¶ªÆú£¬arraybuffer ¶þ½øÖÆÄ£Ê½;
+            // WebSockt:  Textï¿½Ä±ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½arraybuffer ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½;
             if (this.isWebSocket) {
                 BinaryWebSocketFrame f = new BinaryWebSocketFrame(buffer);
-                this.client.WriteAndFlushAsync(f); // eventLoopÏß³ÌÀïÃæ
+                this.client.WriteAndFlushAsync(f); // eventLoopï¿½ß³ï¿½ï¿½ï¿½ï¿½ï¿½
                 /*this.client.EventLoop.Execute(async () =>
                 {
                     await this.client.WriteAndFlushAsync(f);
                 });*/
             }
-            else {  // TcpSocketµÄSender ---> IByteBufferÊý¾Ý¶ÔÏó£¬ÔÚPipelineÀïÃæ´¦Àí;
-                this.client.WriteAndFlushAsync(buffer); // eventLoopÏß³ÌÀïÃæ
+            else {  // TcpSocketï¿½ï¿½Sender ---> IByteBufferï¿½ï¿½ï¿½Ý¶ï¿½ï¿½ï¿½ï¿½ï¿½Pipelineï¿½ï¿½ï¿½æ´¦ï¿½ï¿½;
+                this.client.WriteAndFlushAsync(buffer); // eventLoopï¿½ß³ï¿½ï¿½ï¿½ï¿½ï¿½
                 /*this.client.EventLoop.Execute(async () =>
                 {
                     // this.client.WriteAndFlushAsync(buffer);

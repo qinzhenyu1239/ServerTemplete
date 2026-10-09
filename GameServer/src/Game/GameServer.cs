@@ -95,7 +95,7 @@ namespace Game
             if (role == ServerRole.Login)
             {
                 HttpRouteDispatcher.Instance.Init(
-                    "/ReqGuestLogin", "/ReqRegisterUser", "/ReqUserLogin",
+                    "/ReqGuestLogin", "/ReqRegisterUser", "/ReqUserLogin", "/ReqUserLogout",
                     "/ReqGuestUpgrade", "/ReqIssueGameTicket");
                 return;
             }
@@ -104,7 +104,7 @@ namespace Game
             HttpRouteDispatcher.Instance.Init();
             HttpRouteDispatcher.Instance.RemoveRoutes(
                 "/GetAccountId", "/ReqGuestLogin", "/ReqRegisterUser",
-                "/ReqUserLogin", "/ReqGuestUpgrade", "/ReqIssueGameTicket");
+                "/ReqUserLogin", "/ReqUserLogout", "/ReqGuestUpgrade", "/ReqIssueGameTicket");
             SessionMgr.Instance.Init();
 
             bool gatewayMode = role == ServerRole.Gateway ||
@@ -166,6 +166,8 @@ namespace Game
 
         public async Task Shutdown()
         {
+            await SessionMgr.Instance.StopAsync();
+            await GM_AuthSessionMgr.Instance.StopLogoutRetriesAsync();
             if (server != null) await server.Shutdown();
             if (role == ServerRole.ServerZone) return;
 

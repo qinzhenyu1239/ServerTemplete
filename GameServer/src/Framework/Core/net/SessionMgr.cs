@@ -9,12 +9,13 @@ using System.Threading.Tasks;
 
 namespace Framework.Core.Net
 {
-    public class SessionMgr {
+    public partial class SessionMgr {
         public static SessionMgr Instance = new SessionMgr();
 
         
         private AttributeKey<IdSession> SESSION_KEY = AttributeKey<IdSession>.ValueOf("session");
         private long autoId = 0;
+        public object BindingSync { get; } = new object();
         private readonly ConcurrentDictionary<long, IdSession> accountSessions = new();
         private readonly ConcurrentDictionary<IdSession, byte> closeAfterResponseSessions = new();
 
@@ -23,6 +24,7 @@ namespace Framework.Core.Net
         public void Init() {
             this.autoId = 0;
             this.accountSessions.Clear();
+            StartIdleChecks();
         }
 
         public void SetSessionChannel(IdSession s, IChannel channel) {
@@ -78,22 +80,32 @@ namespace Framework.Core.Net
         public void BindAuthenticatedAccount(IdSession session, long accountId, string authSessionId)
         {
             if (session == null || accountId <= 0 || string.IsNullOrWhiteSpace(authSessionId)) return;
-            session.accountId = accountId;
-            session.authSessionId = authSessionId;
-            accountSessions.AddOrUpdate(accountId, session, (_, previous) =>
+            lock (BindingSync)
             {
-                if (!ReferenceEquals(previous, session)) previous.client?.CloseAsync();
-                return session;
-            });
+                session.accountId = accountId;
+                session.authSessionId = authSessionId;
+                session.MarkValidActivity();
+                if (accountSessions.TryGetValue(accountId, out IdSession previous) && !ReferenceEquals(previous, session))
+                    previous.client?.CloseAsync();
+                accountSessions[accountId] = session;
+            }
+        }
+
+        public bool IsCurrentConnection(IdSession session)
+        {
+            lock (BindingSync)
+                return session != null && accountSessions.TryGetValue(session.accountId, out IdSession current) && ReferenceEquals(current, session);
         }
 
         public void UnbindAuthenticatedAccount(IdSession session)
         {
             if (session == null) return;
             closeAfterResponseSessions.TryRemove(session, out _);
-            if (session.accountId <= 0) return;
-            if (accountSessions.TryGetValue(session.accountId, out IdSession current) && ReferenceEquals(current, session))
-                accountSessions.TryRemove(session.accountId, out _);
+            lock (BindingSync)
+            {
+                if (accountSessions.TryGetValue(session.accountId, out IdSession current) && ReferenceEquals(current, session))
+                    accountSessions.TryRemove(session.accountId, out _);
+            }
         }
 
         public void CloseAfterNextResponse(IdSession session)
@@ -131,9 +143,10 @@ namespace Framework.Core.Net
 
         public void KickSupersededSession(long accountId, string currentAuthSessionId)
         {
-            if (accountSessions.TryGetValue(accountId, out IdSession session) &&
-                !string.Equals(session.authSessionId, currentAuthSessionId, System.StringComparison.Ordinal))
-                session.client?.CloseAsync();
+            lock (BindingSync)
+                if (accountSessions.TryGetValue(accountId, out IdSession session) &&
+                    !string.Equals(session.authSessionId, currentAuthSessionId, System.StringComparison.Ordinal))
+                    session.client?.CloseAsync();
         }
 
     }

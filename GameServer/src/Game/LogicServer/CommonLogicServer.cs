@@ -56,7 +56,16 @@ namespace Game
         [RequestMapping]
         public object DoReqExitLogicServer(IdSession s, ReqExitLogicServer req, long playerId)
         {
-            int status = this.ExitLogicServer(playerId, req.quitReason);
+            int status;
+            bool gatewayMode = bool.TryParse(System.Configuration.ConfigurationManager.AppSettings["GatewayMode"], out bool enabled) && enabled;
+            if (req.quitReason == (int)QuitReason.DisconnectQuit && !s.isWebSocket && !gatewayMode)
+            {
+                int? result = Game.Core.EntityMgr.GM_EntityMgr.Instance.ExitCurrentSession(
+                    s, () => this.ExitLogicServer(playerId, req.quitReason));
+                if (!result.HasValue) return null;
+                status = result.Value;
+            }
+            else status = this.ExitLogicServer(playerId, req.quitReason);
             ResExitLogicServer res = null;
             if (req.quitReason != (int)QuitReason.DisconnectQuit) {
                 res = new ResExitLogicServer();

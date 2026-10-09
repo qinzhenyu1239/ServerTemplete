@@ -30,10 +30,34 @@ namespace Game.Core.EntityMgr
                 return false;
             }
 
-            session.playerId = playerId;
-            session.accountIdAndJob = GM_AccountEntityMgr.Instance.PlayerKey(accountId, job);
-            AddPlayer(session, playerId);
-            return true;
+            lock (SessionMgr.Instance.BindingSync)
+            {
+                if (!SessionMgr.Instance.IsCurrentConnection(session) || session.client != null && !session.client.Active)
+                    return false;
+                session.playerId = playerId;
+                session.accountIdAndJob = GM_AccountEntityMgr.Instance.PlayerKey(accountId, job);
+                AddPlayer(session, playerId);
+                return true;
+            }
+        }
+
+        public int? ExitCurrentSession(IdSession session, Func<int> exit)
+        {
+            lock (SessionMgr.Instance.BindingSync)
+            {
+                GM_PlayerEntity player = Get(session.playerId);
+                if (player == null || !ReferenceEquals(player.uPlayer.s, session)) return null;
+                return exit();
+            }
+        }
+
+        public void ClearDisconnectedSession(IdSession session)
+        {
+            lock (SessionMgr.Instance.BindingSync)
+            {
+                GM_PlayerEntity player = Get(session.playerId);
+                if (player != null && ReferenceEquals(player.uPlayer.s, session)) player.uPlayer.s = null;
+            }
         }
 
         public int AddPlayer(IdSession s, long playerId) {

@@ -6,7 +6,8 @@ namespace Game.Core.GM_Auth
         InvalidAccessToken,
         InvalidGameTicket,
         SupersededSession,
-        Failed
+        Failed,
+        NotificationPending
     }
 
     public sealed class AccessTokenValidationResult

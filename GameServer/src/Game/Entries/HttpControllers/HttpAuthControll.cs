@@ -45,6 +45,10 @@ namespace Game.Entries.HttpControllers
         public async Task<object> DoUserLoginAction(IFullHttpRequest request)
             => await AuthModule.Instance.HandlerReqUserLoginAsync(ReadRequest(request) as ReqUserLogin);
 
+        [HttpRequestMapping("/ReqUserLogout")]
+        public async Task<object> DoUserLogout(IFullHttpRequest request) =>
+            await AuthModule.Instance.HandlerReqUserLogoutAsync(ReadRequest(request) as ReqUserLogout);
+
         [HttpRequestMapping("/ReqGuestUpgrade")]
         public object DoReqGuestUpgrade(IFullHttpRequest request) =>
             AuthModule.Instance.HandlerReqGuestUpgrade(ReadRequest(request) as ReqGuestUpgrade);

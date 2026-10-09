@@ -33,6 +33,8 @@
         // 用户登录
         eUserLoginReq = 1001,
         eUserLoginRes = 1002,
+        eUserLogoutReq = 1008,
+        eUserLogoutRes = 1009,
 
         // 登录服签发游戏服一次性票据
         eIssueGameTicketReq = 1003,

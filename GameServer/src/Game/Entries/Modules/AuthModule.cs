@@ -134,6 +134,20 @@ namespace Game.Entries.Modules
             return response;
         }
 
+        public async Task<ResUserLogout> HandlerReqUserLogoutAsync(ReqUserLogout request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.accessToken) || request.accessToken.Length > 512)
+                return new ResUserLogout { status = (int)Respones.InvalidParams };
+            AuthOperationStatus result = await GM_AuthSessionMgr.Instance.LogoutAsync(request.accessToken);
+            return new ResUserLogout
+            {
+                status = result == AuthOperationStatus.Success ? (int)Respones.OK :
+                    result == AuthOperationStatus.InvalidAccessToken ? (int)Respones.AccountIsNotLogin : (int)Respones.SystemErr,
+                errorMessage = result == AuthOperationStatus.NotificationPending
+                    ? "Login credentials revoked; game server cleanup is pending and will be retried." : null
+            };
+        }
+
         public ResRegisterUser HandlerReqRegisterUser(ReqRegisterUser request)
         {
             var response = new ResRegisterUser();
