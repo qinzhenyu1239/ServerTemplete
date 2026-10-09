@@ -430,7 +430,7 @@ namespace Game.Core.GM_Auth
                 sessionId = session.SessionId,
                 timestamp = timestamp,
                 nonce = nonce,
-                signature = ComputeHmac(InvalidationPurpose + unsignedBody)
+                signature = Convert.ToBase64String(ComputeHmac(InvalidationPurpose + unsignedBody))
             };
             byte[] packet = MessagePusher.PackMessage(request, 0);
             if (packet == null) return;

@@ -147,6 +147,22 @@
           "Microsoft.AspNetCore.App"
         ]
       },
+      "Google.Protobuf/3.12.4": {
+        "type": "package",
+        "dependencies": {
+          "System.Memory": "4.5.2"
+        },
+        "compile": {
+          "lib/netstandard2.0/Google.Protobuf.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/Google.Protobuf.dll": {
+            "related": ".pdb;.xml"
+          }
+        }
+      },
       "LogicLooper/1.6.0": {
         "type": "package",
         "compile": {
@@ -1688,6 +1704,26 @@
         "lib/net6.0/EnyimMemcachedCore.dll",
         "lib/net7.0/EnyimMemcachedCore.dll",
         "lib/net8.0/EnyimMemcachedCore.dll"
+      ]
+    },
+    "Google.Protobuf/3.12.4": {
+      "sha512": "Vl0FuEKLBQp6WOFacaRXnwSlnBKwYtoWtSK0tErYBcLvipbx5Jdq3V17xLHsUUluF/ZOSyjZ2L2skCVxwGNhZw==",
+      "type": "package",
+      "path": "google.protobuf/3.12.4",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "google.protobuf.3.12.4.nupkg.sha512",
+        "google.protobuf.nuspec",
+        "lib/net45/Google.Protobuf.dll",
+        "lib/net45/Google.Protobuf.pdb",
+        "lib/net45/Google.Protobuf.xml",
+        "lib/netstandard1.0/Google.Protobuf.dll",
+        "lib/netstandard1.0/Google.Protobuf.pdb",
+        "lib/netstandard1.0/Google.Protobuf.xml",
+        "lib/netstandard2.0/Google.Protobuf.dll",
+        "lib/netstandard2.0/Google.Protobuf.pdb",
+        "lib/netstandard2.0/Google.Protobuf.xml"
       ]
     },
     "LogicLooper/1.6.0": {
@@ -4397,6 +4433,7 @@
       "DotNetty.Handlers >= 0.7.6",
       "DotNetty.Transport >= 0.7.6",
       "EnyimMemcachedCore >= 3.2.3",
+      "Google.Protobuf >= 3.12.4",
       "LogicLooper >= 1.6.0",
       "Microsoft.Extensions.Configuration >= 8.0.0",
       "NLog >= 5.3.3",
@@ -4481,6 +4518,10 @@
           "EnyimMemcachedCore": {
             "target": "Package",
             "version": "[3.2.3, )"
+          },
+          "Google.Protobuf": {
+            "target": "Package",
+            "version": "[3.12.4, )"
           },
           "LogicLooper": {
             "target": "Package",

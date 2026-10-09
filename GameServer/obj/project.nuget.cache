@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "ZSHpKVr1QK8=",
+  "dgSpecHash": "wkLYBXlKEPA=",
   "success": true,
   "projectFilePath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj",
   "expectedPackageFiles": [
@@ -12,6 +12,7 @@
     "C:\\Users\\Windows\\.nuget\\packages\\dotnetty.handlers\\0.7.6\\dotnetty.handlers.0.7.6.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\dotnetty.transport\\0.7.6\\dotnetty.transport.0.7.6.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\enyimmemcachedcore\\3.2.3\\enyimmemcachedcore.3.2.3.nupkg.sha512",
+    "C:\\Users\\Windows\\.nuget\\packages\\google.protobuf\\3.12.4\\google.protobuf.3.12.4.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\logiclooper\\1.6.0\\logiclooper.1.6.0.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\messagepack\\2.5.140\\messagepack.2.5.140.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\messagepack.annotations\\2.5.140\\messagepack.annotations.2.5.140.nupkg.sha512",

@@ -364,6 +364,7 @@ D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\DotNetty.Common.dl
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\DotNetty.Handlers.dll
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\DotNetty.Transport.dll
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\EnyimMemcachedCore.dll
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Google.Protobuf.dll
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Cysharp.Threading.LogicLooper.dll
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\MessagePack.dll
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\MessagePack.Annotations.dll

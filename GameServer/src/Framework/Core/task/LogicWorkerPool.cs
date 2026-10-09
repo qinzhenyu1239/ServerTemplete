@@ -18,8 +18,6 @@ namespace Framework.Core.task
         // 任务队列Task, 操作对垒，都是线程安全的;
         public Queue<AbstractDistributeTask> taskQueue = new Queue<AbstractDistributeTask>();
         public AutoResetEvent taskEvent = new AutoResetEvent(true);
-
-
     }
 
     public class LogicWorkerPool

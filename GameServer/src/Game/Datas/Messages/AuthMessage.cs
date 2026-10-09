@@ -247,7 +247,7 @@ namespace Game.Datas.Messages
         public string nonce;
 
         [ProtoMember(6, IsRequired = true)]
-        public byte[] signature;
+        public string signature;
     }
 
 }

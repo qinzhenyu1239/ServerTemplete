@@ -15,11 +15,16 @@ namespace Framework.Core.Serializer
 
             try {
                 using (var stream = new MemoryStream()) {
-                    ProtoBuf.Serializer.Serialize(stream, msg);
+                    if (!GoogleProtocolCodec.TrySerialize(msg, stream, out string googleError)) {
+                        string reason = string.IsNullOrEmpty(googleError)
+                            ? "Protocol is not generated in GoogleProtocolCodec."
+                            : googleError;
+                        throw new InvalidOperationException(reason);
+                    }
                     body = stream.ToArray();
                 }
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 logger.Error(e.Message);
             }
             return body;
@@ -35,8 +40,14 @@ namespace Framework.Core.Serializer
 
             try {
                 using (var stream = new MemoryStream(body, offset, count)) {
-                    Message _fw = (Message)ProtoBuf.Serializer.Deserialize(msgType, stream);
-                    return _fw;
+                    if (GoogleProtocolCodec.TryDeserialize(msgType, stream, out Message _fw, out string googleError)) {
+                        return _fw;
+                    }
+
+                    string reason = string.IsNullOrEmpty(googleError)
+                        ? "Protocol is not generated in GoogleProtocolCodec."
+                        : googleError;
+                    throw new InvalidOperationException(reason);
                 }
             } catch (Exception e) {
                 logger.Error($"读取消息出错,模块号[{module}]，类型[{cmd}],异常:{e.Message}");

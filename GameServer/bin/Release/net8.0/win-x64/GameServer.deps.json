@@ -17,6 +17,7 @@
           "DotNetty.Handlers": "0.7.6",
           "DotNetty.Transport": "0.7.6",
           "EnyimMemcachedCore": "3.2.3",
+          "Google.Protobuf": "3.12.4",
           "LogicLooper": "1.6.0",
           "Microsoft.Extensions.Configuration": "8.0.0",
           "NLog": "5.3.3",
@@ -1426,6 +1427,17 @@
           }
         }
       },
+      "Google.Protobuf/3.12.4": {
+        "dependencies": {
+          "System.Memory": "4.5.3"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Google.Protobuf.dll": {
+            "assemblyVersion": "3.12.4.0",
+            "fileVersion": "3.12.4.0"
+          }
+        }
+      },
       "LogicLooper/1.6.0": {
         "runtime": {
           "lib/net8.0/Cysharp.Threading.LogicLooper.dll": {
@@ -2158,6 +2170,13 @@
       "sha512": "sha512-VqYVr0aVKUMNDdSSXDDlbq3SaBFXkQJXLbNA8gQjjuJER6vVahpjoczfBh8ZLtJV1d2nYS0Z1kLg3gPBpLBIkQ==",
       "path": "enyimmemcachedcore/3.2.3",
       "hashPath": "enyimmemcachedcore.3.2.3.nupkg.sha512"
+    },
+    "Google.Protobuf/3.12.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Vl0FuEKLBQp6WOFacaRXnwSlnBKwYtoWtSK0tErYBcLvipbx5Jdq3V17xLHsUUluF/ZOSyjZ2L2skCVxwGNhZw==",
+      "path": "google.protobuf/3.12.4",
+      "hashPath": "google.protobuf.3.12.4.nupkg.sha512"
     },
     "LogicLooper/1.6.0": {
       "type": "package",

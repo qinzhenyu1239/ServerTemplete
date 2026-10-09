@@ -105,8 +105,15 @@ namespace Game.Entries.Modules
             long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             if (request == null || request.accountId <= 0 || request.sessionVersion <= 0 ||
                 string.IsNullOrWhiteSpace(request.sessionId) || string.IsNullOrWhiteSpace(request.nonce) ||
-                request.signature == null || request.signature.Length == 0 ||
+                string.IsNullOrWhiteSpace(request.signature) || request.signature.Length != 44 ||
                 request.timestamp < now - 30 || request.timestamp > now + 30)
+            {
+                return "INVALID";
+            }
+
+            var signature = new byte[32];
+            if (!Convert.TryFromBase64String(request.signature, signature, out int bytesWritten) ||
+                bytesWritten != signature.Length)
             {
                 return "INVALID";
             }
@@ -118,7 +125,7 @@ namespace Game.Entries.Modules
                 SessionId = request.sessionId,
                 Timestamp = request.timestamp,
                 Nonce = request.nonce,
-                Signature = request.signature
+                Signature = signature
             };
             return GM_AuthSessionMgr.Instance.ApplySessionInvalidation(command) ? "OK" : "INVALID";
         }

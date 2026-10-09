@@ -1,0 +1,435 @@
+[2026-09-23 22:34:17.9142] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:34:17.9167] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:34:17.9167] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:34:17.9167] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:34:17.9167] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:35:30.4618] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:35:30.4618] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:35:30.4618] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:35:30.4618] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:35:57.2936] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:35:57.2936] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:35:57.2936] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:35:57.2936] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:37:03.8339] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:37:03.8339] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:37:03.8339] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:37:03.8339] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:40:55.1614] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:40:55.1614] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:40:55.1614] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:40:55.1614] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:41:27.8307] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:41:27.8307] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:41:27.8307] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:41:27.8307] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:44:18.7947] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:44:18.7947] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:44:18.7947] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:44:18.7947] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:48:02.5890] [Formation][Get] playerId=96256259254132736, status=1, error=, rules=3, formations=15, characters=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Rule] playerId=96256259254132736, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:48:02.5983] [Formation][Get][Rule] playerId=96256259254132736, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:48:02.5983] [Formation][Get][Rule] playerId=96256259254132736, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:02.5983] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get] playerId=96256259254132736, status=1, error=, rules=3, formations=15, characters=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Rule] playerId=96256259254132736, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:48:04.4010] [Formation][Get][Rule] playerId=96256259254132736, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:48:04.4010] [Formation][Get][Rule] playerId=96256259254132736, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:04.4010] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:12.2995] [Formation][Get] playerId=96256259254132736, status=1, error=, rules=3, formations=15, characters=6 
+[2026-09-23 22:48:12.3006] [Formation][Get][Rule] playerId=96256259254132736, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:48:12.3006] [Formation][Get][Rule] playerId=96256259254132736, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:48:12.3006] [Formation][Get][Rule] playerId=96256259254132736, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Formation] playerId=96256259254132736, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Character] playerId=96256259254132736, characterId=20002, star=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Character] playerId=96256259254132736, characterId=20003, star=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Character] playerId=96256259254132736, characterId=20006, star=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Character] playerId=96256259254132736, characterId=20007, star=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Character] playerId=96256259254132736, characterId=20011, star=0 
+[2026-09-23 22:48:12.3006] [Formation][Get][Character] playerId=96256259254132736, characterId=20012, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:49:25.7515] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:49:25.7515] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:49:25.7515] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:49:25.7515] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:51:54.9718] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:51:54.9718] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:51:54.9718] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:51:54.9718] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:54:39.4301] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:54:39.4301] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:54:39.4301] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:54:39.4301] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 22:59:38.2467] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:59:38.2467] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 22:59:38.2467] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 22:59:38.2467] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get] playerId=91728819852943360, status=1, error=, rules=3, formations=15, characters=12 
+[2026-09-23 23:01:02.5157] [Formation][Get][Rule] playerId=91728819852943360, moduleId=0, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 23:01:02.5157] [Formation][Get][Rule] playerId=91728819852943360, moduleId=1, slotCount=9, minDeployCount=1, maxDeployCount=6 
+[2026-09-23 23:01:02.5157] [Formation][Get][Rule] playerId=91728819852943360, moduleId=2, slotCount=12, minDeployCount=12, maxDeployCount=12 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=0, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=1, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=2, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=3, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=0, formationId=4, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=0, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=1, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=2, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=3, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=1, formationId=4, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=0, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=1, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=2, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=3, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Formation] playerId=91728819852943360, moduleId=2, formationId=4, version=0, slots=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20001, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20002, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20003, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20004, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20005, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20006, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20007, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20008, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20009, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20010, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20011, star=0 
+[2026-09-23 23:01:02.5157] [Formation][Get][Character] playerId=91728819852943360, characterId=20012, star=0 

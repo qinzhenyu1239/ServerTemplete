@@ -21,19 +21,23 @@ namespace Game.Entries.Modules
         public ResGetPlayerFormations HandlerGet(IdSession session, ReqGetPlayerFormations request, long playerId)
         {
             if (!IsLoggedIn(playerId))
+            {
                 return new ResGetPlayerFormations
                 {
                     status = (int)Respones.AccountIsNotLogin,
                     errorMessage = "Player is not logged in."
                 };
+            }
             FormationOverviewResult result = GM_FormationMgr.Instance.GetOverview(playerId);
             if (result.Status != FormationStatus.Success)
+            {
                 return new ResGetPlayerFormations
                 {
                     status = (int)Respones.SystemErr,
                     errorMessage = "Failed to query player formations."
                 };
-            return new ResGetPlayerFormations
+            }
+            var response = new ResGetPlayerFormations
             {
                 status = (int)Respones.OK,
                 moduleRules = result.ModuleRules.Select(MapRule).ToList(),
@@ -44,8 +48,9 @@ namespace Game.Entries.Modules
                     star = character.Star
                 }).ToList()
             };
+            return response;
         }
-
+ 
         public ResSavePlayerFormation HandlerSave(IdSession session, ReqSavePlayerFormation request, long playerId)
         {
             if (!IsLoggedIn(playerId))
@@ -70,7 +75,7 @@ namespace Game.Entries.Modules
 
             SaveFormationResult result = GM_FormationMgr.Instance.Save(
                 playerId, request.moduleId, request.formationId, request.expectedVersion, slots);
-            return result.Status switch
+            ResSavePlayerFormation response = result.Status switch
             {
                 FormationStatus.Success => new ResSavePlayerFormation
                 {
@@ -88,6 +93,7 @@ namespace Game.Entries.Modules
                 FormationStatus.Invalid => Error(Respones.InvalidParams, "Invalid formation save request."),
                 _ => Error(Respones.FormationSaveFailed, "Formation save failed and was rolled back.")
             };
+            return response;
         }
 
         private static bool IsLoggedIn(long playerId) =>
@@ -119,5 +125,6 @@ namespace Game.Entries.Modules
             status = (int)status,
             errorMessage = message
         };
+
     }
 }

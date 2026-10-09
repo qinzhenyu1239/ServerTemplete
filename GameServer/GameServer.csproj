@@ -19,6 +19,7 @@
     <PackageReference Include="DotNetty.Handlers" Version="0.7.6" />
     <PackageReference Include="DotNetty.Transport" Version="0.7.6" />
     <PackageReference Include="EnyimMemcachedCore" Version="3.2.3" />
+    <PackageReference Include="Google.Protobuf" Version="3.12.4" />
     <PackageReference Include="LogicLooper" Version="1.6.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="NLog" Version="5.3.3" />
