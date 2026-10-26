@@ -1,0 +1,58 @@
+--- before/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs
++++ after/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs
+@@ -29,13 +29,6 @@
+         // Register only at server startup. The owning business manager evaluates its own data.
+         public void RegisterBusiness(int nodeId, Func<SqlSugarClient, long, bool> evaluate) =>
+             providers.Add(nodeId, evaluate ?? throw new ArgumentNullException(nameof(evaluate)));
+-
+-        public void ValidateProviders()
+-        {
+-            foreach (var node in Catalog.Nodes.Where(n => n.clearType == 1 && Catalog.IsEnabled(n.id)))
+-                if (!providers.ContainsKey(node.id))
+-                    throw new InvalidOperationException($"No business provider for red-dot node {node.id}.");
+-        }
+ 
+         public RedDotSnapshot Initialize(long playerId)
+         {
+--- before/GameServer/src/Game/GameServer.cs
++++ after/GameServer/src/Game/GameServer.cs
+@@ -142,7 +142,6 @@
+             GM_SkillMgr.Instance.Init();
+             GM_BuffMgr.Instance.Init();
+             GM_MailMsgMgr.Instance.Init();
+-            Game.Core.GM_RedDot.GM_RedDotMgr.Instance.ValidateProviders();
+             GM_BonuesMgr.Instance.Init();
+             GM_TaskMgr.Instance.Init();
+             GM_RankMgr.Instance.Init();
+--- before/GameServerTests/RedDot/RedDotMySqlTests.cs
++++ after/GameServerTests/RedDot/RedDotMySqlTests.cs
+@@ -61,7 +61,6 @@
+                 evaluations++;
+                 return transaction.Ado.SqlQuery<int>("SELECT active FROM testcondition WHERE playerId=@pid", new { pid = id }).Single() == 1;
+             });
+-            GM_RedDotMgr.Instance.ValidateProviders();
+             var initial = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
+             Assert.Equal(1, initial.status);
+             Assert.False(initial.states.Single(s => s.nodeId == 9001).isActive);
+--- before/docs/RedDotSystem.md
++++ after/docs/RedDotSystem.md
+@@ -8,7 +8,7 @@
+ - Luban 表头依次为 `##var`、`##type`、`##group`、`##comment`，第五行开始为数据；服务端 CSV 保持三行表头。新增 bool 字段通过 ExcelUtils 原有配置入口读取。
+ - 字段：`id:int`、`name:string`、`parentId:int`、`clearType:int`、`enabled:bool`、`tipVersion:long`。
+ - 类型 0 为汇总，1 为业务条件，2 为查看消除。业务节点只能是叶子；节点 ID 必须唯一、正数；父节点必须存在且为汇总节点；禁止循环。
+-- 全部示例节点默认禁用，包括 1000 邮箱入口和 1001 邮件未读；仅开启配置不能替代业务接入。新增启用的业务条件节点必须注册业务提供方，否则启动失败。
++- 全部示例节点默认禁用，包括 1000 邮箱入口和 1001 邮件未读；仅开启配置不能替代业务接入。业务条件节点可以直接调用 WriteBusinessState 更新，不强制注册判断方法。只有调用 RefreshBusinessState 时，才要求已通过 RegisterBusiness 注册对应方法，否则该次刷新报错。
+ - 查看型节点的 `tipVersion` 从 1 起递增，其他节点为 0。发布后不要复用 ID 或把已有节点改作不相关业务。
+ - `configVersion` 为按 ID 排序后的全部配置字段的 SHA-256，包括禁用节点。本期在启动时加载配置，不提供运行时修改入口。
+ 
+--- before/docs/RedDotChanges.md
++++ after/docs/RedDotChanges.md
+@@ -25,7 +25,7 @@
+ | 新增 | [RedDotMessage.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/Messages/RedDotMessage.cs) | 两端一致的节点、状态及五种协议定义。 |
+ | 新增 | [RedDotController.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Controllers/RedDotController.cs) | 初始化及查看请求路由。 |
+ | 新增 | [RedDotModule.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Modules/RedDotModule.cs) | 登录/参数校验和协议响应、通知映射。 |
+-| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化红点模块、检查业务提供方；不再增加邮件关闭逻辑。 |
++| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化通用红点模块；不再强制校验业务判断方法注册。 |
+ | 新增 | [RedDotChanges.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotChanges.md) | 接入、安装、验证及本次完整变更说明。 |
+ | 新增 | [RedDotSystem.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotSystem.md) | 接入、安装、验证及本次完整变更说明。 |
+ | 新增 | [20261023_001_reddot.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/migrations/20261023_001_reddot.sql) | 已有库的可重复迁移，保留旧邮件数据。 |

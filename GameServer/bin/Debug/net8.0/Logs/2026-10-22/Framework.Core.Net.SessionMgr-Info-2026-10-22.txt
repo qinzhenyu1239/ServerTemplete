@@ -1,0 +1,8 @@
+[2026-10-22 09:45:09.2793] Closing idle TCP session: account[281873657426214931] player[96230230309478400] idleSeconds[61.4] 
+[2026-10-22 15:16:43.4046] Closing idle TCP session: account[106651473944776704] player[106651513035694080] idleSeconds[61.1] 
+[2026-10-22 15:19:18.4047] Closing idle TCP session: account[106651473944776704] player[106651513035694080] idleSeconds[64.9] 
+[2026-10-22 18:26:29.5811] Closing idle TCP session: account[106651473944776704] player[106651513035694080] idleSeconds[62.2] 
+[2026-10-22 18:32:14.5830] Closing idle TCP session: account[91814909431517184] player[106700238516920320] idleSeconds[62.9] 
+[2026-10-22 18:38:49.5750] Closing idle TCP session: account[94615294412066816] player[101865408830644224] idleSeconds[61.7] 
+[2026-10-22 18:48:49.5665] Closing idle TCP session: account[91814909431517184] player[106700238516920320] idleSeconds[61.5] 
+[2026-10-22 18:54:59.5429] Closing idle TCP session: account[91814909431517184] player[106700238516920320] idleSeconds[62.0] 

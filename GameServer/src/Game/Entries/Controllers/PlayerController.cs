@@ -11,6 +11,14 @@ namespace Game.Entries.Controllers
     [Controller]
     public class PlayerController
     {
+        [RequestMapping]
+        public object DoGetPlayerBasicInfo(IdSession session, ReqGetPlayerBasicInfo request, long playerId) =>
+            PlayerModule.Instance.HandlerGetPlayerBasicInfo(session, request, playerId);
+
+        [RequestMapping]
+        public object DoUpdatePlayerBasicInfo(IdSession session, ReqUpdatePlayerBasicInfo request, long playerId) =>
+            PlayerModule.Instance.HandlerUpdatePlayerBasicInfo(session, request, playerId);
+
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         [RequestMapping]

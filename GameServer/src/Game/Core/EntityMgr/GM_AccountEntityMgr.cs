@@ -420,6 +420,27 @@ namespace Game.Core.EntityMgr
             return entity;
         }
 
+        public void ApplyCommittedPlayer(Player player)
+        {
+            GM_AccountEntity account = GetOrAddEntity(player.accountId);
+            lock (account.syncRoot)
+            {
+                var online = GM_EntityMgr.Instance.Get(player.id);
+                // Keep the shared Player reference and unrelated cached gameplay state intact.
+                Player target = online?.uPlayer.playerInfo ?? account.uPlayer.playerInfo;
+                if (target == null || target.id != player.id) target = player;
+                target.avatarId = player.avatarId;
+                target.avatarFrameId = player.avatarFrameId;
+                target.titleId = player.titleId;
+                target.backgroundId = player.backgroundId;
+                target.signature = player.signature;
+                target.displayAchievementIds = player.displayAchievementIds;
+                target.displayCharacterIds = player.displayCharacterIds;
+                AttachPlayer(target);
+                if (online != null) online.uPlayer.playerInfo = target;
+            }
+        }
+
         private Player AttachPlayer(Player player)
         {
             GM_AccountEntity entity = GetOrAddEntity(player.accountId);
@@ -474,6 +495,15 @@ namespace Game.Core.EntityMgr
             accountId = accountId,
             job = command.Job,
             name = command.Name,
+            avatarId = 0,
+            avatarFrameId = 0,
+            backgroundId = 0,
+            displayAchievementIds = "[0,0,0,0,0,0,0]",
+            displayCharacterIds = "[0,0,0,0,0,0]",
+            guildId = 0,
+            titleId = 0,
+            signature = string.Empty,
+            createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             HP = 100,
             MP = 0,
             status = 0,

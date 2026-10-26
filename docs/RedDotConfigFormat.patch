@@ -1,0 +1,71 @@
+--- before/tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1
++++ after/tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1
+@@ -166,6 +166,10 @@
+         $workbook = $application.Workbooks.Open($copiedWorkbook, 0, $true)
+         try {
+             $worksheet = $workbook.Worksheets.Item([string]$table.worksheet)
++            # Three-row Luban metadata uses ## in row 3; older tables may have ##group plus ##comment.
++            $thirdRowMarker = ([string]$worksheet.Cells.Item(3, 1).Text).Trim()
++            $descriptionRow = if ($thirdRowMarker -in @('##', '##comment')) { 3 } else { 4 }
++            $firstDataRow = $descriptionRow + 1
+             $seenSourceFields = @{}
+             $outputDescriptions = @()
+             $outputTypes = @()
+@@ -181,7 +185,7 @@
+                 $seenSourceFields[$normalized] = $true
+ 
+                 $sourceType = Convert-LubanType ([string]$worksheet.Cells.Item(2, $column).Text)
+-                $sourceDescription = [string]$worksheet.Cells.Item(4, $column).Text
++                $sourceDescription = [string]$worksheet.Cells.Item($descriptionRow, $column).Text
+                 if ($existingMetadata.ContainsKey($normalized)) {
+                     $metadata = $existingMetadata[$normalized]
+                     $outputFields += $metadata.Field
+@@ -216,7 +220,7 @@
+                 }
+ 
+                 $writtenRows = 0
+-                for ($row = 5; $row -le $worksheet.UsedRange.Rows.Count; $row++) {
++                for ($row = $firstDataRow; $row -le $worksheet.UsedRange.Rows.Count; $row++) {
+                     $keyValue = $worksheet.Cells.Item($row, $columnMappings[0]).Value2
+                     if ($null -eq $keyValue -or ([string]$keyValue).Trim().Length -eq 0) { continue }
+ 
+--- before/docs/RedDotSystem.md
++++ after/docs/RedDotSystem.md
+@@ -5,7 +5,7 @@
+ ## 配置与数据
+ 
+ - 编辑 `D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx`，使用现有 `tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1` 导出。工作簿副本位于 `Excels/RedDotConfig.xlsx`。
+-- Luban 表头依次为 `##var`、`##type`、`##group`、`##comment`，第五行开始为数据；服务端 CSV 保持三行表头。新增 bool 字段通过 ExcelUtils 原有配置入口读取。
++- RedDotConfig 的 Excel 格式与 ResonanceLv 一致：三行表头依次为 `##var`、`##type`、`##`，第四行开始为数据；字体、表头填色和边框沿用参考表。红点字段类型保留 int/string/bool/long。服务端 CSV 继续使用“中文说明、类型、字段名”三行表头。导出脚本兼容上述三行表头及原来的四行表头，不漏掉首条数据。
+ - 字段：`id:int`、`name:string`、`parentId:int`、`clearType:int`、`enabled:bool`、`tipVersion:long`。
+ - 类型 0 为汇总，1 为业务条件，2 为查看消除。业务节点只能是叶子；节点 ID 必须唯一、正数；父节点必须存在且为汇总节点；禁止循环。
+ - 全部示例节点默认禁用，包括 1000 邮箱入口和 1001 邮件未读；仅开启配置不能替代业务接入。业务条件节点可以直接调用 WriteBusinessState 更新，不强制注册判断方法。只有调用 RefreshBusinessState 时，才要求已通过 RegisterBusiness 注册对应方法，否则该次刷新报错。
+--- /dev/null
++++ after/docs/RedDotConfigFormatChanges.md
+@@ -0,0 +1,24 @@
++# RedDotConfig 与 ResonanceLv 格式统一
++
++## 本次文件变化
++
++| 文件 | 修改内容 |
++|---|---|
++| D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx | 沿用 ResonanceLv 的字体、浅绿色表头、边框、列宽和对齐；表头改为 ##var、##type、## 三行，数据从第 4 行开始。保留红点字段名及实际 int/string/bool/long 类型，不照搬参考表的全 string 字段类型。 |
++| Excels/RedDotConfig.xlsx | 与客户端源工作簿同步的二进制副本。 |
++| tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1 | 根据第 3 行标记识别三行/四行表头，动态选择中文说明行与首条数据行，避免跳过节点 1000。 |
++| docs/RedDotSystem.md | 更新表格格式和导出说明。 |
++| docs/RedDotChanges.md、docs/RedDotSystem.patch | 更新最终功能清单及差异中的工作簿描述。 |
++| 本说明、docs/RedDotConfigFormat.patch | 保存本次说明与脚本/说明文档的真实修改差异；二进制工作簿记录结构变化。 |
++
++ResonanceLv 源文件及所有 .meta 未修改。GameServer/Configs/Csvs/RedDotConfig.csv 内容不变，不需要变更协议、配置类型或游戏业务逻辑。
++
++## 验证
++
++- 渲染并对照参考表、修改前表格和修改后表格，确认表头与样式。
++- 核对七条节点的字段和值、全部禁用状态均未改变，没有残留参考表数据。
++- 核对第四行起的数据与服务器原 CSV 完全一致，源工作簿与服务端副本字节一致。
++- 确认 ResonanceLv 字节未改变；PowerShell 导出脚本语法检查通过。
++- 未启动 Excel/WPS 执行 COM 导出，未运行与本次格式调整无关的服务端或客户端测试。
++
++修改前快照、预览、构建脚本与核对结果位于 C:/Users/Windows/AppData/Local/Temp/codex-reddot-20261023/resonance-format/ 及同级 artifact/match-resonance.mjs；不作为项目内容交付。
+
+Binary workbooks updated: client Assets/Luban/Template/Datas/RedDotConfig.xlsx and server Excels/RedDotConfig.xlsx. Three metadata rows match ResonanceLv; data moves from row 5 to row 4, all seven nodes and types retained, formatting cloned from reference.

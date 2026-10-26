@@ -68,7 +68,9 @@ namespace Framework.Core.task
             }
             catch (Exception e)
             {
-                logger.Warn("message task execute failed" + e.Message);
+                logger.Error(e,
+                    $"logic task execute failed: handler={method?.DeclaringType?.FullName}.{method?.Name}, " +
+                    $"serverType={stype}, distributeKey={distributeKey}{Environment.NewLine}{e}");
             }
         }
     }

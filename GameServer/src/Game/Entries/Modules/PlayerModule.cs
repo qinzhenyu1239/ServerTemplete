@@ -19,11 +19,87 @@ using Game.LogicServer;
 using Framework.Core.Serializer;
 using System.Configuration;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Text.Json;
+using Game.Core.GM_PlayerProfile;
 
 namespace Game.Entries.Modules
 {
     public class PlayerModule
     {
+        public ResGetPlayerBasicInfo HandlerGetPlayerBasicInfo(
+            IdSession session, ReqGetPlayerBasicInfo request, long playerId)
+        {
+            if (session == null || session.accountId <= 0 || playerId <= 0 || session.playerId != playerId)
+                return new ResGetPlayerBasicInfo
+                { status = (int)Respones.AccountIsNotLogin, errorMessage = "Player is not logged in." };
+            if (request == null)
+                return new ResGetPlayerBasicInfo
+                { status = (int)Respones.InvalidParams, errorMessage = "Invalid basic info request." };
+
+            var result = Game.Core.GM_PlayerProfile.GM_PlayerProfileMgr.Instance.GetBasicInfo(playerId);
+            if (result.Status != Game.Core.GM_PlayerProfile.PlayerProfileStatus.Success)
+                return new ResGetPlayerBasicInfo
+                {
+                    status = result.Status == Game.Core.GM_PlayerProfile.PlayerProfileStatus.NotFound
+                        ? (int)Respones.PlayerIsNotExist : (int)Respones.SystemErr,
+                    errorMessage = result.Status == Game.Core.GM_PlayerProfile.PlayerProfileStatus.NotFound
+                        ? "Player does not exist." : "Failed to load player basic info."
+                };
+            var info = result.Info;
+            return new ResGetPlayerBasicInfo
+            {
+                status = (int)Respones.OK, playerId = info.PlayerId, avatarId = info.AvatarId,
+                name = info.Name, guildId = info.GuildId, createTime = info.CreateTime,
+                titleId = info.TitleId, signature = info.Signature,
+                avatarFrameId = info.AvatarFrameId, backgroundId = info.BackgroundId,
+                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds)
+            };
+        }
+
+        public ResUpdatePlayerBasicInfo HandlerUpdatePlayerBasicInfo(IdSession session, ReqUpdatePlayerBasicInfo request, long playerId)
+        {
+            if (session == null || session.accountId <= 0 || playerId <= 0 || session.playerId != playerId)
+                return new ResUpdatePlayerBasicInfo { status = (int)Respones.AccountIsNotLogin, errorMessage = "Player is not logged in." };
+            if (request == null)
+                return new ResUpdatePlayerBasicInfo { status = (int)Respones.InvalidParams, errorMessage = "Invalid update request." };
+            PlayerProfileUpdate command;
+            try
+            {
+                command = new PlayerProfileUpdate
+                {
+                    Fields = request.updateFields?.Select(x => (ProfileField)x).ToArray(),
+                    AvatarId = request.avatarId, AvatarFrameId = request.avatarFrameId, TitleId = request.titleId,
+                    BackgroundId = request.backgroundId,
+                    DisplayAchievementIds = request.displayAchievementIds == null ? null : JsonSerializer.Deserialize<int[]>(request.displayAchievementIds),
+                    DisplayCharacterIds = request.displayCharacterIds == null ? null : JsonSerializer.Deserialize<long[]>(request.displayCharacterIds),
+                    Signature = request.signature
+                };
+            }
+            catch (JsonException)
+            {
+                return new ResUpdatePlayerBasicInfo { status = (int)Respones.InvalidParams, errorMessage = "Invalid profile JSON." };
+            }
+            if (!command.IsValid())
+                return new ResUpdatePlayerBasicInfo { status = (int)Respones.InvalidParams, errorMessage = "Invalid profile fields or values." };
+            var result = GM_PlayerProfileMgr.Instance.UpdateBasicInfo(playerId, session.accountId, command);
+            if (result.Status != PlayerProfileStatus.Success)
+                return new ResUpdatePlayerBasicInfo
+                {
+                    status = (int)(result.Status == PlayerProfileStatus.InvalidInput ? Respones.InvalidParams :
+                        result.Status == PlayerProfileStatus.NotFound ? Respones.PlayerIsNotExist : Respones.SystemErr),
+                    errorMessage = "Failed to update player profile."
+                };
+            var info = result.Info;
+            return new ResUpdatePlayerBasicInfo
+            {
+                status = (int)Respones.OK, playerId = info.PlayerId, avatarId = info.AvatarId, name = info.Name,
+                guildId = info.GuildId, createTime = info.CreateTime, titleId = info.TitleId, signature = info.Signature,
+                avatarFrameId = info.AvatarFrameId, backgroundId = info.BackgroundId,
+                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds)
+            };
+        }
+
         public static PlayerModule Instance = new PlayerModule();
 
         private NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();

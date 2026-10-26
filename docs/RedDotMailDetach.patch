@@ -1,0 +1,1802 @@
+--- before/docs/RedDotChanges.md
++++ after/docs/RedDotChanges.md
+@@ -8,33 +8,30 @@
+ 
+ | 操作 | 文件 | 内容及原因 |
+ |---|---|---|
+-| 新增 | [RedDotConfig.xlsx](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/Excels/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个节点，仅邮箱启用；两处副本内容一致。 |
++| 新增 | [RedDotConfig.xlsx](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/Excels/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个预留节点全部禁用；两处副本内容一致。 |
+ | 新增 | [RedDotMySqlTests.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServerTests/RedDot/RedDotMySqlTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
+ | 新增 | [RedDotTests.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServerTests/RedDot/RedDotTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
+-| 新增 | [RedDotConfig.csv](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/Configs/Csvs/RedDotConfig.csv) | 七节点默认配置，仅启用邮箱。 |
++| 新增 | [RedDotConfig.csv](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/Configs/Csvs/RedDotConfig.csv) | 七节点预留配置，全部禁用。 |
+ | 修改 | [GoogleProtocolCodec.Generated.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs) | 生成红点协议编解码；不移除原有已支持合同。 |
+ | 修改 | [ExcelUtils.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Framework/Core/utils/ExcelUtils.cs) | 泛型与非泛型配置读取入口支持 bool 字段。 |
+ | 修改 | [Constants.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Constants.cs) | 追加 PLAYER 红点命令 95–99，保留原命令号。 |
+ | 修改 | [ConfigMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/Configs/ConfigMgr.cs) | 启动预加载 RedDotConfig。 |
+-| 修改 | [GM_MailMsgMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs) | 邮件收件人/有效期校验、事务更新红点、到期扫描与容量清理。 |
+ | 新增 | [GM_RedDotMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs) | 叶子持久化、查看记录、事务同步和提交后推送。 |
+ | 新增 | [RedDotDefinitions.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_RedDot/RedDotDefinitions.cs) | 领域快照、配置图校验与稳定配置版本。 |
+-| 修改 | [Mailmessage.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/DbEntities/Mailmessage.cs) | 增加 expireTime，保留旧实体字段。 |
+ | 新增 | [Playerreddot.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/DbEntities/Playerreddot.cs) | 新增红点数据库实体和联合主键映射。 |
+ | 新增 | [RedDotConfig.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/Excels/RedDotConfig.cs) | 与配置字段一致的类型定义。 |
+ | 新增 | [RedDotComponent.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/GMEntities/Components/RedDotComponent.cs) | 保存当前连接的有界红点状态及同步版本。 |
+ | 修改 | [GM_Entity.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/GMEntities/GM_Entity.cs) | 在线玩家持有 RedDotComponent。 |
+ | 新增 | [RedDotMessage.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/Messages/RedDotMessage.cs) | 两端一致的节点、状态及五种协议定义。 |
+ | 新增 | [RedDotController.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Controllers/RedDotController.cs) | 初始化及查看请求路由。 |
+-| 修改 | [PlayerModule.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Modules/PlayerModule.cs) | 邮件更新携带当前玩家ID并返回实际操作结果，校验请求。 |
+ | 新增 | [RedDotModule.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Modules/RedDotModule.cs) | 登录/参数校验和协议响应、通知映射。 |
+-| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化红点模块、检查业务提供方、关闭邮件定时任务。 |
++| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化红点模块、检查业务提供方；不再增加邮件关闭逻辑。 |
+ | 新增 | [RedDotChanges.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotChanges.md) | 接入、安装、验证及本次完整变更说明。 |
+ | 新增 | [RedDotSystem.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotSystem.md) | 接入、安装、验证及本次完整变更说明。 |
+ | 新增 | [20261023_001_reddot.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/migrations/20261023_001_reddot.sql) | 已有库的可重复迁移，保留旧邮件数据。 |
+-| 修改 | [ugame_10001.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/ugame_10001.sql) | 完整建库结构同步红点表、邮件有效期和索引；保留原有玩家资料改动。 |
++| 修改 | [ugame_10001.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/ugame_10001.sql) | 完整建库结构同步红点表；邮件结构恢复原状，保留原有玩家资料改动。 |
+ | 修改 | [LubanExcelToCsv.json](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/tools/LubanExcelToCsv/LubanExcelToCsv.json) | 现有 Excel → CSV 导出流程登记 RedDotConfig。 |
+-| 新增 | [RedDotConfig.xlsx](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个节点，仅邮箱启用；两处副本内容一致。 |
++| 新增 | [RedDotConfig.xlsx](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个预留节点全部禁用；两处副本内容一致。 |
+ | 新增 | [RedDotConfig.xlsx.meta](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
+ | 修改 | [Cmd.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/Protocol/Definitions/Cmd.cs) | 追加 PLAYER 红点命令 95–99，保留原命令号。 |
+ | 新增 | [RedDotMessage.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/Protocol/Messages/RedDotMessage.cs) | 两端一致的节点、状态及五种协议定义。 |
+@@ -62,7 +59,7 @@
+ ## 验证与限制
+ 
+ - 服务端编译通过，客户端 HotUpdate 编译通过；红点服务端测试 6 项、客户端测试 7 项和隔离 MySQL 测试 1 项通过。
+-- Game 角色真实启动、TCP 鉴权、完整配置、邮件亮灭增量和非法查看拒绝均通过。未迁移用户业务数据库。
++- Game 角色真实启动、TCP 鉴权、完整禁用配置、空状态快照和非法查看拒绝均通过。未迁移用户业务数据库。
+ - 全量非数据库测试 93 通过、1 失败；已用修改前 codec 单独编译验证，失败来自已有玩家资料更新请求未生成编解码。
+ - 原客户端网络测试项目引用的 7 个源文件不存在，无法完整编译；未恢复用户移除的文件。Unity 场景/视觉验收未运行。
+ 
+@@ -73,3 +70,10 @@
+ - 工作簿自动产生的 inspect.ndjson 已移入上述临时目录。
+ - dotnet 编译产生/更新服务端、服务端测试、客户端及独立红点测试的 bin/obj 等构建产物；这些目录中部分文件在本任务前已修改，不纳入源代码差异。
+ - Unity 新增的全部 .meta 已在上表逐项列出。
++
++## 本次撤回邮件接入
++
++- GM_MailMsgMgr、Mailmessage、PlayerModule 的邮件处理已恢复至本功能实施前，取消默认期限、容量清理、定时扫描及邮件红点事务。
++- 1000/1001 节点在 Excel 和 CSV 中禁用；SQL 和迁移脚本不再增加邮件字段。
++- MySQL 测试改用独立测试业务表，不依赖邮件。
++- 撤回前后完整差异：[RedDotMailDetach.patch](RedDotMailDetach.patch)。
+--- before/docs/RedDotSystem.md
++++ after/docs/RedDotSystem.md
+@@ -1,6 +1,6 @@
+ # 通用红点系统
+ 
+-实现范围：服务端持久化业务叶子节点、完整配置同步、查看记录、增量推送、客户端父子汇总，以及旧邮件系统的未读红点。任务和活动业务尚未接入，默认配置禁用对应节点。
++实现范围：服务端持久化业务叶子节点、完整配置同步、查看记录、增量推送、客户端父子汇总，当前没有接入任何实际业务。邮箱、任务和活动仅保留禁用的示例节点。
+ 
+ ## 配置与数据
+ 
+@@ -8,7 +8,7 @@
+ - Luban 表头依次为 `##var`、`##type`、`##group`、`##comment`，第五行开始为数据；服务端 CSV 保持三行表头。新增 bool 字段通过 ExcelUtils 原有配置入口读取。
+ - 字段：`id:int`、`name:string`、`parentId:int`、`clearType:int`、`enabled:bool`、`tipVersion:long`。
+ - 类型 0 为汇总，1 为业务条件，2 为查看消除。业务节点只能是叶子；节点 ID 必须唯一、正数；父节点必须存在且为汇总节点；禁止循环。
+-- 默认启用 1000 邮箱入口和 1001 邮件未读；任务、活动仅预留节点。新增启用的业务条件节点必须注册业务提供方，否则启动失败。
++- 全部示例节点默认禁用，包括 1000 邮箱入口和 1001 邮件未读；仅开启配置不能替代业务接入。新增启用的业务条件节点必须注册业务提供方，否则启动失败。
+ - 查看型节点的 `tipVersion` 从 1 起递增，其他节点为 0。发布后不要复用 ID 或把已有节点改作不相关业务。
+ - `configVersion` 为按 ID 排序后的全部配置字段的 SHA-256，包括禁用节点。本期在启动时加载配置，不提供运行时修改入口。
+ 
+@@ -16,11 +16,9 @@
+ 
+ ## 安装数据库
+ 
+-新建环境使用 `sql/ugame_10001.sql`，其中已同步加入红点表、邮件 `expireTime` 及索引。已有环境在对应游戏数据库执行 `sql/migrations/20261023_001_reddot.sql` 后再启动更新后的游戏服。迁移兼容 MySQL 5.7，可重复执行，不会删除现有数据。
++新建环境使用 `sql/ugame_10001.sql`，其中已同步加入红点表。已有环境在对应游戏数据库执行 `sql/migrations/20261023_001_reddot.sql` 后再启动更新后的游戏服。迁移兼容 MySQL 5.7，可重复执行，不会删除现有数据。
+ 
+-旧邮件保持 `expireTime=0`，不追溯设置期限。新邮件默认有效期 7 天，发送方法允许传入有效秒数；所有查询和操作即时排除到期邮件，后台每秒扫描一批到期收件人并同步状态。旧协议的未读/已读/删除状态及命令号保持不变。
+-
+-邮箱容量暂取 100，可在游戏服 appSettings 设置正整数 `MailboxCapacity`。发送时按照当前旧邮件排序（未读优先、发送时间降序、ID 降序）保留前 N 封，其余标记删除。当前旧邮件不包含附件；完整资源邮件、附件领取、一键领取及对应 UI 不属于本次实现。`MarkAllRead(db,playerId)` 是后续一键领取事务的接入点。
++本次已撤回所有邮件接入：GM_MailMsgMgr、邮件实体及 PlayerModule 的邮件处理恢复为本功能实施前的代码。没有新增邮件有效期、容量清理、定时扫描或邮件红点写入。迁移脚本只创建 playerreddot，不依赖或修改 mailmessage。
+ 
+ 本次没有对现有业务数据库执行迁移，数据库测试和启动验证均使用独立临时数据库。
+ 
+@@ -44,7 +42,7 @@
+ 
+ ## 开发接入
+ 
+-职责链：Controller 解码和路由 → RedDotModule 校验及组装协议 → GM_RedDotMgr 管理事务、状态和推送 → 玩家 RedDotComponent / MySQL。各业务 Manager 提供自身条件；红点 Manager 不查询邮件等业务表。
++职责链：Controller 解码和路由 → RedDotModule 校验及组装协议 → GM_RedDotMgr 管理事务、状态和推送 → 玩家 RedDotComponent / MySQL。各业务 Manager 提供自身条件；红点 Manager 不查询其他业务表。当前没有注册邮件业务提供方。
+ 
+ 注册业务叶子示例：
+ 
+@@ -54,11 +52,9 @@
+ 
+ 业务变化时使用 PlayerOperationLock，同一事务先锁定 player 行，再修改业务状态、调用 `WriteBusinessState(db,playerId,nodeId,active)`，提交后调用 `PublishCommitted(playerId)`。不要在提交前改在线组件或发推送。幂等 upsert 允许无变化时影响行数为 0；业务条件更新需要检查对应影响行数。
+ 
+-邮件读写改为等待数据库执行，校验收件人、有效期和状态，不允许客户端改回未读。阅读、删除、发送、过期和容量清理均在同一事务内更新未读红点；奖励领取本身不决定红点。
+-
+ 客户端实现位于 `Assets/Scripts/HotUpdate/Game/RedDot`。使用 `MiaoWu.Networking.RedDot.RedDotManager.Singleton.Tree.IsActive(nodeId)` 查询，查看型节点调用 `MarkViewedAsync(nodeId, displayedVersion)`。在内容展示时记录实际版本，提交时不要改用刚同步到的新版本。重连注册器自动在每次鉴权后初始化，管理器跨场景保留。
+ 
+-UI 入口挂载 `RedDotBinding`，设置 nodeId 与独立子对象 indicator；组件启用时订阅、禁用时解除订阅。不要把 indicator 指向挂载组件的对象本身，以免隐藏后无法重新订阅。现有 `Game/Presentation` 下的本地技能红点及已有界面引用保留；新的邮件入口使用节点 ID 1000，无新增邮箱 UI 或 prefab 改动。
++UI 入口挂载 `RedDotBinding`，设置 nodeId 与独立子对象 indicator；组件启用时订阅、禁用时解除订阅。不要把 indicator 指向挂载组件的对象本身，以免隐藏后无法重新订阅。现有 `Game/Presentation` 下的本地技能红点及已有界面引用保留；本期没有新增邮箱 UI 或绑定邮箱入口；1000/1001 仅是禁用的配置预留。
+ 
+ 两端协议 DTO 一致，Google protobuf codec 使用客户端现有 `Tools/Protocol/GenerateGoogleProtocolCodec.py` 生成。此次未移除旧 codec 中已支持的任何合同。
+ 
+@@ -66,8 +62,8 @@
+ 
+ - .NET 8 服务端编译通过；MiaoWu `HotUpdate.csproj` 编译通过。
+ - 服务端红点规则与协议测试 6 项通过，客户端独立红点树测试 7 项通过。
+-- MySQL 隔离测试通过：旧表迁移两次、邮件事务回滚、未读变化、过期删除、收件人校验、查看版本与重连持久化；随机临时库在结束后删除。
+-- 真实 Game 角色启动及 TCP 验证通过：HMAC 鉴权、完整七节点配置、邮件红点亮灭推送、拒绝直接清除业务节点。使用独立临时游戏库、账号库与空闲端口，结束后关闭并删除临时库。
++- MySQL 隔离测试通过：红点迁移两次、独立测试业务表与红点状态的事务回滚、通用状态变化、查看版本与重连持久化；测试数据库没有邮件表，随机临时库在结束后删除。
++- 真实 Game 角色启动及 TCP 验证通过：HMAC 鉴权、完整七个禁用节点配置、空叶子状态、拒绝清除禁用节点。此前邮件推送验证属于已撤回的接入，不计入当前业务能力。使用独立临时游戏库、账号库与空闲端口，结束后关闭并删除临时库。
+ - 服务端全部非数据库测试：93 项通过，1 项失败。失败项为已有 `PlayerProfileUpdateTests.BothCodecsPreserveNullableZeroJsonStringsAndLongIds`；修改前 codec 同样不包含 `ReqUpdatePlayerBasicInfo` 的编解码分支，原生成器不支持其枚举数组和 nullable 字段，本次未扩大处理范围。
+ - `MiaoWu.NetworkAuth.Tests.csproj` 因已有 7 个测试源文件路径不存在而无法完成编译；其引用的 HotUpdate 业务程序集可编译。本次另建 `Tools/RedDotTests` 独立测试工程验证实际红点树代码。未运行 Unity Editor 场景及 prefab 视觉验收。
+ 
+--- before/docs/RedDotSystem.patch
++++ after/docs/RedDotSystem.patch
+@@ -1,13 +1,13 @@
+ diff --git a/server/Excels/RedDotConfig.xlsx b/server/Excels/RedDotConfig.xlsx
+-Binary file added: 4883 bytes; node configuration workbook.
++Binary file added: 4876 bytes; node configuration workbook.
+ --- /dev/null
+ +++ b/server/GameServerTests/RedDot/RedDotMySqlTests.cs
+-@@ -0,0 +1,133 @@
++@@ -0,0 +1,124 @@
+ +using DotNetty.Transport.Channels.Embedded;
+++using Framework.Core.Concurrency;
+ +using Framework.Core.Net;
+-+using Framework.Core.Serializer;
+++using Game.Core.Db;
+ +using Game.Core.EntityMgr;
+-+using Game.Core.GM_MailMessage;
+ +using Game.Core.GM_RedDot;
+ +using Game.Datas.Excels;
+ +using Game.Datas.GMEntities;
+@@ -15,9 +15,7 @@
+ +using Game.Entries.Modules;
+ +using GameServerTests.Gacha;
+ +using MySqlConnector;
+-+using System.Configuration;
+ +using System.Reflection;
+-+using System.Text.RegularExpressions;
+ +
+ +namespace GameServerTests.RedDot;
+ +
+@@ -25,111 +23,104 @@
+ +{
+ +    [DatabaseFact]
+ +    [Trait("Category", "Database")]
+-+    public async Task IsolatedDatabase_MailTransactionsExpiryViewedPersistenceAndMigration()
+++    public async Task IsolatedDatabase_GenericBusinessRollbackViewedPersistenceAndMigration()
+ +    {
+ +        string database = "codex_reddot_" + Guid.NewGuid().ToString("N");
+-+        var builder = new MySqlConnectionStringBuilder(GachaMySqlTestEnvironment.ReadConnectionString());
+-+        builder.Database = "";
+++        var builder = new MySqlConnectionStringBuilder(GachaMySqlTestEnvironment.ReadConnectionString()) { Database = "" };
+ +        await using var admin = new MySqlConnection(builder.ConnectionString);
+ +        await admin.OpenAsync();
+ +        await Execute(admin, $"CREATE DATABASE `{database}` CHARACTER SET utf8mb4");
+ +        builder.Database = database;
+ +        var channel = new EmbeddedChannel();
+ +        const long playerId = 910001;
+-+        var connectionField = typeof(Game.Core.Db.DBService).GetField("connGameDataStr", BindingFlags.Instance | BindingFlags.NonPublic);
+-+        object previousConnection = connectionField.GetValue(Game.Core.Db.DBService.Instance);
+++        var connectionField = typeof(DBService).GetField("connGameDataStr", BindingFlags.Instance | BindingFlags.NonPublic);
+++        object previousConnection = connectionField.GetValue(DBService.Instance);
+ +        try
+ +        {
+ +            await using var db = new MySqlConnection(builder.ConnectionString);
+ +            await db.OpenAsync();
+-+            string root = FindRoot();
+-+            string schema = await File.ReadAllTextAsync(Path.Combine(root, "sql/ugame_10001.sql"));
+-+            // Start with the old mail schema, then exercise the migration twice.
+-+            var mailSchema = Regex.Match(schema, @"CREATE TABLE IF NOT EXISTS `mailmessage`[\s\S]*?\) ENGINE=[^;]+;").Value;
+-+            mailSchema = string.Join("\n", mailSchema.Split('\n').Where(line => !line.Contains("expireTime") && !line.Contains("ix_mail_")))
+-+                .Replace("PRIMARY KEY (`id`),", "PRIMARY KEY (`id`)");
+-+            await Execute(db, "CREATE TABLE player(id BIGINT PRIMARY KEY);" + mailSchema);
+-+            string migration = await File.ReadAllTextAsync(Path.Combine(root, "sql/migrations/20261023_001_reddot.sql"));
+++            await Execute(db, "CREATE TABLE player(id BIGINT PRIMARY KEY);" +
+++                "CREATE TABLE testcondition(playerId BIGINT PRIMARY KEY,active TINYINT NOT NULL);");
+++            var current = new DirectoryInfo(AppContext.BaseDirectory);
+++            while (current != null && !File.Exists(Path.Combine(current.FullName, "sql/ugame_10001.sql"))) current = current.Parent;
+++            string migration = await File.ReadAllTextAsync(Path.Combine(current.FullName, "sql/migrations/20261023_001_reddot.sql"));
+ +            await Execute(db, migration); await Execute(db, migration);
+-+            await Execute(db, $"INSERT INTO player(id) VALUES({playerId}),({playerId + 1})");
+++            // The generic migration must not require a mail table.
+++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage'"));
+++            await Execute(db, $"INSERT INTO player(id) VALUES({playerId}); INSERT INTO testcondition VALUES({playerId},0)");
+ +            GachaMySqlTestEnvironment.InitializeServerServices(builder.ConnectionString);
+ +            var entity = GachaMySqlTestEnvironment.AddOnlinePlayer(playerId, new Dictionary<int, long>());
+ +            var session = new IdSession { playerId = playerId, accountId = playerId, client = channel };
+ +            entity.uPlayer.s = session;
+ +            var catalog = new RedDotCatalog(new[]
+ +            {
+-+                new RedDotConfig { id = 1000, name = "邮箱", enabled = true },
+-+                new RedDotConfig { id = 1001, name = "未读", parentId = 1000, clearType = 1, enabled = true },
+-+                new RedDotConfig { id = 3000, name = "活动", enabled = true },
+-+                new RedDotConfig { id = 3001, name = "新活动", parentId = 3000, clearType = 2, enabled = true, tipVersion = 5 }
+++                new RedDotConfig { id = 9000, name = "测试业务", enabled = true },
+++                new RedDotConfig { id = 9001, name = "测试条件", parentId = 9000, clearType = 1, enabled = true },
+++                new RedDotConfig { id = 3000, name = "测试查看", enabled = true },
+++                new RedDotConfig { id = 3001, name = "提示", parentId = 3000, clearType = 2, enabled = true, tipVersion = 5 }
+ +            });
+-+            GM_RedDotMgr.Instance.Configure(catalog, snapshot => new NotifyRedDotChanged
+-+            { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
+-+                states = snapshot.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList() });
+-+            GM_MailMsgMgr.Instance.Init();
+-+            GM_MailMsgMgr.Instance.Stop();
+++            Configure(catalog);
+++            GM_RedDotMgr.Instance.RegisterBusiness(9001, (transaction, id) =>
+++                transaction.Ado.SqlQuery<int>("SELECT active FROM testcondition WHERE playerId=@pid", new { pid = id }).Single() == 1);
+ +            GM_RedDotMgr.Instance.ValidateProviders();
+ +            var initial = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
+ +            Assert.Equal(1, initial.status);
+-+            Assert.False(initial.states.Single(s => s.nodeId == 1001).isActive);
+-+            Assert.Equal(0, await Scalar(db, $"SELECT COUNT(*) FROM playerreddot WHERE nodeId IN(1000,3000)"));
+-+
+-+            GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "mail-a");
+-+            GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "mail-b");
+-+            Assert.Equal(1, await Scalar(db, $"SELECT isActive FROM playerreddot WHERE playerId={playerId} AND nodeId=1001"));
+-+            var mails = GM_MailMsgMgr.Instance.PullingMailMsg(playerId, 0);
+-+            Assert.Equal(2, mails.Length);
+-+            Assert.False(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId + 1, mails[0].id, 1));
+-+            Assert.False(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, mails[0].id, 0));
+-+            Assert.True(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, mails[0].id, 1));
+-+            Assert.Equal(1, await Scalar(db, $"SELECT isActive FROM playerreddot WHERE nodeId=1001"));
+-+            Assert.True(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, mails[1].id, 1));
+-+            Assert.Equal(0, await Scalar(db, $"SELECT isActive FROM playerreddot WHERE nodeId=1001"));
+++            Assert.False(initial.states.Single(s => s.nodeId == 9001).isActive);
+++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM playerreddot WHERE nodeId IN(9000,3000)"));
+++            SetBusiness(playerId, true);
+++            Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
+ +            Assert.True(entity.uRedDot.StateVersion > initial.stateVersion);
+-+
+-+            // Force the red-dot update to fail: mail insertion must roll back with it.
+ +            await Execute(db, "CREATE TRIGGER reject_reddot BEFORE UPDATE ON playerreddot FOR EACH ROW " +
+ +                "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='test rollback'");
+-+            Assert.ThrowsAny<Exception>(() => GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "rollback"));
+-+            Assert.Equal(2, await Scalar(db, "SELECT COUNT(*) FROM mailmessage"));
+++            Assert.ThrowsAny<Exception>(() => SetBusiness(playerId, false));
+++            Assert.Equal(1, await Scalar(db, "SELECT active FROM testcondition"));
+++            Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
+ +            await Execute(db, "DROP TRIGGER reject_reddot");
+-+
+-+            GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "expire");
+-+            await Execute(db, "UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP()-1 WHERE msgBody='expire'");
+-+            GM_MailMsgMgr.Instance.ExpireDue();
+-+            Assert.Equal(2, await Scalar(db, "SELECT status FROM mailmessage WHERE msgBody='expire'"));
+-+            Assert.Equal(0, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=1001"));
+-+
+-+            var staleView = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 3 }, playerId);
+-+            Assert.Equal(1, staleView.status);
+-+            Assert.True(staleView.states.Single(s => s.nodeId == 3001).isActive);
+++            SetBusiness(playerId, false);
+++            Assert.Equal(0, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
+++            Assert.Equal(-103, RedDotModule.Instance.MarkViewed(session,
+++                new ReqRedDotView { nodeId = 9001, tipVersion = 1 }, playerId).status);
+++            var stale = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 3 }, playerId);
+++            Assert.True(stale.states.Single(s => s.nodeId == 3001).isActive);
+ +            Assert.Equal(-103, RedDotModule.Instance.MarkViewed(session,
+ +                new ReqRedDotView { nodeId = 3001, tipVersion = 6 }, playerId).status);
+ +            var viewed = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 5 }, playerId);
+ +            Assert.False(viewed.states.Single(s => s.nodeId == 3001).isActive);
+ +            RedDotComponent.Reset(entity);
+-+            var reconnect = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
+-+            Assert.False(reconnect.states.Single(s => s.nodeId == 3001).isActive);
+++            Assert.False(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
+++                .states.Single(s => s.nodeId == 3001).isActive);
+ +            catalog.ById[3001].tipVersion = 6;
+-+            GM_RedDotMgr.Instance.Configure(new RedDotCatalog(catalog.Nodes), snapshot => new NotifyRedDotChanged());
+++            Configure(new RedDotCatalog(catalog.Nodes));
+ +            Assert.True(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
+ +                .states.Single(s => s.nodeId == 3001).isActive);
+ +        }
+ +        finally
+ +        {
+-+            GM_MailMsgMgr.Instance.Stop();
+ +            GM_EntityMgr.Instance.RemovePlayer(playerId);
+-+            connectionField.SetValue(Game.Core.Db.DBService.Instance, previousConnection);
+-+            // This database was created by this test using a random name, never the user's game database.
+++            connectionField.SetValue(DBService.Instance, previousConnection);
+ +            await Execute(admin, $"DROP DATABASE `{database}`");
+ +            channel.FinishAndReleaseAll();
+ +        }
+ +    }
+-+    private static string FindRoot()
+++    private static void Configure(RedDotCatalog catalog) => GM_RedDotMgr.Instance.Configure(catalog, snapshot =>
+++        new NotifyRedDotChanged { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
+++            states = snapshot.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList() });
+++    private static void SetBusiness(long playerId, bool active)
+ +    {
+-+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+-+        while (current != null && !File.Exists(Path.Combine(current.FullName, "sql/ugame_10001.sql"))) current = current.Parent;
+-+        return current?.FullName ?? throw new DirectoryNotFoundException("Repository SQL not found.");
+++        using var lease = PlayerOperationLock.Acquire(playerId);
+++        lock (lease.SyncRoot)
+++        {
+++            using var db = DBService.Instance.GetGameInstance();
+++            try
+++            {
+++                db.Ado.BeginTran(); GM_RedDotMgr.LockPlayer(db, playerId);
+++                db.Ado.ExecuteCommand("UPDATE testcondition SET active=@active WHERE playerId=@pid", new { active, pid = playerId });
+++                GM_RedDotMgr.Instance.WriteBusinessState(db, playerId, 9001, active);
+++                db.Ado.CommitTran();
+++            }
+++            catch { db.Ado.RollbackTran(); throw; }
+++            GM_RedDotMgr.Instance.PublishCommitted(playerId);
+++        }
+ +    }
+ +    private static async Task Execute(MySqlConnection db, string sql)
+ +    { using var command = new MySqlCommand(sql, db); await command.ExecuteNonQueryAsync(); }
+@@ -215,15 +206,25 @@
+ +++ b/server/GameServer/Configs/Csvs/RedDotConfig.csv
+ @@ -0,0 +1,10 @@
+ +节点ID,节点名称,父节点ID,消除类型,是否启用,提示版本
++
+ +int,string,int,int,bool,long
++
+ +id,name,parentId,clearType,enabled,tipVersion
+-+1000,邮箱入口,0,0,true,0
+-+1001,邮件未读,1000,1,true,0
++
+++1000,邮箱入口,0,0,false,0
++
+++1001,邮件未读,1000,1,false,0
++
+ +2000,任务入口,0,0,false,0
++
+ +2001,日常奖励,2000,1,false,0
++
+ +2002,成就奖励,2000,1,false,0
++
+ +3000,活动入口,0,0,false,0
++
+ +3001,新活动提示,3000,2,false,1
++
+ --- a/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
+ +++ b/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
+ @@ -247,133 +247,153 @@
+@@ -1671,343 +1672,6 @@
+ 
+      }
+ 
+---- a/server/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+-+++ b/server/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+-@@ -1,77 +1,180 @@
+--using Framework.Core.Utils;
+-
+--using Game.Core.Db;
+-
+--using System;
+-
+--using System.Collections.Generic;
+-
+--using System.Linq;
+-
+--using System.Text;
+-
+--using System.Threading.Tasks;
+-
+--
+-
+--namespace Game.Core.GM_MailMessage
+-
+--{
+-
+--    enum MailMsgStatus { 
+-
+--        Unreaded = 0,
+-
+--        Readed,
+-
+--        Deleted,
+-
+--    }
+-
+--
+-
+--    public class GM_MailMsgMgr
+-
+--    {
+-
+--        public static GM_MailMsgMgr Instance = new GM_MailMsgMgr();
+-
+--
+-
+--        public void Init() {
+-
+--
+-
+--        }
+-
+--
+-
+--        public void SendMailMsg(long fromPlayerId, long toPlayerId, string msgBody, long udata = 0) {
+-
+--            Game.Datas.DBEntities.Mailmessage msg = new Game.Datas.DBEntities.Mailmessage();
+-
+--            msg.fromPlayerId = fromPlayerId;
+-
+--            msg.toPlayerId = toPlayerId;
+-
+--            msg.msgBody = msgBody;
+-
+--            msg.userData = udata;
+-
+--            msg.status = (int)MailMsgStatus.Unreaded;
+-
+--            msg.sendTime = (int)UtilsHelper.Timestamp();
+-
+--            msg.readTime = -1;
+-
+--
+-
+--            DBService.Instance.GetGameInstance().Insertable(msg).ExecuteCommandAsync();
+-
+--        }
+-
+--
+-
+--        public bool UpdateMailMsgStatus(long msgId, int status) {
+-
+--            if (status < (int)MailMsgStatus.Unreaded ||
+-
+--                status > (int)MailMsgStatus.Deleted) {
+-
+--                return false;
+-
+--            }
+-
+--
+-
+--            Game.Datas.DBEntities.Mailmessage mailMsg = null;
+-
+--            mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().First(it => it.id == msgId);//查询单条
+-
+--            if (mailMsg.status == status) {
+-
+--                return true;
+-
+--            }
+-
+--
+-
+--
+-
+--            mailMsg.status = status;
+-
+--            if (status == (int)MailMsgStatus.Readed) {
+-
+--                mailMsg.readTime = (int)UtilsHelper.Timestamp();
+-
+--            }
+-
+--            DBService.Instance.GetGameInstance().Updateable<Game.Datas.DBEntities.Mailmessage>(mailMsg).Where(it => it.id == msgId).ExecuteCommandAsync();
+-
+--            return true;
+-
+--        }
+-
+--
+-
+--        // statusMask 0: 拉取这个未读的邮件消息, 1: 拉取未读+已读的邮件 2: 拉取未读+已读+删除的邮件
+-
+--        public Game.Datas.DBEntities.Mailmessage[] PullingMailMsg(long playerId, int statusMask) {
+-
+--            Game.Datas.DBEntities.Mailmessage[] mailMsg = null;
+-
+--            if (statusMask == 2)
+-
+--            { // 所有邮件消息
+-
+--                mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().Where(it => it.toPlayerId == playerId).ToArray();//查询单条
+-
+--            }
+-
+--            else if (statusMask == 1)
+-
+--            { // 拉取未读+已读的邮件
+-
+--                mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().Where(it => ((it.toPlayerId == playerId) && (it.status < 2))).ToArray();//查询单条
+-
+--            }
+-
+--            else if (statusMask == 0)
+-
+--            {// 未读的邮件消息
+-
+--                mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().Where(it => ((it.toPlayerId == playerId) && (it.status < 1))).ToArray();//查询单条
+-
+--            }
+-
+--            return mailMsg;         
+-
+--        }
+-
+--    }
+-
+--}
+-
+-+using Framework.Core.Concurrency;
+-+using Game.Core.Db;
+-+using Game.Core.GM_RedDot;
+-+using Game.Datas.DBEntities;
+-+using SqlSugar;
+-+using System;
+-+using System.Configuration;
+-+using System.Linq;
+-+using System.Threading;
+-+
+-+namespace Game.Core.GM_MailMessage
+-+{
+-+    enum MailMsgStatus { Unreaded = 0, Readed = 1, Deleted = 2 }
+-+    public sealed class GM_MailMsgMgr
+-+    {
+-+        public static GM_MailMsgMgr Instance { get; } = new();
+-+        public const int UnreadRedDotNodeId = 1001;
+-+        private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+-+        private Timer timer;
+-+        private int running;
+-+        private int capacity = 100;
+-+
+-+        public void Init()
+-+        {
+-+            if (int.TryParse(ConfigurationManager.AppSettings["MailboxCapacity"], out var value) && value > 0)
+-+                capacity = value;
+-+            GM_RedDotMgr.Instance.RegisterBusiness(UnreadRedDotNodeId, HasUnread);
+-+            timer ??= new Timer(_ => ExpireDue(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+-+        }
+-+        public void Stop()
+-+        {
+-+            var current = timer; timer = null;
+-+            if (current == null) return;
+-+            using var finished = new ManualResetEvent(false);
+-+            if (current.Dispose(finished)) finished.WaitOne(TimeSpan.FromSeconds(30));
+-+        }
+-+
+-+        public void SendMailMsg(long fromPlayerId, long toPlayerId, string msgBody, long udata = 0,
+-+            long lifetimeSeconds = 604800)
+-+        {
+-+            if (toPlayerId <= 0 || string.IsNullOrWhiteSpace(msgBody) || lifetimeSeconds <= 0)
+-+                throw new ArgumentException("Invalid mail.");
+-+            using var lease = PlayerOperationLock.Acquire(toPlayerId);
+-+            lock (lease.SyncRoot)
+-+            {
+-+                using var db = DBService.Instance.GetGameInstance();
+-+                try
+-+                {
+-+                    db.Ado.BeginTran();
+-+                    GM_RedDotMgr.LockPlayer(db, toPlayerId);
+-+                    long now = Now();
+-+                    RequireOne(db.Ado.ExecuteCommand(
+-+                        "INSERT INTO mailmessage(fromPlayerId,toPlayerId,msgBody,status,sendTime,userData,readTime,expireTime) " +
+-+                        "VALUES(@sender,@pid,@body,0,@now,@data,0,@expiry)",
+-+                        new { sender = fromPlayerId, pid = toPlayerId, body = msgBody, now,
+-+                            data = udata, expiry = checked(now + lifetimeSeconds) }));
+-+                    ExpirePlayer(db, toPlayerId, now);
+-+                    var ordered = db.Ado.SqlQuery<long>(
+-+                        "SELECT id FROM mailmessage WHERE toPlayerId=@pid AND status<2 " +
+-+                        "AND (expireTime=0 OR expireTime>@now) ORDER BY status ASC,sendTime DESC,id DESC",
+-+                        new { pid = toPlayerId, now });
+-+                    foreach (var id in ordered.Skip(capacity))
+-+                        RequireOne(db.Ado.ExecuteCommand("UPDATE mailmessage SET status=2 WHERE id=@id AND toPlayerId=@pid AND status<2",
+-+                            new { id, pid = toPlayerId }));
+-+                    UpdateRedDot(db, toPlayerId);
+-+                    db.Ado.CommitTran();
+-+                }
+-+                catch { db.Ado.RollbackTran(); throw; }
+-+                GM_RedDotMgr.Instance.PublishCommitted(toPlayerId);
+-+            }
+-+        }
+-+
+-+        public bool UpdateMailMsgStatus(long playerId, long msgId, int status)
+-+        {
+-+            if (playerId <= 0 || msgId <= 0 || status is not (1 or 2)) return false;
+-+            using var lease = PlayerOperationLock.Acquire(playerId);
+-+            lock (lease.SyncRoot)
+-+            {
+-+                using var db = DBService.Instance.GetGameInstance();
+-+                try
+-+                {
+-+                    db.Ado.BeginTran();
+-+                    GM_RedDotMgr.LockPlayer(db, playerId);
+-+                    var mail = db.Queryable<Mailmessage>().First(m => m.id == msgId && m.toPlayerId == playerId);
+-+                    long now = Now();
+-+                    if (mail == null || mail.status == 2 || mail.expireTime > 0 && mail.expireTime <= now)
+-+                    { db.Ado.RollbackTran(); return false; }
+-+                    if (status == 2 && mail.status != 1) { db.Ado.RollbackTran(); return false; }
+-+                    if (mail.status != status)
+-+                        RequireOne(db.Ado.ExecuteCommand(
+-+                            "UPDATE mailmessage SET status=@status,readTime=CASE WHEN @status=1 AND readTime<=0 " +
+-+                            "THEN @now ELSE readTime END WHERE id=@id AND toPlayerId=@pid AND status=@old",
+-+                            new { status, now, id = msgId, pid = playerId, old = mail.status }));
+-+                    UpdateRedDot(db, playerId);
+-+                    db.Ado.CommitTran();
+-+                }
+-+                catch { db.Ado.RollbackTran(); throw; }
+-+                GM_RedDotMgr.Instance.PublishCommitted(playerId);
+-+                return true;
+-+            }
+-+        }
+-+
+-+        // Future reward workflows must call this inside their own locked transaction, then publish after commit.
+-+        public void MarkAllRead(SqlSugarClient db, long playerId)
+-+        {
+-+            db.Ado.ExecuteCommand("UPDATE mailmessage SET status=1,readTime=@now WHERE toPlayerId=@pid " +
+-+                "AND status=0 AND (expireTime=0 OR expireTime>@now)", new { pid = playerId, now = Now() });
+-+            UpdateRedDot(db, playerId);
+-+        }
+-+        public bool HasUnread(SqlSugarClient db, long playerId)
+-+        {
+-+            long now = Now();
+-+            return db.Queryable<Mailmessage>().Any(m => m.toPlayerId == playerId && m.status == 0 &&
+-+                (m.expireTime == 0 || m.expireTime > now));
+-+        }
+-+        public void UpdateRedDot(SqlSugarClient db, long playerId) =>
+-+            GM_RedDotMgr.Instance.WriteBusinessState(db, playerId, UnreadRedDotNodeId, HasUnread(db, playerId));
+-+
+-+        public Mailmessage[] PullingMailMsg(long playerId, int statusMask)
+-+        {
+-+            using var lease = PlayerOperationLock.Acquire(playerId);
+-+            lock (lease.SyncRoot)
+-+            {
+-+                return PullingMailMsgLocked(playerId, statusMask);
+-+            }
+-+        }
+-+
+-+        private Mailmessage[] PullingMailMsgLocked(long playerId, int statusMask) =>
+-+            ReadMailMessages(playerId, statusMask);
+-+
+-+        // Mail history remains database-owned; only bounded red-dot state belongs to the online component.
+-+        private Mailmessage[] ReadMailMessages(long playerId, int statusMask)
+-+        {
+-+            using var db = DBService.Instance.GetGameInstance();
+-+            long now = Now();
+-+            return db.Queryable<Mailmessage>().Where(m => m.toPlayerId == playerId &&
+-+                (m.expireTime == 0 || m.expireTime > now))
+-+                .WhereIF(statusMask < 2, m => m.status <= statusMask)
+-+                .OrderBy(m => m.status).OrderBy(m => m.sendTime, OrderByType.Desc)
+-+                .OrderBy(m => m.id, OrderByType.Desc).ToArray();
+-+        }
+-+
+-+        public void ExpireDue()
+-+        {
+-+            if (Interlocked.Exchange(ref running, 1) != 0) return;
+-+            try
+-+            {
+-+                using var scan = DBService.Instance.GetGameInstance();
+-+                var ids = scan.Ado.SqlQuery<long>("SELECT DISTINCT toPlayerId FROM mailmessage " +
+-+                    "WHERE status<2 AND expireTime>0 AND expireTime<=@now LIMIT 100", new { now = Now() });
+-+                foreach (long playerId in ids)
+-+                {
+-+                    using var lease = PlayerOperationLock.Acquire(playerId);
+-+                    lock (lease.SyncRoot)
+-+                    {
+-+                        using var db = DBService.Instance.GetGameInstance();
+-+                        try
+-+                        {
+-+                            db.Ado.BeginTran();
+-+                            GM_RedDotMgr.LockPlayer(db, playerId);
+-+                            ExpirePlayer(db, playerId, Now());
+-+                            UpdateRedDot(db, playerId);
+-+                            db.Ado.CommitTran();
+-+                        }
+-+                        catch { db.Ado.RollbackTran(); throw; }
+-+                        GM_RedDotMgr.Instance.PublishCommitted(playerId);
+-+                    }
+-+                }
+-+            }
+-+            catch (Exception ex) { logger.Error(ex, "Mail expiry/red-dot refresh failed."); }
+-+            finally { Volatile.Write(ref running, 0); }
+-+        }
+-+        private static void ExpirePlayer(SqlSugarClient db, long playerId, long now) =>
+-+            db.Ado.ExecuteCommand("UPDATE mailmessage SET status=2 WHERE toPlayerId=@pid AND status<2 " +
+-+                "AND expireTime>0 AND expireTime<=@now", new { pid = playerId, now });
+-+        private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+-+        private static void RequireOne(int affected)
+-+        { if (affected != 1) throw new InvalidOperationException("Concurrent mail modification."); }
+-+    }
+-+}
+ --- /dev/null
+ +++ b/server/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs
+ @@ -0,0 +1,171 @@
+@@ -2257,26 +1921,6 @@
+ +            IsEnabled(id) && node.clearType == 2 && version > 0 && version <= node.tipVersion;
+ +    }
+ +}
+---- a/server/GameServer/src/Game/Datas/DbEntities/Mailmessage.cs
+-+++ b/server/GameServer/src/Game/Datas/DbEntities/Mailmessage.cs
+-@@ -67,7 +67,9 @@
+-            /// Default:0
+-
+-            /// Nullable:False
+-
+-            /// </summary>           
+-
+--           public int readTime {get;set;}
+-
+-+           public int readTime {get;set;}
+-+           /// <summary>Unix seconds; 0 is reserved for legacy mails without an expiry.</summary>
+-+           public long expireTime {get;set;}
+- 
+-
+-     }
+-
+- }
+-
+ --- /dev/null
+ +++ b/server/GameServer/src/Game/Datas/DbEntities/Playerreddot.cs
+ @@ -0,0 +1,14 @@
+@@ -2436,32 +2080,6 @@
+ +            RedDotModule.Instance.MarkViewed(session, request, playerId);
+ +    }
+ +}
+---- a/server/GameServer/src/Game/Entries/Modules/PlayerModule.cs
+-+++ b/server/GameServer/src/Game/Entries/Modules/PlayerModule.cs
+-@@ -558,8 +558,14 @@
+-                 return res;
+-             }
+- 
+--            GM_MailMsgMgr.Instance.UpdateMailMsgStatus(req.mailMsgId, req.status);
+--            res.status = (int)Respones.OK;
+-+            if (req == null || req.mailMsgId <= 0 || (req.status != 1 && req.status != 2))
+-
+-+            {
+-
+-+                res.status = (int)Respones.InvalidParams;
+-
+-+                return res;
+-
+-+            }
+-
+-+
+-
+-+            res.status = GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, req.mailMsgId, req.status)
+-
+-+                ? (int)Respones.OK : (int)Respones.InvalidOpt;
+-             return res;
+-         }
+- 
+ --- /dev/null
+ +++ b/server/GameServer/src/Game/Entries/Modules/RedDotModule.cs
+ @@ -0,0 +1,56 @@
+@@ -2523,60 +2141,58 @@
+ +}
+ --- a/server/GameServer/src/Game/GameServer.cs
+ +++ b/server/GameServer/src/Game/GameServer.cs
+-@@ -131,7 +131,8 @@
+-                 return;
+-
++@@ -132,6 +132,7 @@
+              }
+ 
+  
+ 
+--            ConfigMgr.Instance.Init();
+-
+-+            ConfigMgr.Instance.Init();
++             ConfigMgr.Instance.Init();
++
+ +            RedDotModule.Instance.Init();
++
+              CharacterStarUpModule.Instance.Init();
+ 
+              GachaModule.Instance.Init();
+ 
+              ServerZoneModule.Instance.Init();
+ 
+-@@ -140,7 +141,8 @@
+-             GM_EntityMgr.Instance.Init();
+-
++@@ -141,6 +142,7 @@
+              GM_SkillMgr.Instance.Init();
+ 
+              GM_BuffMgr.Instance.Init();
+ 
+--            GM_MailMsgMgr.Instance.Init();
+-
+-+            GM_MailMsgMgr.Instance.Init();
++             GM_MailMsgMgr.Instance.Init();
++
+ +            Game.Core.GM_RedDot.GM_RedDotMgr.Instance.ValidateProviders();
++
+              GM_BonuesMgr.Instance.Init();
+ 
+              GM_TaskMgr.Instance.Init();
+ 
+              GM_RankMgr.Instance.Init();
+ 
+-@@ -174,7 +176,8 @@
+-             RedisService.Instance.Shutdown();
+-
+-             if (role == ServerRole.Login) return;
+-
++@@ -166,8 +168,8 @@
+  
+ 
+--            EconomicOperationCleanupService.Instance.Stop();
+-
+-+            EconomicOperationCleanupService.Instance.Stop();
+-+            GM_MailMsgMgr.Instance.Stop();
+-             LogicWorkerPool.Instance.Stop();
+-
+-             TaskWorkerPool.Instance.Stop();
+-
+-             bool isGateway = role == ServerRole.Gateway;
++         public async Task Shutdown()
++
++         {
++
++-            await SessionMgr.Instance.StopAsync();
++-            await GM_AuthSessionMgr.Instance.StopLogoutRetriesAsync();
+++            await SessionMgr.Instance.StopAsync();
++
+++            await GM_AuthSessionMgr.Instance.StopLogoutRetriesAsync();
++
++             if (server != null) await server.Shutdown();
++
++             if (role == ServerRole.ServerZone) return;
++
++ 
+ 
+ --- /dev/null
+ +++ b/server/docs/RedDotChanges.md
+-@@ -0,0 +1,75 @@
++@@ -0,0 +1,79 @@
+ +# 本次红点系统变更清单
+ 
+ +
+@@ -2597,13 +2213,13 @@
+ 
+ +|---|---|---|
+ 
+-+| 新增 | [RedDotConfig.xlsx](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/Excels/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个节点，仅邮箱启用；两处副本内容一致。 |
+++| 新增 | [RedDotConfig.xlsx](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/Excels/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个预留节点全部禁用；两处副本内容一致。 |
+ 
+ +| 新增 | [RedDotMySqlTests.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServerTests/RedDot/RedDotMySqlTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
+ 
+ +| 新增 | [RedDotTests.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServerTests/RedDot/RedDotTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
+ 
+-+| 新增 | [RedDotConfig.csv](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/Configs/Csvs/RedDotConfig.csv) | 七节点默认配置，仅启用邮箱。 |
+++| 新增 | [RedDotConfig.csv](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/Configs/Csvs/RedDotConfig.csv) | 七节点预留配置，全部禁用。 |
+ 
+ +| 修改 | [GoogleProtocolCodec.Generated.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs) | 生成红点协议编解码；不移除原有已支持合同。 |
+ 
+@@ -2613,14 +2229,10 @@
+ 
+ +| 修改 | [ConfigMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/Configs/ConfigMgr.cs) | 启动预加载 RedDotConfig。 |
+ 
+-+| 修改 | [GM_MailMsgMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs) | 邮件收件人/有效期校验、事务更新红点、到期扫描与容量清理。 |
+-
+ +| 新增 | [GM_RedDotMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs) | 叶子持久化、查看记录、事务同步和提交后推送。 |
+ 
+ +| 新增 | [RedDotDefinitions.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_RedDot/RedDotDefinitions.cs) | 领域快照、配置图校验与稳定配置版本。 |
+ 
+-+| 修改 | [Mailmessage.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/DbEntities/Mailmessage.cs) | 增加 expireTime，保留旧实体字段。 |
+-
+ +| 新增 | [Playerreddot.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/DbEntities/Playerreddot.cs) | 新增红点数据库实体和联合主键映射。 |
+ 
+ +| 新增 | [RedDotConfig.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/Excels/RedDotConfig.cs) | 与配置字段一致的类型定义。 |
+@@ -2633,11 +2245,9 @@
+ 
+ +| 新增 | [RedDotController.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Controllers/RedDotController.cs) | 初始化及查看请求路由。 |
+ 
+-+| 修改 | [PlayerModule.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Modules/PlayerModule.cs) | 邮件更新携带当前玩家ID并返回实际操作结果，校验请求。 |
+-
+ +| 新增 | [RedDotModule.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Modules/RedDotModule.cs) | 登录/参数校验和协议响应、通知映射。 |
+ 
+-+| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化红点模块、检查业务提供方、关闭邮件定时任务。 |
+++| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化红点模块、检查业务提供方；不再增加邮件关闭逻辑。 |
+ 
+ +| 新增 | [RedDotChanges.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotChanges.md) | 接入、安装、验证及本次完整变更说明。 |
+ 
+@@ -2645,11 +2255,11 @@
+ 
+ +| 新增 | [20261023_001_reddot.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/migrations/20261023_001_reddot.sql) | 已有库的可重复迁移，保留旧邮件数据。 |
+ 
+-+| 修改 | [ugame_10001.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/ugame_10001.sql) | 完整建库结构同步红点表、邮件有效期和索引；保留原有玩家资料改动。 |
+++| 修改 | [ugame_10001.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/ugame_10001.sql) | 完整建库结构同步红点表；邮件结构恢复原状，保留原有玩家资料改动。 |
+ 
+ +| 修改 | [LubanExcelToCsv.json](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/tools/LubanExcelToCsv/LubanExcelToCsv.json) | 现有 Excel → CSV 导出流程登记 RedDotConfig。 |
+ 
+-+| 新增 | [RedDotConfig.xlsx](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个节点，仅邮箱启用；两处副本内容一致。 |
+++| 新增 | [RedDotConfig.xlsx](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx) | 新增 Luban 四行表头工作簿，七个预留节点全部禁用；两处副本内容一致。 |
+ 
+ +| 新增 | [RedDotConfig.xlsx.meta](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
+ 
+@@ -2705,7 +2315,7 @@
+ 
+ +- 服务端编译通过，客户端 HotUpdate 编译通过；红点服务端测试 6 项、客户端测试 7 项和隔离 MySQL 测试 1 项通过。
+ 
+-+- Game 角色真实启动、TCP 鉴权、完整配置、邮件亮灭增量和非法查看拒绝均通过。未迁移用户业务数据库。
+++- Game 角色真实启动、TCP 鉴权、完整禁用配置、空状态快照和非法查看拒绝均通过。未迁移用户业务数据库。
+ 
+ +- 全量非数据库测试 93 通过、1 失败；已用修改前 codec 单独编译验证，失败来自已有玩家资料更新请求未生成编解码。
+ 
+@@ -2726,130 +2336,198 @@
+ +- dotnet 编译产生/更新服务端、服务端测试、客户端及独立红点测试的 bin/obj 等构建产物；这些目录中部分文件在本任务前已修改，不纳入源代码差异。
+ 
+ +- Unity 新增的全部 .meta 已在上表逐项列出。
++
+++
++
+++## 本次撤回邮件接入
++
+++
++
+++- GM_MailMsgMgr、Mailmessage、PlayerModule 的邮件处理已恢复至本功能实施前，取消默认期限、容量清理、定时扫描及邮件红点事务。
++
+++- 1000/1001 节点在 Excel 和 CSV 中禁用；SQL 和迁移脚本不再增加邮件字段。
++
+++- MySQL 测试改用独立测试业务表，不依赖邮件。
++
+++- 撤回前后完整差异：[RedDotMailDetach.patch](RedDotMailDetach.patch)。
+ 
+ --- /dev/null
+ +++ b/server/docs/RedDotSystem.md
+-@@ -0,0 +1,74 @@
++@@ -0,0 +1,70 @@
+ +# 通用红点系统
+-+
+-+实现范围：服务端持久化业务叶子节点、完整配置同步、查看记录、增量推送、客户端父子汇总，以及旧邮件系统的未读红点。任务和活动业务尚未接入，默认配置禁用对应节点。
+-+
++
+++
++
+++实现范围：服务端持久化业务叶子节点、完整配置同步、查看记录、增量推送、客户端父子汇总，当前没有接入任何实际业务。邮箱、任务和活动仅保留禁用的示例节点。
++
+++
++
+ +## 配置与数据
+-+
++
+++
++
+ +- 编辑 `D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx`，使用现有 `tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1` 导出。工作簿副本位于 `Excels/RedDotConfig.xlsx`。
++
+ +- Luban 表头依次为 `##var`、`##type`、`##group`、`##comment`，第五行开始为数据；服务端 CSV 保持三行表头。新增 bool 字段通过 ExcelUtils 原有配置入口读取。
++
+ +- 字段：`id:int`、`name:string`、`parentId:int`、`clearType:int`、`enabled:bool`、`tipVersion:long`。
++
+ +- 类型 0 为汇总，1 为业务条件，2 为查看消除。业务节点只能是叶子；节点 ID 必须唯一、正数；父节点必须存在且为汇总节点；禁止循环。
+-+- 默认启用 1000 邮箱入口和 1001 邮件未读；任务、活动仅预留节点。新增启用的业务条件节点必须注册业务提供方，否则启动失败。
++
+++- 全部示例节点默认禁用，包括 1000 邮箱入口和 1001 邮件未读；仅开启配置不能替代业务接入。新增启用的业务条件节点必须注册业务提供方，否则启动失败。
++
+ +- 查看型节点的 `tipVersion` 从 1 起递增，其他节点为 0。发布后不要复用 ID 或把已有节点改作不相关业务。
++
+ +- `configVersion` 为按 ID 排序后的全部配置字段的 SHA-256，包括禁用节点。本期在启动时加载配置，不提供运行时修改入口。
+-+
++
+++
++
+ +数据库 `playerreddot` 使用 `(playerId,nodeId)` 联合主键，仅保存叶子，字段为 `isActive`、`seenVersion`、`updateTime`。父节点不保存到数据库，客户端从有效子节点汇总。禁用的父节点会禁用其整棵子树。
+-+
++
+++
++
+ +## 安装数据库
+-+
+-+新建环境使用 `sql/ugame_10001.sql`，其中已同步加入红点表、邮件 `expireTime` 及索引。已有环境在对应游戏数据库执行 `sql/migrations/20261023_001_reddot.sql` 后再启动更新后的游戏服。迁移兼容 MySQL 5.7，可重复执行，不会删除现有数据。
+-+
+-+旧邮件保持 `expireTime=0`，不追溯设置期限。新邮件默认有效期 7 天，发送方法允许传入有效秒数；所有查询和操作即时排除到期邮件，后台每秒扫描一批到期收件人并同步状态。旧协议的未读/已读/删除状态及命令号保持不变。
+-+
+-+邮箱容量暂取 100，可在游戏服 appSettings 设置正整数 `MailboxCapacity`。发送时按照当前旧邮件排序（未读优先、发送时间降序、ID 降序）保留前 N 封，其余标记删除。当前旧邮件不包含附件；完整资源邮件、附件领取、一键领取及对应 UI 不属于本次实现。`MarkAllRead(db,playerId)` 是后续一键领取事务的接入点。
+-+
++
+++
++
+++新建环境使用 `sql/ugame_10001.sql`，其中已同步加入红点表。已有环境在对应游戏数据库执行 `sql/migrations/20261023_001_reddot.sql` 后再启动更新后的游戏服。迁移兼容 MySQL 5.7，可重复执行，不会删除现有数据。
++
+++
++
+++本次已撤回所有邮件接入：GM_MailMsgMgr、邮件实体及 PlayerModule 的邮件处理恢复为本功能实施前的代码。没有新增邮件有效期、容量清理、定时扫描或邮件红点写入。迁移脚本只创建 playerreddot，不依赖或修改 mailmessage。
++
+++
++
+ +本次没有对现有业务数据库执行迁移，数据库测试和启动验证均使用独立临时数据库。
+-+
++
+++
++
+ +## 协议与状态同步
+-+
++
+++
++
+ +沿用 PLAYER 模块 102，使用新命令 95–99：
+-+
++
+++
++
+ +| 命令 | 协议 | 作用 |
++
+ +|---|---|---|
++
+ +|95|ReqRedDotInit|登录、重连或发现版本不连续时请求初始化|
++
+ +|96|ResRedDotInit|status、configVersion、stateVersion、完整 nodes、有效叶子 states|
++
+ +|97|ReqRedDotView|nodeId、实际展示的 tipVersion|
++
+ +|98|ResRedDotView|status、configVersion、stateVersion、完整有效叶子 states|
++
+ +|99|NotifyRedDotChanged|configVersion、stateVersion、变化叶子 states；requestId=0|
+-+
++
+++
++
+ +节点消息包含配置六个字段，状态消息包含 nodeId 和 isActive。初始化发送禁用节点，无须客户端维护本地 Excel。stateVersion 随当前连接的叶子亮灭变化递增，重连后以新快照为准。
+-+
++
+++
++
+ +客户端在临时树上建立配置并应用快照，初始化期间暂存推送，按版本回放成功后一次刷新 UI。旧推送不覆盖新状态；缺失版本、配置不匹配触发全量同步。全量查看响应也按版本应用，防止旧响应恢复旧红点。登出、断线、重新鉴权时隐藏旧状态。
+-+
++
+++
++
+ +查看请求只接受已启用的查看型叶子，版本必须大于 0 且不超过当前版本。seenVersion 单调递增，旧查看请求不能清掉新版本。客户端须在实际展示内容后调用查看接口，不得通过打开父入口清除所有节点。
+-+
++
+++
++
+ +## 开发接入
+-+
+-+职责链：Controller 解码和路由 → RedDotModule 校验及组装协议 → GM_RedDotMgr 管理事务、状态和推送 → 玩家 RedDotComponent / MySQL。各业务 Manager 提供自身条件；红点 Manager 不查询邮件等业务表。
+-+
++
+++
++
+++职责链：Controller 解码和路由 → RedDotModule 校验及组装协议 → GM_RedDotMgr 管理事务、状态和推送 → 玩家 RedDotComponent / MySQL。各业务 Manager 提供自身条件；红点 Manager 不查询其他业务表。当前没有注册邮件业务提供方。
++
+++
++
+ +注册业务叶子示例：
+-+
++
+++
++
+ +```csharp
++
+ +GM_RedDotMgr.Instance.RegisterBusiness(nodeId, (db, playerId) => EvaluateOwnBusiness(db, playerId));
++
+ +```
+-+
++
+++
++
+ +业务变化时使用 PlayerOperationLock，同一事务先锁定 player 行，再修改业务状态、调用 `WriteBusinessState(db,playerId,nodeId,active)`，提交后调用 `PublishCommitted(playerId)`。不要在提交前改在线组件或发推送。幂等 upsert 允许无变化时影响行数为 0；业务条件更新需要检查对应影响行数。
+-+
+-+邮件读写改为等待数据库执行，校验收件人、有效期和状态，不允许客户端改回未读。阅读、删除、发送、过期和容量清理均在同一事务内更新未读红点；奖励领取本身不决定红点。
+-+
++
+++
++
+ +客户端实现位于 `Assets/Scripts/HotUpdate/Game/RedDot`。使用 `MiaoWu.Networking.RedDot.RedDotManager.Singleton.Tree.IsActive(nodeId)` 查询，查看型节点调用 `MarkViewedAsync(nodeId, displayedVersion)`。在内容展示时记录实际版本，提交时不要改用刚同步到的新版本。重连注册器自动在每次鉴权后初始化，管理器跨场景保留。
+-+
+-+UI 入口挂载 `RedDotBinding`，设置 nodeId 与独立子对象 indicator；组件启用时订阅、禁用时解除订阅。不要把 indicator 指向挂载组件的对象本身，以免隐藏后无法重新订阅。现有 `Game/Presentation` 下的本地技能红点及已有界面引用保留；新的邮件入口使用节点 ID 1000，无新增邮箱 UI 或 prefab 改动。
+-+
++
+++
++
+++UI 入口挂载 `RedDotBinding`，设置 nodeId 与独立子对象 indicator；组件启用时订阅、禁用时解除订阅。不要把 indicator 指向挂载组件的对象本身，以免隐藏后无法重新订阅。现有 `Game/Presentation` 下的本地技能红点及已有界面引用保留；本期没有新增邮箱 UI 或绑定邮箱入口；1000/1001 仅是禁用的配置预留。
++
+++
++
+ +两端协议 DTO 一致，Google protobuf codec 使用客户端现有 `Tools/Protocol/GenerateGoogleProtocolCodec.py` 生成。此次未移除旧 codec 中已支持的任何合同。
+-+
++
+++
++
+ +## 验证结果
+-+
++
+++
++
+ +- .NET 8 服务端编译通过；MiaoWu `HotUpdate.csproj` 编译通过。
++
+ +- 服务端红点规则与协议测试 6 项通过，客户端独立红点树测试 7 项通过。
+-+- MySQL 隔离测试通过：旧表迁移两次、邮件事务回滚、未读变化、过期删除、收件人校验、查看版本与重连持久化；随机临时库在结束后删除。
+-+- 真实 Game 角色启动及 TCP 验证通过：HMAC 鉴权、完整七节点配置、邮件红点亮灭推送、拒绝直接清除业务节点。使用独立临时游戏库、账号库与空闲端口，结束后关闭并删除临时库。
++
+++- MySQL 隔离测试通过：红点迁移两次、独立测试业务表与红点状态的事务回滚、通用状态变化、查看版本与重连持久化；测试数据库没有邮件表，随机临时库在结束后删除。
++
+++- 真实 Game 角色启动及 TCP 验证通过：HMAC 鉴权、完整七个禁用节点配置、空叶子状态、拒绝清除禁用节点。此前邮件推送验证属于已撤回的接入，不计入当前业务能力。使用独立临时游戏库、账号库与空闲端口，结束后关闭并删除临时库。
++
+ +- 服务端全部非数据库测试：93 项通过，1 项失败。失败项为已有 `PlayerProfileUpdateTests.BothCodecsPreserveNullableZeroJsonStringsAndLongIds`；修改前 codec 同样不包含 `ReqUpdatePlayerBasicInfo` 的编解码分支，原生成器不支持其枚举数组和 nullable 字段，本次未扩大处理范围。
++
+ +- `MiaoWu.NetworkAuth.Tests.csproj` 因已有 7 个测试源文件路径不存在而无法完成编译；其引用的 HotUpdate 业务程序集可编译。本次另建 `Tools/RedDotTests` 独立测试工程验证实际红点树代码。未运行 Unity Editor 场景及 prefab 视觉验收。
+-+
++
+++
++
+ +运行红点核心测试：`dotnet test GameServerTests/GameServerTests.csproj --filter FullyQualifiedName~RedDotTests`；客户端：`dotnet test D:/iaowu/MiaoWu/Tools/RedDotTests/RedDot.Tests.csproj`。MySQL 测试沿用 GACHA_RUN_DATABASE_TESTS 和 GACHA_DB_CONFIGURATION_PATH 环境变量，并仅创建/删除随机命名的私有测试库。
++
+ --- /dev/null
+ +++ b/server/sql/migrations/20261023_001_reddot.sql
+-@@ -0,0 +1,29 @@
++@@ -0,0 +1,10 @@
+ +-- Run against the intended ugame database before starting the updated game server.
++
+ +CREATE TABLE IF NOT EXISTS `playerreddot` (
++
+ +  `playerId` bigint NOT NULL COMMENT '玩家ID',
++
+ +  `nodeId` int NOT NULL COMMENT '红点叶子节点ID',
++
+ +  `isActive` tinyint NOT NULL DEFAULT 0 COMMENT '0隐藏，1显示',
++
+ +  `seenVersion` bigint NOT NULL DEFAULT 0 COMMENT '已查看提示版本',
++
+ +  `updateTime` bigint NOT NULL DEFAULT 0 COMMENT '更新时间，Unix秒',
++
+ +  PRIMARY KEY (`playerId`,`nodeId`)
++
+ +) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家红点状态';
+-+
+-+-- MySQL 5.7-compatible and rerunnable. Legacy mail expiry is left at 0.
+-+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+-+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage' AND COLUMN_NAME='expireTime'),
+-+  'SELECT 1', 'ALTER TABLE mailmessage ADD COLUMN expireTime BIGINT NOT NULL DEFAULT 0 COMMENT ''到期时间，Unix秒；0为旧邮件无期限''');
+-+PREPARE stmt FROM @ddl;
+-+EXECUTE stmt;
+-+DEALLOCATE PREPARE stmt;
+-+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+-+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage' AND INDEX_NAME='ix_mail_recipient_status_expiry'),
+-+  'SELECT 1', 'ALTER TABLE mailmessage ADD INDEX ix_mail_recipient_status_expiry(toPlayerId,status,expireTime)');
+-+PREPARE stmt FROM @ddl;
+-+EXECUTE stmt;
+-+DEALLOCATE PREPARE stmt;
+-+SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+-+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage' AND INDEX_NAME='ix_mail_status_expiry'),
+-+  'SELECT 1', 'ALTER TABLE mailmessage ADD INDEX ix_mail_status_expiry(status,expireTime)');
+-+PREPARE stmt FROM @ddl;
+-+EXECUTE stmt;
+-+DEALLOCATE PREPARE stmt;
++
+++
++
+ --- a/server/sql/ugame_10001.sql
+ +++ b/server/sql/ugame_10001.sql
+-@@ -91,8 +91,19 @@
++@@ -91,6 +91,17 @@
+    PRIMARY KEY (`id`)
+ 
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='登陆奖励管理';
+ 
+  
+ 
+---- 导出  表 ugame_10001.mailmessage 结构
+-
+--CREATE TABLE IF NOT EXISTS `mailmessage` (
+-
+ +-- 导出  表 ugame_10001.playerreddot 结构
++
+ +CREATE TABLE IF NOT EXISTS `playerreddot` (
+ 
+ +  `playerId` bigint NOT NULL COMMENT '玩家ID',
+@@ -2870,38 +2548,13 @@
+ 
+ +
+ 
+-+-- 导出  表 ugame_10001.mailmessage 结构
+-+CREATE TABLE IF NOT EXISTS `mailmessage` (
++ -- 导出  表 ugame_10001.mailmessage 结构
++
++ CREATE TABLE IF NOT EXISTS `mailmessage` (
++
+    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '邮件消息的唯一ID号',
+ 
+-   `fromPlayerId` bigint(20) NOT NULL DEFAULT '-1' COMMENT '来自与哪个玩家Id发送的邮件',
+-
+-   `toPlayerId` bigint(20) NOT NULL DEFAULT '0' COMMENT '发送给哪个玩家Id的邮件',
+-
+-@@ -101,7 +112,10 @@
+-   `sendTime` int(11) NOT NULL DEFAULT '0' COMMENT '邮件消息发送的时间',
+-
+-   `userData` bigint(20) NOT NULL DEFAULT '0' COMMENT '消息邮件要关联的一些用户数据，具体可以根据游戏项目来定,暂定用BigInt,带任务ID，奖励ID等',
+-
+-   `readTime` int(11) NOT NULL DEFAULT '0' COMMENT '邮件消息被玩家阅读的时间',
+-
+--  PRIMARY KEY (`id`)
+-
+-+  `expireTime` bigint NOT NULL DEFAULT 0 COMMENT '到期时间，Unix秒；0为旧邮件无期限',
+-
+-+  PRIMARY KEY (`id`),
+-
+-+  KEY `ix_mail_recipient_status_expiry` (`toPlayerId`,`status`,`expireTime`),
+-
+-+  KEY `ix_mail_status_expiry` (`status`,`expireTime`)
+-
+- ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='邮件消息管理';
+-
+- 
+-
+- -- 导出  表 ugame_10001.player 结构
+-
+-@@ -109,16 +123,16 @@
++@@ -109,16 +120,16 @@
+    `id` bigint(20) NOT NULL DEFAULT '10000' COMMENT 'playerId',
+ 
+    `accountId` bigint(20) NOT NULL DEFAULT '0' COMMENT '账号ID',
+@@ -2944,7 +2597,7 @@
+ 
+    `exp` int(11) NOT NULL DEFAULT '0' COMMENT '经验',
+ 
+-@@ -134,92 +148,92 @@
++@@ -134,92 +145,92 @@
+    PRIMARY KEY (`id`)
+ 
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+@@ -3325,7 +2978,7 @@
+  }
+ 
+ diff --git a/client/Assets/Luban/Template/Datas/RedDotConfig.xlsx b/client/Assets/Luban/Template/Datas/RedDotConfig.xlsx
+-Binary file added: 4883 bytes; node configuration workbook.
++Binary file added: 4876 bytes; node configuration workbook.
+ --- /dev/null
+ +++ b/client/Assets/Luban/Template/Datas/RedDotConfig.xlsx.meta
+ @@ -0,0 +1,2 @@
+@@ -5358,32 +5011,30 @@
+ 
+ --- a/client/HotUpdate.csproj
+ +++ b/client/HotUpdate.csproj
+-@@ -41,6 +41,13 @@
+-     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
+-
+-   </PropertyGroup>
+-
+-   <ItemGroup>
++@@ -826,6 +826,12 @@
++     <Compile Include="Assets\Scripts\HotUpdate\Game\Account\Events\UserLoginSucceededEvent.cs" />
++
++     <Compile Include="Assets\Scripts\HotUpdate\UI\Inventory\Filtering\UIStatFilterTag.cs" />
++
++     <Compile Include="Assets\Scripts\HotUpdate\Game\Skills\Implementations\Player\Skill宠物射击.cs" />
+ 
+ +    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Manager\RedDotManager.cs" />
+ 
+ +    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Models\RedDotTreeModel.cs" />
+ 
+++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Network\RedDotRecoveryHandler.cs" />
++
+ +    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Network\RedDotNetwork.cs" />
+ 
+-+    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Network\RedDotRecoveryHandler.cs" />
+-
+ +    <Compile Include="Assets\Scripts\HotUpdate\UI\Shared\RedDot\RedDotBinding.cs" />
+ 
+ +    <Compile Include="Assets\Scripts\HotUpdate\Game\Protocol\Messages\RedDotMessage.cs" />
+ 
+-+
+-
+-     <Compile Include="Assets\Scripts\HotUpdate\Game\Battle\Models\BattleSnapshotModel.cs" />
+-
+-     <Compile Include="Assets\Scripts\HotUpdate\Game\Grid\Manager\GridIdleManager.cs" />
+-
+-     <Compile Include="Assets\Scripts\HotUpdate\Game\Traps\Models\TrapPlacementModel.cs" />
++     <None Include="Assets\Scripts\HotUpdate\HotUpdate.asmdef" />
++
++     <None Include="Assets\Scripts\HotUpdate\Buffs\Core\Metadata\package.json" />
++
++     <Reference Include="UnityEngine">
+ 
+ --- /dev/null
+ +++ b/client/Tools/RedDotTests/RedDot.Tests.csproj
+Binary workbook changed: Excels/RedDotConfig.xlsx; only enabled cells F5:F6 changed to false; mirrored to authoritative client workbook.
+--- before/GameServer/Configs/Csvs/RedDotConfig.csv
++++ after/GameServer/Configs/Csvs/RedDotConfig.csv
+@@ -1,8 +1,8 @@
+ 节点ID,节点名称,父节点ID,消除类型,是否启用,提示版本
+ int,string,int,int,bool,long
+ id,name,parentId,clearType,enabled,tipVersion
+-1000,邮箱入口,0,0,true,0
+-1001,邮件未读,1000,1,true,0
++1000,邮箱入口,0,0,false,0
++1001,邮件未读,1000,1,false,0
+ 2000,任务入口,0,0,false,0
+ 2001,日常奖励,2000,1,false,0
+ 2002,成就奖励,2000,1,false,0
+--- before/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
++++ after/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+@@ -1,180 +1,77 @@
+-using Framework.Core.Concurrency;
++using Framework.Core.Utils;
+ using Game.Core.Db;
+-using Game.Core.GM_RedDot;
+-using Game.Datas.DBEntities;
+-using SqlSugar;
+ using System;
+-using System.Configuration;
++using System.Collections.Generic;
+ using System.Linq;
+-using System.Threading;
++using System.Text;
++using System.Threading.Tasks;
+ 
+ namespace Game.Core.GM_MailMessage
+ {
+-    enum MailMsgStatus { Unreaded = 0, Readed = 1, Deleted = 2 }
+-    public sealed class GM_MailMsgMgr
++    enum MailMsgStatus { 
++        Unreaded = 0,
++        Readed,
++        Deleted,
++    }
++
++    public class GM_MailMsgMgr
+     {
+-        public static GM_MailMsgMgr Instance { get; } = new();
+-        public const int UnreadRedDotNodeId = 1001;
+-        private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+-        private Timer timer;
+-        private int running;
+-        private int capacity = 100;
++        public static GM_MailMsgMgr Instance = new GM_MailMsgMgr();
+ 
+-        public void Init()
+-        {
+-            if (int.TryParse(ConfigurationManager.AppSettings["MailboxCapacity"], out var value) && value > 0)
+-                capacity = value;
+-            GM_RedDotMgr.Instance.RegisterBusiness(UnreadRedDotNodeId, HasUnread);
+-            timer ??= new Timer(_ => ExpireDue(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+-        }
+-        public void Stop()
+-        {
+-            var current = timer; timer = null;
+-            if (current == null) return;
+-            using var finished = new ManualResetEvent(false);
+-            if (current.Dispose(finished)) finished.WaitOne(TimeSpan.FromSeconds(30));
++        public void Init() {
++
+         }
+ 
+-        public void SendMailMsg(long fromPlayerId, long toPlayerId, string msgBody, long udata = 0,
+-            long lifetimeSeconds = 604800)
+-        {
+-            if (toPlayerId <= 0 || string.IsNullOrWhiteSpace(msgBody) || lifetimeSeconds <= 0)
+-                throw new ArgumentException("Invalid mail.");
+-            using var lease = PlayerOperationLock.Acquire(toPlayerId);
+-            lock (lease.SyncRoot)
+-            {
+-                using var db = DBService.Instance.GetGameInstance();
+-                try
+-                {
+-                    db.Ado.BeginTran();
+-                    GM_RedDotMgr.LockPlayer(db, toPlayerId);
+-                    long now = Now();
+-                    RequireOne(db.Ado.ExecuteCommand(
+-                        "INSERT INTO mailmessage(fromPlayerId,toPlayerId,msgBody,status,sendTime,userData,readTime,expireTime) " +
+-                        "VALUES(@sender,@pid,@body,0,@now,@data,0,@expiry)",
+-                        new { sender = fromPlayerId, pid = toPlayerId, body = msgBody, now,
+-                            data = udata, expiry = checked(now + lifetimeSeconds) }));
+-                    ExpirePlayer(db, toPlayerId, now);
+-                    var ordered = db.Ado.SqlQuery<long>(
+-                        "SELECT id FROM mailmessage WHERE toPlayerId=@pid AND status<2 " +
+-                        "AND (expireTime=0 OR expireTime>@now) ORDER BY status ASC,sendTime DESC,id DESC",
+-                        new { pid = toPlayerId, now });
+-                    foreach (var id in ordered.Skip(capacity))
+-                        RequireOne(db.Ado.ExecuteCommand("UPDATE mailmessage SET status=2 WHERE id=@id AND toPlayerId=@pid AND status<2",
+-                            new { id, pid = toPlayerId }));
+-                    UpdateRedDot(db, toPlayerId);
+-                    db.Ado.CommitTran();
+-                }
+-                catch { db.Ado.RollbackTran(); throw; }
+-                GM_RedDotMgr.Instance.PublishCommitted(toPlayerId);
+-            }
++        public void SendMailMsg(long fromPlayerId, long toPlayerId, string msgBody, long udata = 0) {
++            Game.Datas.DBEntities.Mailmessage msg = new Game.Datas.DBEntities.Mailmessage();
++            msg.fromPlayerId = fromPlayerId;
++            msg.toPlayerId = toPlayerId;
++            msg.msgBody = msgBody;
++            msg.userData = udata;
++            msg.status = (int)MailMsgStatus.Unreaded;
++            msg.sendTime = (int)UtilsHelper.Timestamp();
++            msg.readTime = -1;
++
++            DBService.Instance.GetGameInstance().Insertable(msg).ExecuteCommandAsync();
+         }
+ 
+-        public bool UpdateMailMsgStatus(long playerId, long msgId, int status)
+-        {
+-            if (playerId <= 0 || msgId <= 0 || status is not (1 or 2)) return false;
+-            using var lease = PlayerOperationLock.Acquire(playerId);
+-            lock (lease.SyncRoot)
+-            {
+-                using var db = DBService.Instance.GetGameInstance();
+-                try
+-                {
+-                    db.Ado.BeginTran();
+-                    GM_RedDotMgr.LockPlayer(db, playerId);
+-                    var mail = db.Queryable<Mailmessage>().First(m => m.id == msgId && m.toPlayerId == playerId);
+-                    long now = Now();
+-                    if (mail == null || mail.status == 2 || mail.expireTime > 0 && mail.expireTime <= now)
+-                    { db.Ado.RollbackTran(); return false; }
+-                    if (status == 2 && mail.status != 1) { db.Ado.RollbackTran(); return false; }
+-                    if (mail.status != status)
+-                        RequireOne(db.Ado.ExecuteCommand(
+-                            "UPDATE mailmessage SET status=@status,readTime=CASE WHEN @status=1 AND readTime<=0 " +
+-                            "THEN @now ELSE readTime END WHERE id=@id AND toPlayerId=@pid AND status=@old",
+-                            new { status, now, id = msgId, pid = playerId, old = mail.status }));
+-                    UpdateRedDot(db, playerId);
+-                    db.Ado.CommitTran();
+-                }
+-                catch { db.Ado.RollbackTran(); throw; }
+-                GM_RedDotMgr.Instance.PublishCommitted(playerId);
++        public bool UpdateMailMsgStatus(long msgId, int status) {
++            if (status < (int)MailMsgStatus.Unreaded ||
++                status > (int)MailMsgStatus.Deleted) {
++                return false;
++            }
++
++            Game.Datas.DBEntities.Mailmessage mailMsg = null;
++            mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().First(it => it.id == msgId);//查询单条
++            if (mailMsg.status == status) {
+                 return true;
+             }
++
++
++            mailMsg.status = status;
++            if (status == (int)MailMsgStatus.Readed) {
++                mailMsg.readTime = (int)UtilsHelper.Timestamp();
++            }
++            DBService.Instance.GetGameInstance().Updateable<Game.Datas.DBEntities.Mailmessage>(mailMsg).Where(it => it.id == msgId).ExecuteCommandAsync();
++            return true;
+         }
+ 
+-        // Future reward workflows must call this inside their own locked transaction, then publish after commit.
+-        public void MarkAllRead(SqlSugarClient db, long playerId)
+-        {
+-            db.Ado.ExecuteCommand("UPDATE mailmessage SET status=1,readTime=@now WHERE toPlayerId=@pid " +
+-                "AND status=0 AND (expireTime=0 OR expireTime>@now)", new { pid = playerId, now = Now() });
+-            UpdateRedDot(db, playerId);
++        // statusMask 0: 拉取这个未读的邮件消息, 1: 拉取未读+已读的邮件 2: 拉取未读+已读+删除的邮件
++        public Game.Datas.DBEntities.Mailmessage[] PullingMailMsg(long playerId, int statusMask) {
++            Game.Datas.DBEntities.Mailmessage[] mailMsg = null;
++            if (statusMask == 2)
++            { // 所有邮件消息
++                mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().Where(it => it.toPlayerId == playerId).ToArray();//查询单条
++            }
++            else if (statusMask == 1)
++            { // 拉取未读+已读的邮件
++                mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().Where(it => ((it.toPlayerId == playerId) && (it.status < 2))).ToArray();//查询单条
++            }
++            else if (statusMask == 0)
++            {// 未读的邮件消息
++                mailMsg = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Mailmessage>().Where(it => ((it.toPlayerId == playerId) && (it.status < 1))).ToArray();//查询单条
++            }
++            return mailMsg;         
+         }
+-        public bool HasUnread(SqlSugarClient db, long playerId)
+-        {
+-            long now = Now();
+-            return db.Queryable<Mailmessage>().Any(m => m.toPlayerId == playerId && m.status == 0 &&
+-                (m.expireTime == 0 || m.expireTime > now));
+-        }
+-        public void UpdateRedDot(SqlSugarClient db, long playerId) =>
+-            GM_RedDotMgr.Instance.WriteBusinessState(db, playerId, UnreadRedDotNodeId, HasUnread(db, playerId));
+-
+-        public Mailmessage[] PullingMailMsg(long playerId, int statusMask)
+-        {
+-            using var lease = PlayerOperationLock.Acquire(playerId);
+-            lock (lease.SyncRoot)
+-            {
+-                return PullingMailMsgLocked(playerId, statusMask);
+-            }
+-        }
+-
+-        private Mailmessage[] PullingMailMsgLocked(long playerId, int statusMask) =>
+-            ReadMailMessages(playerId, statusMask);
+-
+-        // Mail history remains database-owned; only bounded red-dot state belongs to the online component.
+-        private Mailmessage[] ReadMailMessages(long playerId, int statusMask)
+-        {
+-            using var db = DBService.Instance.GetGameInstance();
+-            long now = Now();
+-            return db.Queryable<Mailmessage>().Where(m => m.toPlayerId == playerId &&
+-                (m.expireTime == 0 || m.expireTime > now))
+-                .WhereIF(statusMask < 2, m => m.status <= statusMask)
+-                .OrderBy(m => m.status).OrderBy(m => m.sendTime, OrderByType.Desc)
+-                .OrderBy(m => m.id, OrderByType.Desc).ToArray();
+-        }
+-
+-        public void ExpireDue()
+-        {
+-            if (Interlocked.Exchange(ref running, 1) != 0) return;
+-            try
+-            {
+-                using var scan = DBService.Instance.GetGameInstance();
+-                var ids = scan.Ado.SqlQuery<long>("SELECT DISTINCT toPlayerId FROM mailmessage " +
+-                    "WHERE status<2 AND expireTime>0 AND expireTime<=@now LIMIT 100", new { now = Now() });
+-                foreach (long playerId in ids)
+-                {
+-                    using var lease = PlayerOperationLock.Acquire(playerId);
+-                    lock (lease.SyncRoot)
+-                    {
+-                        using var db = DBService.Instance.GetGameInstance();
+-                        try
+-                        {
+-                            db.Ado.BeginTran();
+-                            GM_RedDotMgr.LockPlayer(db, playerId);
+-                            ExpirePlayer(db, playerId, Now());
+-                            UpdateRedDot(db, playerId);
+-                            db.Ado.CommitTran();
+-                        }
+-                        catch { db.Ado.RollbackTran(); throw; }
+-                        GM_RedDotMgr.Instance.PublishCommitted(playerId);
+-                    }
+-                }
+-            }
+-            catch (Exception ex) { logger.Error(ex, "Mail expiry/red-dot refresh failed."); }
+-            finally { Volatile.Write(ref running, 0); }
+-        }
+-        private static void ExpirePlayer(SqlSugarClient db, long playerId, long now) =>
+-            db.Ado.ExecuteCommand("UPDATE mailmessage SET status=2 WHERE toPlayerId=@pid AND status<2 " +
+-                "AND expireTime>0 AND expireTime<=@now", new { pid = playerId, now });
+-        private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+-        private static void RequireOne(int affected)
+-        { if (affected != 1) throw new InvalidOperationException("Concurrent mail modification."); }
+     }
+ }
+--- before/GameServer/src/Game/Datas/DbEntities/Mailmessage.cs
++++ after/GameServer/src/Game/Datas/DbEntities/Mailmessage.cs
+@@ -68,8 +68,6 @@
+            /// Nullable:False
+            /// </summary>           
+            public int readTime {get;set;}
+-           /// <summary>Unix seconds; 0 is reserved for legacy mails without an expiry.</summary>
+-           public long expireTime {get;set;}
+ 
+     }
+ }
+--- before/GameServer/src/Game/Entries/Modules/PlayerModule.cs
++++ after/GameServer/src/Game/Entries/Modules/PlayerModule.cs
+@@ -558,14 +558,8 @@
+                 return res;
+             }
+ 
+-            if (req == null || req.mailMsgId <= 0 || (req.status != 1 && req.status != 2))
+-            {
+-                res.status = (int)Respones.InvalidParams;
+-                return res;
+-            }
+-
+-            res.status = GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, req.mailMsgId, req.status)
+-                ? (int)Respones.OK : (int)Respones.InvalidOpt;
++            GM_MailMsgMgr.Instance.UpdateMailMsgStatus(req.mailMsgId, req.status);
++            res.status = (int)Respones.OK;
+             return res;
+         }
+ 
+--- before/GameServer/src/Game/GameServer.cs
++++ after/GameServer/src/Game/GameServer.cs
+@@ -177,7 +177,6 @@
+             if (role == ServerRole.Login) return;
+ 
+             EconomicOperationCleanupService.Instance.Stop();
+-            GM_MailMsgMgr.Instance.Stop();
+             LogicWorkerPool.Instance.Stop();
+             TaskWorkerPool.Instance.Stop();
+             bool isGateway = role == ServerRole.Gateway;
+--- before/GameServerTests/RedDot/RedDotMySqlTests.cs
++++ after/GameServerTests/RedDot/RedDotMySqlTests.cs
+@@ -1,8 +1,8 @@
+ using DotNetty.Transport.Channels.Embedded;
++using Framework.Core.Concurrency;
+ using Framework.Core.Net;
+-using Framework.Core.Serializer;
++using Game.Core.Db;
+ using Game.Core.EntityMgr;
+-using Game.Core.GM_MailMessage;
+ using Game.Core.GM_RedDot;
+ using Game.Datas.Excels;
+ using Game.Datas.GMEntities;
+@@ -10,9 +10,7 @@
+ using Game.Entries.Modules;
+ using GameServerTests.Gacha;
+ using MySqlConnector;
+-using System.Configuration;
+ using System.Reflection;
+-using System.Text.RegularExpressions;
+ 
+ namespace GameServerTests.RedDot;
+ 
+@@ -20,111 +18,104 @@
+ {
+     [DatabaseFact]
+     [Trait("Category", "Database")]
+-    public async Task IsolatedDatabase_MailTransactionsExpiryViewedPersistenceAndMigration()
++    public async Task IsolatedDatabase_GenericBusinessRollbackViewedPersistenceAndMigration()
+     {
+         string database = "codex_reddot_" + Guid.NewGuid().ToString("N");
+-        var builder = new MySqlConnectionStringBuilder(GachaMySqlTestEnvironment.ReadConnectionString());
+-        builder.Database = "";
++        var builder = new MySqlConnectionStringBuilder(GachaMySqlTestEnvironment.ReadConnectionString()) { Database = "" };
+         await using var admin = new MySqlConnection(builder.ConnectionString);
+         await admin.OpenAsync();
+         await Execute(admin, $"CREATE DATABASE `{database}` CHARACTER SET utf8mb4");
+         builder.Database = database;
+         var channel = new EmbeddedChannel();
+         const long playerId = 910001;
+-        var connectionField = typeof(Game.Core.Db.DBService).GetField("connGameDataStr", BindingFlags.Instance | BindingFlags.NonPublic);
+-        object previousConnection = connectionField.GetValue(Game.Core.Db.DBService.Instance);
++        var connectionField = typeof(DBService).GetField("connGameDataStr", BindingFlags.Instance | BindingFlags.NonPublic);
++        object previousConnection = connectionField.GetValue(DBService.Instance);
+         try
+         {
+             await using var db = new MySqlConnection(builder.ConnectionString);
+             await db.OpenAsync();
+-            string root = FindRoot();
+-            string schema = await File.ReadAllTextAsync(Path.Combine(root, "sql/ugame_10001.sql"));
+-            // Start with the old mail schema, then exercise the migration twice.
+-            var mailSchema = Regex.Match(schema, @"CREATE TABLE IF NOT EXISTS `mailmessage`[\s\S]*?\) ENGINE=[^;]+;").Value;
+-            mailSchema = string.Join("\n", mailSchema.Split('\n').Where(line => !line.Contains("expireTime") && !line.Contains("ix_mail_")))
+-                .Replace("PRIMARY KEY (`id`),", "PRIMARY KEY (`id`)");
+-            await Execute(db, "CREATE TABLE player(id BIGINT PRIMARY KEY);" + mailSchema);
+-            string migration = await File.ReadAllTextAsync(Path.Combine(root, "sql/migrations/20261023_001_reddot.sql"));
++            await Execute(db, "CREATE TABLE player(id BIGINT PRIMARY KEY);" +
++                "CREATE TABLE testcondition(playerId BIGINT PRIMARY KEY,active TINYINT NOT NULL);");
++            var current = new DirectoryInfo(AppContext.BaseDirectory);
++            while (current != null && !File.Exists(Path.Combine(current.FullName, "sql/ugame_10001.sql"))) current = current.Parent;
++            string migration = await File.ReadAllTextAsync(Path.Combine(current.FullName, "sql/migrations/20261023_001_reddot.sql"));
+             await Execute(db, migration); await Execute(db, migration);
+-            await Execute(db, $"INSERT INTO player(id) VALUES({playerId}),({playerId + 1})");
++            // The generic migration must not require a mail table.
++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage'"));
++            await Execute(db, $"INSERT INTO player(id) VALUES({playerId}); INSERT INTO testcondition VALUES({playerId},0)");
+             GachaMySqlTestEnvironment.InitializeServerServices(builder.ConnectionString);
+             var entity = GachaMySqlTestEnvironment.AddOnlinePlayer(playerId, new Dictionary<int, long>());
+             var session = new IdSession { playerId = playerId, accountId = playerId, client = channel };
+             entity.uPlayer.s = session;
+             var catalog = new RedDotCatalog(new[]
+             {
+-                new RedDotConfig { id = 1000, name = "邮箱", enabled = true },
+-                new RedDotConfig { id = 1001, name = "未读", parentId = 1000, clearType = 1, enabled = true },
+-                new RedDotConfig { id = 3000, name = "活动", enabled = true },
+-                new RedDotConfig { id = 3001, name = "新活动", parentId = 3000, clearType = 2, enabled = true, tipVersion = 5 }
++                new RedDotConfig { id = 9000, name = "测试业务", enabled = true },
++                new RedDotConfig { id = 9001, name = "测试条件", parentId = 9000, clearType = 1, enabled = true },
++                new RedDotConfig { id = 3000, name = "测试查看", enabled = true },
++                new RedDotConfig { id = 3001, name = "提示", parentId = 3000, clearType = 2, enabled = true, tipVersion = 5 }
+             });
+-            GM_RedDotMgr.Instance.Configure(catalog, snapshot => new NotifyRedDotChanged
+-            { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
+-                states = snapshot.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList() });
+-            GM_MailMsgMgr.Instance.Init();
+-            GM_MailMsgMgr.Instance.Stop();
++            Configure(catalog);
++            GM_RedDotMgr.Instance.RegisterBusiness(9001, (transaction, id) =>
++                transaction.Ado.SqlQuery<int>("SELECT active FROM testcondition WHERE playerId=@pid", new { pid = id }).Single() == 1);
+             GM_RedDotMgr.Instance.ValidateProviders();
+             var initial = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
+             Assert.Equal(1, initial.status);
+-            Assert.False(initial.states.Single(s => s.nodeId == 1001).isActive);
+-            Assert.Equal(0, await Scalar(db, $"SELECT COUNT(*) FROM playerreddot WHERE nodeId IN(1000,3000)"));
+-
+-            GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "mail-a");
+-            GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "mail-b");
+-            Assert.Equal(1, await Scalar(db, $"SELECT isActive FROM playerreddot WHERE playerId={playerId} AND nodeId=1001"));
+-            var mails = GM_MailMsgMgr.Instance.PullingMailMsg(playerId, 0);
+-            Assert.Equal(2, mails.Length);
+-            Assert.False(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId + 1, mails[0].id, 1));
+-            Assert.False(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, mails[0].id, 0));
+-            Assert.True(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, mails[0].id, 1));
+-            Assert.Equal(1, await Scalar(db, $"SELECT isActive FROM playerreddot WHERE nodeId=1001"));
+-            Assert.True(GM_MailMsgMgr.Instance.UpdateMailMsgStatus(playerId, mails[1].id, 1));
+-            Assert.Equal(0, await Scalar(db, $"SELECT isActive FROM playerreddot WHERE nodeId=1001"));
++            Assert.False(initial.states.Single(s => s.nodeId == 9001).isActive);
++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM playerreddot WHERE nodeId IN(9000,3000)"));
++            SetBusiness(playerId, true);
++            Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
+             Assert.True(entity.uRedDot.StateVersion > initial.stateVersion);
+-
+-            // Force the red-dot update to fail: mail insertion must roll back with it.
+             await Execute(db, "CREATE TRIGGER reject_reddot BEFORE UPDATE ON playerreddot FOR EACH ROW " +
+                 "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='test rollback'");
+-            Assert.ThrowsAny<Exception>(() => GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "rollback"));
+-            Assert.Equal(2, await Scalar(db, "SELECT COUNT(*) FROM mailmessage"));
++            Assert.ThrowsAny<Exception>(() => SetBusiness(playerId, false));
++            Assert.Equal(1, await Scalar(db, "SELECT active FROM testcondition"));
++            Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
+             await Execute(db, "DROP TRIGGER reject_reddot");
+-
+-            GM_MailMsgMgr.Instance.SendMailMsg(-1, playerId, "expire");
+-            await Execute(db, "UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP()-1 WHERE msgBody='expire'");
+-            GM_MailMsgMgr.Instance.ExpireDue();
+-            Assert.Equal(2, await Scalar(db, "SELECT status FROM mailmessage WHERE msgBody='expire'"));
+-            Assert.Equal(0, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=1001"));
+-
+-            var staleView = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 3 }, playerId);
+-            Assert.Equal(1, staleView.status);
+-            Assert.True(staleView.states.Single(s => s.nodeId == 3001).isActive);
++            SetBusiness(playerId, false);
++            Assert.Equal(0, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
++            Assert.Equal(-103, RedDotModule.Instance.MarkViewed(session,
++                new ReqRedDotView { nodeId = 9001, tipVersion = 1 }, playerId).status);
++            var stale = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 3 }, playerId);
++            Assert.True(stale.states.Single(s => s.nodeId == 3001).isActive);
+             Assert.Equal(-103, RedDotModule.Instance.MarkViewed(session,
+                 new ReqRedDotView { nodeId = 3001, tipVersion = 6 }, playerId).status);
+             var viewed = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 5 }, playerId);
+             Assert.False(viewed.states.Single(s => s.nodeId == 3001).isActive);
+             RedDotComponent.Reset(entity);
+-            var reconnect = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
+-            Assert.False(reconnect.states.Single(s => s.nodeId == 3001).isActive);
++            Assert.False(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
++                .states.Single(s => s.nodeId == 3001).isActive);
+             catalog.ById[3001].tipVersion = 6;
+-            GM_RedDotMgr.Instance.Configure(new RedDotCatalog(catalog.Nodes), snapshot => new NotifyRedDotChanged());
++            Configure(new RedDotCatalog(catalog.Nodes));
+             Assert.True(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
+                 .states.Single(s => s.nodeId == 3001).isActive);
+         }
+         finally
+         {
+-            GM_MailMsgMgr.Instance.Stop();
+             GM_EntityMgr.Instance.RemovePlayer(playerId);
+-            connectionField.SetValue(Game.Core.Db.DBService.Instance, previousConnection);
+-            // This database was created by this test using a random name, never the user's game database.
++            connectionField.SetValue(DBService.Instance, previousConnection);
+             await Execute(admin, $"DROP DATABASE `{database}`");
+             channel.FinishAndReleaseAll();
+         }
+     }
+-    private static string FindRoot()
++    private static void Configure(RedDotCatalog catalog) => GM_RedDotMgr.Instance.Configure(catalog, snapshot =>
++        new NotifyRedDotChanged { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
++            states = snapshot.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList() });
++    private static void SetBusiness(long playerId, bool active)
+     {
+-        var current = new DirectoryInfo(AppContext.BaseDirectory);
+-        while (current != null && !File.Exists(Path.Combine(current.FullName, "sql/ugame_10001.sql"))) current = current.Parent;
+-        return current?.FullName ?? throw new DirectoryNotFoundException("Repository SQL not found.");
++        using var lease = PlayerOperationLock.Acquire(playerId);
++        lock (lease.SyncRoot)
++        {
++            using var db = DBService.Instance.GetGameInstance();
++            try
++            {
++                db.Ado.BeginTran(); GM_RedDotMgr.LockPlayer(db, playerId);
++                db.Ado.ExecuteCommand("UPDATE testcondition SET active=@active WHERE playerId=@pid", new { active, pid = playerId });
++                GM_RedDotMgr.Instance.WriteBusinessState(db, playerId, 9001, active);
++                db.Ado.CommitTran();
++            }
++            catch { db.Ado.RollbackTran(); throw; }
++            GM_RedDotMgr.Instance.PublishCommitted(playerId);
++        }
+     }
+     private static async Task Execute(MySqlConnection db, string sql)
+     { using var command = new MySqlCommand(sql, db); await command.ExecuteNonQueryAsync(); }
+--- before/sql/migrations/20261023_001_reddot.sql
++++ after/sql/migrations/20261023_001_reddot.sql
+@@ -8,22 +8,3 @@
+   PRIMARY KEY (`playerId`,`nodeId`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家红点状态';
+ 
+--- MySQL 5.7-compatible and rerunnable. Legacy mail expiry is left at 0.
+-SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS
+-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage' AND COLUMN_NAME='expireTime'),
+-  'SELECT 1', 'ALTER TABLE mailmessage ADD COLUMN expireTime BIGINT NOT NULL DEFAULT 0 COMMENT ''到期时间，Unix秒；0为旧邮件无期限''');
+-PREPARE stmt FROM @ddl;
+-EXECUTE stmt;
+-DEALLOCATE PREPARE stmt;
+-SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage' AND INDEX_NAME='ix_mail_recipient_status_expiry'),
+-  'SELECT 1', 'ALTER TABLE mailmessage ADD INDEX ix_mail_recipient_status_expiry(toPlayerId,status,expireTime)');
+-PREPARE stmt FROM @ddl;
+-EXECUTE stmt;
+-DEALLOCATE PREPARE stmt;
+-SET @ddl = IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS
+-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage' AND INDEX_NAME='ix_mail_status_expiry'),
+-  'SELECT 1', 'ALTER TABLE mailmessage ADD INDEX ix_mail_status_expiry(status,expireTime)');
+-PREPARE stmt FROM @ddl;
+-EXECUTE stmt;
+-DEALLOCATE PREPARE stmt;
+--- before/sql/ugame_10001.sql
++++ after/sql/ugame_10001.sql
+@@ -112,10 +112,7 @@
+   `sendTime` int(11) NOT NULL DEFAULT '0' COMMENT '邮件消息发送的时间',
+   `userData` bigint(20) NOT NULL DEFAULT '0' COMMENT '消息邮件要关联的一些用户数据，具体可以根据游戏项目来定,暂定用BigInt,带任务ID，奖励ID等',
+   `readTime` int(11) NOT NULL DEFAULT '0' COMMENT '邮件消息被玩家阅读的时间',
+-  `expireTime` bigint NOT NULL DEFAULT 0 COMMENT '到期时间，Unix秒；0为旧邮件无期限',
+-  PRIMARY KEY (`id`),
+-  KEY `ix_mail_recipient_status_expiry` (`toPlayerId`,`status`,`expireTime`),
+-  KEY `ix_mail_status_expiry` (`status`,`expireTime`)
++  PRIMARY KEY (`id`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='邮件消息管理';
+ 
+ -- 导出  表 ugame_10001.player 结构

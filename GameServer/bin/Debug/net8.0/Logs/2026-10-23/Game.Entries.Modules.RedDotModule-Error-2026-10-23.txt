@@ -1,0 +1,3 @@
+[2026-10-23 17:44:46.1745] Red-dot initialization failed. Table 'ugame_10001.playerreddot' doesn't exist 
+ RuntimeMethodHandle.InvokeMethod => RedDotController.Initialize => RedDotModule.Initialize 
+

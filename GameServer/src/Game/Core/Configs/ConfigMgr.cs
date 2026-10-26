@@ -43,6 +43,7 @@ namespace Game.Core.Configs
             ExcelUtils.ReadConfigData<WeaponGoods>();
             ExcelUtils.ReadConfigData<WearGoods>();
             ExcelUtils.ReadConfigData<ZoneConfig>();
+            ExcelUtils.ReadConfigData<RedDotConfig>();
 
         }
     }

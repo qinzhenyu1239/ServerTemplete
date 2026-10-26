@@ -91,6 +91,17 @@ CREATE TABLE IF NOT EXISTS `loginbonues` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='登陆奖励管理';
 
+-- 导出  表 ugame_10001.playerreddot 结构
+CREATE TABLE IF NOT EXISTS `playerreddot` (
+  `playerId` bigint NOT NULL COMMENT '玩家ID',
+  `nodeId` int NOT NULL COMMENT '红点叶子节点ID',
+  `isActive` tinyint NOT NULL DEFAULT 0 COMMENT '0隐藏，1显示',
+  `seenVersion` bigint NOT NULL DEFAULT 0 COMMENT '已查看提示版本',
+  `updateTime` bigint NOT NULL DEFAULT 0 COMMENT '更新时间，Unix秒',
+  PRIMARY KEY (`playerId`,`nodeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家红点状态';
+
+
 -- 导出  表 ugame_10001.mailmessage 结构
 CREATE TABLE IF NOT EXISTS `mailmessage` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '邮件消息的唯一ID号',
@@ -110,6 +121,15 @@ CREATE TABLE IF NOT EXISTS `player` (
   `accountId` bigint(20) NOT NULL DEFAULT '0' COMMENT '账号ID',
   `level` int(11) NOT NULL DEFAULT '1' COMMENT '等级',
   `name` varchar(128) DEFAULT NULL COMMENT '用户名字',
+  `avatarId` int(11) NOT NULL DEFAULT '0' COMMENT '头像ID，0表示未设置',
+  `guildId` bigint(20) NOT NULL DEFAULT '0' COMMENT '公会ID，0表示未加入公会',
+  `titleId` int(11) NOT NULL DEFAULT '0' COMMENT '称号ID，0表示未佩戴称号',
+  `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '' COMMENT '个性签名',
+  `createTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '创建角色Unix秒时间戳，0表示未知',
+  `avatarFrameId` int(11) NOT NULL DEFAULT '0' COMMENT '头像框ID，0表示未设置',
+  `backgroundId` int(11) NOT NULL DEFAULT '0' COMMENT '资料背景ID，0表示默认背景',
+  `displayAchievementIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0,0]' COMMENT '展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位',
+  `displayCharacterIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0]' COMMENT '展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位',
   `usex` int(11) NOT NULL DEFAULT '0',
   `job` int(11) NOT NULL DEFAULT '0' COMMENT '职业',
   `exp` int(11) NOT NULL DEFAULT '0' COMMENT '经验',
@@ -124,6 +144,90 @@ CREATE TABLE IF NOT EXISTS `player` (
   `status` int(11) NOT NULL DEFAULT '0' COMMENT '账号的状态',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+
+-- 兼容已有player表：仅添加缺少的资料字段，重复执行不会重复添加列（兼容MySQL 5.7）。
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarId'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `avatarId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像ID，0表示未设置'' AFTER `name`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'guildId'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `guildId` bigint(20) NOT NULL DEFAULT 0 COMMENT ''公会ID，0表示未加入公会'' AFTER `avatarId`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'titleId'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `titleId` int(11) NOT NULL DEFAULT 0 COMMENT ''称号ID，0表示未佩戴称号'' AFTER `guildId`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'signature'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '''' COMMENT ''个性签名'' AFTER `titleId`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'createTime'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `createTime` bigint(20) NOT NULL DEFAULT 0 COMMENT ''创建角色Unix秒时间戳，0表示未知'' AFTER `signature`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+-- MySQL 5.7的JSON列不支持非NULL默认值，展示槽位使用varchar保存JSON数组文本。
+-- 数组长度、ID有效性、重复ID和归属由服务端保存时校验。
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarFrameId'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `avatarFrameId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像框ID，0表示未设置'' AFTER `createTime`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'backgroundId'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `backgroundId` int(11) NOT NULL DEFAULT 0 COMMENT ''资料背景ID，0表示默认背景'' AFTER `avatarFrameId`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayAchievementIds'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `displayAchievementIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0,0]'' COMMENT ''展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位'' AFTER `backgroundId`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
+
+SET @player_profile_sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayCharacterIds'),
+  'SELECT 1',
+  'ALTER TABLE `player` ADD COLUMN `displayCharacterIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0]'' COMMENT ''展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位'' AFTER `displayAchievementIds`'
+);
+PREPARE player_profile_statement FROM @player_profile_sql;
+EXECUTE player_profile_statement;
+DEALLOCATE PREPARE player_profile_statement;
 
 -- 抽奖使用的玩家角色、道具、保底和记录表。全部使用 InnoDB，确保一次抽奖可原子提交。
 CREATE TABLE IF NOT EXISTS `player_item` (

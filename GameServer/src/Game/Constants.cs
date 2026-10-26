@@ -1,4 +1,4 @@
-﻿namespace Game{
+namespace Game{
 
     enum Module {
         /*...*/
@@ -195,6 +195,15 @@
         // 玩家全部物品查询
         eGetPlayerItemsReq = 89,
         eGetPlayerItemsRes = 90,
+        eGetPlayerBasicInfoReq = 91,
+        eGetPlayerBasicInfoRes = 92,
+        eUpdatePlayerBasicInfoReq = 93,
+        eUpdatePlayerBasicInfoRes = 94,
+        eRedDotInitReq = 95,
+        eRedDotInitRes = 96,
+        eRedDotViewReq = 97,
+        eRedDotViewRes = 98,
+        eRedDotChanged = 99,
     }
 
     public enum QuitReason { 
@@ -279,4 +288,3 @@
         
     }
 }
-

@@ -38,6 +38,7 @@
         public GachaComponent uGacha;
 
         public FormationComponent uFormation;
+        public RedDotComponent uRedDot;
 
     }
 

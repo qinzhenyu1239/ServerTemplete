@@ -132,6 +132,7 @@ namespace Game
             }
 
             ConfigMgr.Instance.Init();
+            RedDotModule.Instance.Init();
             CharacterStarUpModule.Instance.Init();
             GachaModule.Instance.Init();
             ServerZoneModule.Instance.Init();

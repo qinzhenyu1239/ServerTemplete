@@ -1,0 +1,231 @@
+--- before/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs
++++ after/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs
+@@ -42,30 +42,36 @@
+             using var lease = PlayerOperationLock.Acquire(playerId);
+             lock (lease.SyncRoot)
+             {
+-                using var db = DBService.Instance.GetGameInstance();
+-                try
++                return InitializeLocked(playerId);
++            }
++        }
++
++        private RedDotSnapshot InitializeLocked(long playerId)
++        {
++            var component = GetState(playerId);
++            component.IsInitialized = true;
++            return Snapshot(component);
++        }
++
++        // Initialization reads existing state only; it never triggers a business condition.
++        private RedDotComponent GetState(long playerId)
++        {
++            var entity = GM_EntityMgr.Instance.Get(playerId);
++            if (entity != null)
++            {
++                var component = entity.uRedDot;
++                if (component == null || !ReferenceEquals(component.Session, entity.uPlayer.s))
++                    entity.uRedDot = component = new RedDotComponent { Session = entity.uPlayer.s };
++                if (!component.IsLoaded || component.ConfigVersion != Catalog.Version)
+                 {
+-                    db.Ado.BeginTran();
+-                    LockPlayer(db, playerId);
+-                    foreach (var node in Catalog.Nodes.Where(n => n.clearType != 0 && Catalog.IsEnabled(n.id)))
+-                    {
+-                        if (node.clearType == 1)
+-                            WriteBusinessState(db, playerId, node.id, providers[node.id](db, playerId));
+-                        else
+-                            db.Ado.ExecuteCommand(
+-                                "INSERT INTO playerreddot(playerId,nodeId,isActive,seenVersion,updateTime) " +
+-                                "VALUES(@pid,@nid,1,0,@now) ON DUPLICATE KEY UPDATE " +
+-                                "isActive=(seenVersion<@version),updateTime=@now",
+-                                new { pid = playerId, nid = node.id, now = Now(), version = node.tipVersion });
+-                    }
+-                    var states = ReadPersisted(db, playerId);
+-                    db.Ado.CommitTran();
+-                    var component = ApplyCommitted(playerId, states, false);
+-                    component.IsInitialized = true;
+-                    return Snapshot(component);
++                    using var db = DBService.Instance.GetGameInstance();
++                    component = ApplyCommitted(playerId, ReadPersisted(db, playerId), false);
+                 }
+-                catch { db.Ado.RollbackTran(); throw; }
++                return component;
+             }
++            using var offlineDb = DBService.Instance.GetGameInstance();
++            return new RedDotComponent { IsLoaded = true, ConfigVersion = Catalog.Version,
++                States = ReadPersisted(offlineDb, playerId) };
+         }
+ 
+         public RedDotSnapshot MarkViewed(long playerId, int nodeId, long version)
+@@ -113,6 +119,26 @@
+                 new { pid = playerId, nid = nodeId, active, now = Now() });
+         }
+ 
++        // Explicit business event entry points. Caller owns the lock/transaction and publishes after commit.
++        public void RefreshBusinessState(SqlSugarClient db, long playerId, int nodeId)
++        {
++            if (!providers.TryGetValue(nodeId, out var evaluate))
++                throw new ArgumentException("No business provider for this red-dot node.");
++            WriteBusinessState(db, playerId, nodeId, evaluate(db, playerId));
++        }
++
++        public void WriteViewedState(SqlSugarClient db, long playerId, int nodeId)
++        {
++            if (!Catalog.ById.TryGetValue(nodeId, out var node) || node.clearType != 2)
++                throw new ArgumentException("Not a viewed leaf node.");
++            if (!Catalog.IsEnabled(nodeId)) return;
++            db.Ado.ExecuteCommand(
++                "INSERT INTO playerreddot(playerId,nodeId,isActive,seenVersion,updateTime) " +
++                "VALUES(@pid,@nid,1,0,@now) ON DUPLICATE KEY UPDATE " +
++                "isActive=(seenVersion<@version),updateTime=@now",
++                new { pid = playerId, nid = node.id, now = Now(), version = node.tipVersion });
++        }
++
+         public void PublishCommitted(long playerId)
+         {
+             // A push failure must never turn a committed business operation into a failure/retry.
+@@ -146,6 +172,7 @@
+                 .Select(r => new RedDotValue { NodeId = r.nodeId, IsActive = r.isActive }).ToArray();
+             c.States = states;
+             c.IsLoaded = true;
++            c.ConfigVersion = Catalog.Version;
+             if (changed.Length > 0) c.StateVersion++;
+             if (notify && c.IsInitialized && changed.Length > 0 && c.Session != null)
+             {
+--- before/GameServer/src/Game/Datas/GMEntities/Components/RedDotComponent.cs
++++ after/GameServer/src/Game/Datas/GMEntities/Components/RedDotComponent.cs
+@@ -9,6 +9,7 @@
+         public bool IsLoaded;
+         public bool IsInitialized;
+         public long StateVersion;
++        public string ConfigVersion;
+         public IdSession Session;
+         public Dictionary<int, Playerreddot> States = new();
+         public static void Init(GM_PlayerEntity entity) => Reset(entity);
+--- before/GameServerTests/RedDot/RedDotMySqlTests.cs
++++ after/GameServerTests/RedDot/RedDotMySqlTests.cs
+@@ -55,14 +55,37 @@
+                 new RedDotConfig { id = 3001, name = "提示", parentId = 3000, clearType = 2, enabled = true, tipVersion = 5 }
+             });
+             Configure(catalog);
++            int evaluations = 0;
+             GM_RedDotMgr.Instance.RegisterBusiness(9001, (transaction, id) =>
+-                transaction.Ado.SqlQuery<int>("SELECT active FROM testcondition WHERE playerId=@pid", new { pid = id }).Single() == 1);
++            {
++                evaluations++;
++                return transaction.Ado.SqlQuery<int>("SELECT active FROM testcondition WHERE playerId=@pid", new { pid = id }).Single() == 1;
++            });
+             GM_RedDotMgr.Instance.ValidateProviders();
+             var initial = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
+             Assert.Equal(1, initial.status);
+             Assert.False(initial.states.Single(s => s.nodeId == 9001).isActive);
++            Assert.False(initial.states.Single(s => s.nodeId == 3001).isActive);
++            Assert.Equal(0, evaluations);
++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM playerreddot"));
++            // Even when the DB rejects writes, initialization may load and return existing records unchanged.
++            await Execute(db, $"INSERT INTO playerreddot VALUES({playerId},3001,0,3,123)");
++            await Execute(db, "CREATE TRIGGER reject_init_insert BEFORE INSERT ON playerreddot FOR EACH ROW " +
++                "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='initialization must not insert'");
++            await Execute(db, "CREATE TRIGGER reject_init_update BEFORE UPDATE ON playerreddot FOR EACH ROW " +
++                "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='initialization must not update'");
++            RedDotComponent.Reset(entity);
++            var readOnly = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
++            Assert.Equal(1, readOnly.status);
++            Assert.False(readOnly.states.Single(s => s.nodeId == 3001).isActive);
++            Assert.Equal(3, await Scalar(db, "SELECT seenVersion FROM playerreddot WHERE nodeId=3001"));
++            Assert.Equal(123, await Scalar(db, "SELECT updateTime FROM playerreddot WHERE nodeId=3001"));
++            Assert.Equal(0, evaluations);
++            Assert.Equal(1, await Scalar(db, "SELECT COUNT(*) FROM playerreddot"));
++            await Execute(db, "DROP TRIGGER reject_init_insert; DROP TRIGGER reject_init_update");
+             Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM playerreddot WHERE nodeId IN(9000,3000)"));
+             SetBusiness(playerId, true);
++            Assert.Equal(1, evaluations);
+             Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
+             Assert.True(entity.uRedDot.StateVersion > initial.stateVersion);
+             await Execute(db, "CREATE TRIGGER reject_reddot BEFORE UPDATE ON playerreddot FOR EACH ROW " +
+@@ -86,6 +109,17 @@
+                 .states.Single(s => s.nodeId == 3001).isActive);
+             catalog.ById[3001].tipVersion = 6;
+             Configure(new RedDotCatalog(catalog.Nodes));
++            Assert.False(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
++                .states.Single(s => s.nodeId == 3001).isActive);
++            // A new configuration version alone does not activate a red dot; the business event does.
++            using (var transaction = DBService.Instance.GetGameInstance())
++            {
++                transaction.Ado.BeginTran();
++                GM_RedDotMgr.LockPlayer(transaction, playerId);
++                GM_RedDotMgr.Instance.WriteViewedState(transaction, playerId, 3001);
++                transaction.Ado.CommitTran();
++            }
++            GM_RedDotMgr.Instance.PublishCommitted(playerId);
+             Assert.True(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
+                 .states.Single(s => s.nodeId == 3001).isActive);
+         }
+@@ -110,7 +144,7 @@
+             {
+                 db.Ado.BeginTran(); GM_RedDotMgr.LockPlayer(db, playerId);
+                 db.Ado.ExecuteCommand("UPDATE testcondition SET active=@active WHERE playerId=@pid", new { active, pid = playerId });
+-                GM_RedDotMgr.Instance.WriteBusinessState(db, playerId, 9001, active);
++                GM_RedDotMgr.Instance.RefreshBusinessState(db, playerId, 9001);
+                 db.Ado.CommitTran();
+             }
+             catch { db.Ado.RollbackTran(); throw; }
+--- before/docs/RedDotSystem.md
++++ after/docs/RedDotSystem.md
+@@ -36,6 +36,8 @@
+ 
+ 节点消息包含配置六个字段，状态消息包含 nodeId 和 isActive。初始化发送禁用节点，无须客户端维护本地 Excel。stateVersion 随当前连接的叶子亮灭变化递增，重连后以新快照为准。
+ 
++初始化接口只读取配置和已有玩家状态，不插入、更新记录，不锁数据库 player 行，也不调用业务判断方法。缺少记录的有效叶子按隐藏返回；重复请求优先读取当前连接的在线组件，首次请求或连接/配置版本变化时从数据库加载。修改配置提示版本本身不会自动点亮红点，必须由业务事件显式触发。
++
+ 客户端在临时树上建立配置并应用快照，初始化期间暂存推送，按版本回放成功后一次刷新 UI。旧推送不覆盖新状态；缺失版本、配置不匹配触发全量同步。全量查看响应也按版本应用，防止旧响应恢复旧红点。登出、断线、重新鉴权时隐藏旧状态。
+ 
+ 查看请求只接受已启用的查看型叶子，版本必须大于 0 且不超过当前版本。seenVersion 单调递增，旧查看请求不能清掉新版本。客户端须在实际展示内容后调用查看接口，不得通过打开父入口清除所有节点。
+@@ -52,6 +54,8 @@
+ 
+ 业务变化时使用 PlayerOperationLock，同一事务先锁定 player 行，再修改业务状态、调用 `WriteBusinessState(db,playerId,nodeId,active)`，提交后调用 `PublishCommitted(playerId)`。不要在提交前改在线组件或发推送。幂等 upsert 允许无变化时影响行数为 0；业务条件更新需要检查对应影响行数。
+ 
++如果已注册业务判断方法，可在业务事件事务中调用 `RefreshBusinessState(db,playerId,nodeId)` 重新判断并写入。查看型提示在业务生效时调用 `WriteViewedState(db,playerId,nodeId)`，再于提交后发布变化；该方法保留历史 seenVersion，只在玩家尚未看过当前版本时点亮。以上写入入口均不会在初始化查询中调用。
++
+ 客户端实现位于 `Assets/Scripts/HotUpdate/Game/RedDot`。使用 `MiaoWu.Networking.RedDot.RedDotManager.Singleton.Tree.IsActive(nodeId)` 查询，查看型节点调用 `MarkViewedAsync(nodeId, displayedVersion)`。在内容展示时记录实际版本，提交时不要改用刚同步到的新版本。重连注册器自动在每次鉴权后初始化，管理器跨场景保留。
+ 
+ UI 入口挂载 `RedDotBinding`，设置 nodeId 与独立子对象 indicator；组件启用时订阅、禁用时解除订阅。不要把 indicator 指向挂载组件的对象本身，以免隐藏后无法重新订阅。现有 `Game/Presentation` 下的本地技能红点及已有界面引用保留；本期没有新增邮箱 UI 或绑定邮箱入口；1000/1001 仅是禁用的配置预留。
+@@ -63,6 +67,7 @@
+ - .NET 8 服务端编译通过；MiaoWu `HotUpdate.csproj` 编译通过。
+ - 服务端红点规则与协议测试 6 项通过，客户端独立红点树测试 7 项通过。
+ - MySQL 隔离测试通过：红点迁移两次、独立测试业务表与红点状态的事务回滚、通用状态变化、查看版本与重连持久化；测试数据库没有邮件表，随机临时库在结束后删除。
++- 初始化只读回归通过：空表不新增记录；禁止 INSERT/UPDATE 的触发器下仍能初始化；原 isActive、seenVersion、updateTime 保持不变；不调用业务提供方；提示版本提高后仍不自动点亮，直到业务显式触发。
+ - 真实 Game 角色启动及 TCP 验证通过：HMAC 鉴权、完整七个禁用节点配置、空叶子状态、拒绝清除禁用节点。此前邮件推送验证属于已撤回的接入，不计入当前业务能力。使用独立临时游戏库、账号库与空闲端口，结束后关闭并删除临时库。
+ - 服务端全部非数据库测试：93 项通过，1 项失败。失败项为已有 `PlayerProfileUpdateTests.BothCodecsPreserveNullableZeroJsonStringsAndLongIds`；修改前 codec 同样不包含 `ReqUpdatePlayerBasicInfo` 的编解码分支，原生成器不支持其枚举数组和 nullable 字段，本次未扩大处理范围。
+ - `MiaoWu.NetworkAuth.Tests.csproj` 因已有 7 个测试源文件路径不存在而无法完成编译；其引用的 HotUpdate 业务程序集可编译。本次另建 `Tools/RedDotTests` 独立测试工程验证实际红点树代码。未运行 Unity Editor 场景及 prefab 视觉验收。
+--- before/docs/RedDotChanges.md
++++ after/docs/RedDotChanges.md
+@@ -77,3 +77,8 @@
+ - 1000/1001 节点在 Excel 和 CSV 中禁用；SQL 和迁移脚本不再增加邮件字段。
+ - MySQL 测试改用独立测试业务表，不依赖邮件。
+ - 撤回前后完整差异：[RedDotMailDetach.patch](RedDotMailDetach.patch)。
++
++## 初始化只读修订
++
++- 初始化只读取已有状态，缺少记录按隐藏处理；不执行 upsert、不校准业务条件。
++- 业务刷新和查看提示激活由显式业务事件触发；详情见 [RedDotReadonlyInitChanges.md](RedDotReadonlyInitChanges.md)，本次完整差异见 [RedDotReadonlyInit.patch](RedDotReadonlyInit.patch)。
+--- /dev/null
++++ after/docs/RedDotReadonlyInitChanges.md
+@@ -0,0 +1,16 @@
++# 红点初始化只读调整
++
++初始化只返回配置和已有状态；缺少记录按隐藏处理。协议及数据库表结构不变，邮件未接入。
++
++| 文件 | 本次修改 |
++|---|---|
++| `GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs` | 删除初始化事务、player 行锁、业务计算和 upsert。按加锁入口 → Locked 编排 → 缓存优先读取组织查询。业务事件分别使用 RefreshBusinessState / WriteViewedState，提交后推送。 |
++| `GameServer/src/Game/Datas/GMEntities/Components/RedDotComponent.cs` | 保存已加载配置版本，防止节点配置变化后继续使用旧过滤结果。 |
++| `GameServerTests/RedDot/RedDotMySqlTests.cs` | 验证空表不插入、现有记录不更新、初始化不计算业务、配置升级不点亮，以及显式业务触发、事务回滚和查看记录。 |
++| `docs/RedDotSystem.md` | 更新只读初始化及业务触发接入说明。 |
++| `docs/RedDotChanges.md` / `docs/RedDotSystem.patch` | 更新整个功能的最终文件清单及实际差异。 |
++| 本文件 / `docs/RedDotReadonlyInit.patch` | 本次说明和修改前后完整差异。 |
++
++验证：服务端构建通过；红点相关 7 项测试（含隔离 MySQL）通过；Game 角色启动、真实 TCP 鉴权及初始化接口验证通过。临时数据库已删除，没有修改业务数据库。客户端和邮件代码未改动，本次未重跑无关全量测试；此前已知测试限制见 RedDotSystem.md。
++
++临时验证配置、日志及修改前快照位于 `C:/Users/Windows/AppData/Local/Temp/codex-reddot-20261023/`，含连接信息的临时 smoke.config 在测试后清理。编译器照常更新 bin/obj 构建产物。

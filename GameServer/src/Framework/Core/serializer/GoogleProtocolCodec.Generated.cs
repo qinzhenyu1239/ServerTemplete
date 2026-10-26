@@ -15,9 +15,7 @@ namespace Framework.Core.Serializer
             try
             {
                 var output = new CodedOutputStream(stream, leaveOpen: true);
-                if (source is ReqUserLogout logoutRequest) WriteReqUserLogout(output, logoutRequest);
-                else if (source is ResUserLogout logoutResponse) WriteResUserLogout(output, logoutResponse);
-                else if (source is ReqGuestLogin value0)
+                if (source is ReqGuestLogin value0)
                 {
                     WriteReqGuestLogin(output, value0);
                 }
@@ -69,293 +67,333 @@ namespace Framework.Core.Serializer
                 {
                     WriteReqInvalidateAccountSession(output, value12);
                 }
-                else if (source is ReqGetCharacterInfo value13)
+                else if (source is ReqUserLogout value13)
                 {
-                    WriteReqGetCharacterInfo(output, value13);
+                    WriteReqUserLogout(output, value13);
                 }
-                else if (source is ResGetCharacterInfo value14)
+                else if (source is ResUserLogout value14)
                 {
-                    WriteResGetCharacterInfo(output, value14);
+                    WriteResUserLogout(output, value14);
                 }
-                else if (source is ReqCharacterStarUp value15)
+                else if (source is ReqGetCharacterInfo value15)
                 {
-                    WriteReqCharacterStarUp(output, value15);
+                    WriteReqGetCharacterInfo(output, value15);
                 }
-                else if (source is ResCharacterStarUp value16)
+                else if (source is ResGetCharacterInfo value16)
                 {
-                    WriteResCharacterStarUp(output, value16);
+                    WriteResGetCharacterInfo(output, value16);
                 }
-                else if (source is ReqStartSkill value17)
+                else if (source is ReqCharacterStarUp value17)
                 {
-                    WriteReqStartSkill(output, value17);
+                    WriteReqCharacterStarUp(output, value17);
                 }
-                else if (source is ResStartSkill value18)
+                else if (source is ResCharacterStarUp value18)
                 {
-                    WriteResStartSkill(output, value18);
+                    WriteResCharacterStarUp(output, value18);
                 }
-                else if (source is ReqStartBuff value19)
+                else if (source is ReqStartSkill value19)
                 {
-                    WriteReqStartBuff(output, value19);
+                    WriteReqStartSkill(output, value19);
                 }
-                else if (source is ResStartBuff value20)
+                else if (source is ResStartSkill value20)
                 {
-                    WriteResStartBuff(output, value20);
+                    WriteResStartSkill(output, value20);
                 }
-                else if (source is ResLostHp value21)
+                else if (source is ReqStartBuff value21)
                 {
-                    WriteResLostHp(output, value21);
+                    WriteReqStartBuff(output, value21);
                 }
-                else if (source is ReqGetPlayerFormations value22)
+                else if (source is ResStartBuff value22)
                 {
-                    WriteReqGetPlayerFormations(output, value22);
+                    WriteResStartBuff(output, value22);
                 }
-                else if (source is ResGetPlayerFormations value23)
+                else if (source is ResLostHp value23)
                 {
-                    WriteResGetPlayerFormations(output, value23);
+                    WriteResLostHp(output, value23);
                 }
-                else if (source is ReqSavePlayerFormation value24)
+                else if (source is ReqGetPlayerFormations value24)
                 {
-                    WriteReqSavePlayerFormation(output, value24);
+                    WriteReqGetPlayerFormations(output, value24);
                 }
-                else if (source is ResSavePlayerFormation value25)
+                else if (source is ResGetPlayerFormations value25)
                 {
-                    WriteResSavePlayerFormation(output, value25);
+                    WriteResGetPlayerFormations(output, value25);
                 }
-                else if (source is ReqGetGachaPoolInfo value26)
+                else if (source is ReqSavePlayerFormation value26)
                 {
-                    WriteReqGetGachaPoolInfo(output, value26);
+                    WriteReqSavePlayerFormation(output, value26);
                 }
-                else if (source is ResGetGachaPoolInfo value27)
+                else if (source is ResSavePlayerFormation value27)
                 {
-                    WriteResGetGachaPoolInfo(output, value27);
+                    WriteResSavePlayerFormation(output, value27);
                 }
-                else if (source is ReqGachaDraw value28)
+                else if (source is ReqGetGachaPoolInfo value28)
                 {
-                    WriteReqGachaDraw(output, value28);
+                    WriteReqGetGachaPoolInfo(output, value28);
                 }
-                else if (source is ResGachaDraw value29)
+                else if (source is ResGetGachaPoolInfo value29)
                 {
-                    WriteResGachaDraw(output, value29);
+                    WriteResGetGachaPoolInfo(output, value29);
                 }
-                else if (source is ReqHeartbeat value30)
+                else if (source is ReqGachaDraw value30)
                 {
-                    WriteReqHeartbeat(output, value30);
+                    WriteReqGachaDraw(output, value30);
                 }
-                else if (source is ResHeartbeat value31)
+                else if (source is ResGachaDraw value31)
                 {
-                    WriteResHeartbeat(output, value31);
+                    WriteResGachaDraw(output, value31);
                 }
-                else if (source is ReqGetPlayerItems value32)
+                else if (source is ReqHeartbeat value32)
                 {
-                    WriteReqGetPlayerItems(output, value32);
+                    WriteReqHeartbeat(output, value32);
                 }
-                else if (source is ResGetPlayerItems value33)
+                else if (source is ResHeartbeat value33)
                 {
-                    WriteResGetPlayerItems(output, value33);
+                    WriteResHeartbeat(output, value33);
                 }
-                else if (source is ReqEnterLogicServer value34)
+                else if (source is ReqGetPlayerItems value34)
                 {
-                    WriteReqEnterLogicServer(output, value34);
+                    WriteReqGetPlayerItems(output, value34);
                 }
-                else if (source is ReqExchangeProduct value35)
+                else if (source is ResGetPlayerItems value35)
                 {
-                    WriteReqExchangeProduct(output, value35);
+                    WriteResGetPlayerItems(output, value35);
                 }
-                else if (source is ReqPullingBonuesList value36)
+                else if (source is ReqGetPlayerBasicInfo value36)
                 {
-                    WriteReqPullingBonuesList(output, value36);
+                    WriteReqGetPlayerBasicInfo(output, value36);
                 }
-                else if (source is ReqPullingMailMsg value37)
+                else if (source is ResGetPlayerBasicInfo value37)
                 {
-                    WriteReqPullingMailMsg(output, value37);
+                    WriteResGetPlayerBasicInfo(output, value37);
                 }
-                else if (source is ReqPullingPackData value38)
+                else if (source is ResUpdatePlayerBasicInfo value38)
                 {
-                    WriteReqPullingPackData(output, value38);
+                    WriteResUpdatePlayerBasicInfo(output, value38);
                 }
-                else if (source is ReqPullingPlayerData value39)
+                else if (source is ReqEnterLogicServer value39)
                 {
-                    WriteReqPullingPlayerData(output, value39);
+                    WriteReqEnterLogicServer(output, value39);
                 }
-                else if (source is ReqPullingRank value40)
+                else if (source is ReqExchangeProduct value40)
                 {
-                    WriteReqPullingRank(output, value40);
+                    WriteReqExchangeProduct(output, value40);
                 }
-                else if (source is ReqPullingTaskList value41)
+                else if (source is ReqPullingBonuesList value41)
                 {
-                    WriteReqPullingTaskList(output, value41);
+                    WriteReqPullingBonuesList(output, value41);
                 }
-                else if (source is ReqRecvBonues value42)
+                else if (source is ReqPullingMailMsg value42)
                 {
-                    WriteReqRecvBonues(output, value42);
+                    WriteReqPullingMailMsg(output, value42);
                 }
-                else if (source is ReqRecvLoginBonues value43)
+                else if (source is ReqPullingPackData value43)
                 {
-                    WriteReqRecvLoginBonues(output, value43);
+                    WriteReqPullingPackData(output, value43);
                 }
-                else if (source is ReqSelectPlayer value44)
+                else if (source is ReqPullingPlayerData value44)
                 {
-                    WriteReqSelectPlayer(output, value44);
+                    WriteReqPullingPlayerData(output, value44);
                 }
-                else if (source is ReqUpdateMailMsg value45)
+                else if (source is ReqPullingRank value45)
                 {
-                    WriteReqUpdateMailMsg(output, value45);
+                    WriteReqPullingRank(output, value45);
                 }
-                else if (source is ResEnterLogicServer value46)
+                else if (source is ReqPullingTaskList value46)
                 {
-                    WriteResEnterLogicServer(output, value46);
+                    WriteReqPullingTaskList(output, value46);
                 }
-                else if (source is ResExchangeProduct value47)
+                else if (source is ReqRecvBonues value47)
                 {
-                    WriteResExchangeProduct(output, value47);
+                    WriteReqRecvBonues(output, value47);
                 }
-                else if (source is ResPullingPlayerData value48)
+                else if (source is ReqRecvLoginBonues value48)
                 {
-                    WriteResPullingPlayerData(output, value48);
+                    WriteReqRecvLoginBonues(output, value48);
                 }
-                else if (source is ResRecvBonues value49)
+                else if (source is ReqSelectPlayer value49)
                 {
-                    WriteResRecvBonues(output, value49);
+                    WriteReqSelectPlayer(output, value49);
                 }
-                else if (source is ResRecvLoginBonues value50)
+                else if (source is ReqUpdateMailMsg value50)
                 {
-                    WriteResRecvLoginBonues(output, value50);
+                    WriteReqUpdateMailMsg(output, value50);
                 }
-                else if (source is ResSelectPlayer value51)
+                else if (source is ResEnterLogicServer value51)
                 {
-                    WriteResSelectPlayer(output, value51);
+                    WriteResEnterLogicServer(output, value51);
                 }
-                else if (source is ResUpdateMailMsg value52)
+                else if (source is ResExchangeProduct value52)
                 {
-                    WriteResUpdateMailMsg(output, value52);
+                    WriteResExchangeProduct(output, value52);
                 }
-                else if (source is ReqSitdown value53)
+                else if (source is ResPullingPlayerData value53)
                 {
-                    WriteReqSitdown(output, value53);
+                    WriteResPullingPlayerData(output, value53);
                 }
-                else if (source is ResSitdown value54)
+                else if (source is ResRecvBonues value54)
                 {
-                    WriteResSitdown(output, value54);
+                    WriteResRecvBonues(output, value54);
                 }
-                else if (source is ReqStandup value55)
+                else if (source is ResRecvLoginBonues value55)
                 {
-                    WriteReqStandup(output, value55);
+                    WriteResRecvLoginBonues(output, value55);
                 }
-                else if (source is ResStandup value56)
+                else if (source is ResSelectPlayer value56)
                 {
-                    WriteResStandup(output, value56);
+                    WriteResSelectPlayer(output, value56);
                 }
-                else if (source is ReqTalkMsg value57)
+                else if (source is ResUpdateMailMsg value57)
                 {
-                    WriteReqTalkMsg(output, value57);
+                    WriteResUpdateMailMsg(output, value57);
                 }
-                else if (source is ResTalkMsg value58)
+                else if (source is ReqRedDotInit value58)
                 {
-                    WriteResTalkMsg(output, value58);
+                    WriteReqRedDotInit(output, value58);
                 }
-                else if (source is ReqPlayerIsReady value59)
+                else if (source is ResRedDotInit value59)
                 {
-                    WriteReqPlayerIsReady(output, value59);
+                    WriteResRedDotInit(output, value59);
                 }
-                else if (source is ResPlayerIsReady value60)
+                else if (source is ReqRedDotView value60)
                 {
-                    WriteResPlayerIsReady(output, value60);
+                    WriteReqRedDotView(output, value60);
                 }
-                else if (source is ResEnterRoom value61)
+                else if (source is ResRedDotView value61)
                 {
-                    WriteResEnterRoom(output, value61);
+                    WriteResRedDotView(output, value61);
                 }
-                else if (source is ResUserArrivedSeat value62)
+                else if (source is NotifyRedDotChanged value62)
                 {
-                    WriteResUserArrivedSeat(output, value62);
+                    WriteNotifyRedDotChanged(output, value62);
                 }
-                else if (source is ResUserExitSeat value63)
+                else if (source is ReqSitdown value63)
                 {
-                    WriteResUserExitSeat(output, value63);
+                    WriteReqSitdown(output, value63);
                 }
-                else if (source is ResRoundReady value64)
+                else if (source is ResSitdown value64)
                 {
-                    WriteResRoundReady(output, value64);
+                    WriteResSitdown(output, value64);
                 }
-                else if (source is ResRoundStarted value65)
+                else if (source is ReqStandup value65)
                 {
-                    WriteResRoundStarted(output, value65);
+                    WriteReqStandup(output, value65);
                 }
-                else if (source is ResRoundCheckOut value66)
+                else if (source is ResStandup value66)
                 {
-                    WriteResRoundCheckOut(output, value66);
+                    WriteResStandup(output, value66);
                 }
-                else if (source is ResRoundClear value67)
+                else if (source is ReqTalkMsg value67)
                 {
-                    WriteResRoundClear(output, value67);
+                    WriteReqTalkMsg(output, value67);
                 }
-                else if (source is ResPlayerEscape value68)
+                else if (source is ResTalkMsg value68)
                 {
-                    WriteResPlayerEscape(output, value68);
+                    WriteResTalkMsg(output, value68);
                 }
-                else if (source is ReqPlayerOpt value69)
+                else if (source is ReqPlayerIsReady value69)
                 {
-                    WriteReqPlayerOpt(output, value69);
+                    WriteReqPlayerIsReady(output, value69);
                 }
-                else if (source is ResPlayerOpt value70)
+                else if (source is ResPlayerIsReady value70)
                 {
-                    WriteResPlayerOpt(output, value70);
+                    WriteResPlayerIsReady(output, value70);
                 }
-                else if (source is ReqExitLogicServer value71)
+                else if (source is ResEnterRoom value71)
                 {
-                    WriteReqExitLogicServer(output, value71);
+                    WriteResEnterRoom(output, value71);
                 }
-                else if (source is ResExitLogicServer value72)
+                else if (source is ResUserArrivedSeat value72)
                 {
-                    WriteResExitLogicServer(output, value72);
+                    WriteResUserArrivedSeat(output, value72);
                 }
-                else if (source is ReqTestGetGoods value73)
+                else if (source is ResUserExitSeat value73)
                 {
-                    WriteReqTestGetGoods(output, value73);
+                    WriteResUserExitSeat(output, value73);
                 }
-                else if (source is ReqTestUpdateGooods value74)
+                else if (source is ResRoundReady value74)
                 {
-                    WriteReqTestUpdateGooods(output, value74);
+                    WriteResRoundReady(output, value74);
                 }
-                else if (source is ReqTestLogicCmdEcho value75)
+                else if (source is ResRoundStarted value75)
                 {
-                    WriteReqTestLogicCmdEcho(output, value75);
+                    WriteResRoundStarted(output, value75);
                 }
-                else if (source is ResTestGetGoods value76)
+                else if (source is ResRoundCheckOut value76)
                 {
-                    WriteResTestGetGoods(output, value76);
+                    WriteResRoundCheckOut(output, value76);
                 }
-                else if (source is ResTestUpdateGoods value77)
+                else if (source is ResRoundClear value77)
                 {
-                    WriteResTestUpdateGoods(output, value77);
+                    WriteResRoundClear(output, value77);
                 }
-                else if (source is ResTestLogicCmdEcho value78)
+                else if (source is ResPlayerEscape value78)
                 {
-                    WriteResTestLogicCmdEcho(output, value78);
+                    WriteResPlayerEscape(output, value78);
                 }
-                else if (source is ReqPlayerSpawn value79)
+                else if (source is ReqPlayerOpt value79)
                 {
-                    WriteReqPlayerSpawn(output, value79);
+                    WriteReqPlayerOpt(output, value79);
                 }
-                else if (source is ResPlayerSpawn value80)
+                else if (source is ResPlayerOpt value80)
                 {
-                    WriteResPlayerSpawn(output, value80);
+                    WriteResPlayerOpt(output, value80);
                 }
-                else if (source is ReqNavToDst value81)
+                else if (source is ReqExitLogicServer value81)
                 {
-                    WriteReqNavToDst(output, value81);
+                    WriteReqExitLogicServer(output, value81);
                 }
-                else if (source is ResNavToDst value82)
+                else if (source is ResExitLogicServer value82)
                 {
-                    WriteResNavToDst(output, value82);
+                    WriteResExitLogicServer(output, value82);
                 }
-                else if (source is ReqNavInDir value83)
+                else if (source is ReqTestGetGoods value83)
                 {
-                    WriteReqNavInDir(output, value83);
+                    WriteReqTestGetGoods(output, value83);
                 }
-                else if (source is ResNavInDir value84)
+                else if (source is ReqTestUpdateGooods value84)
                 {
-                    WriteResNavInDir(output, value84);
+                    WriteReqTestUpdateGooods(output, value84);
+                }
+                else if (source is ReqTestLogicCmdEcho value85)
+                {
+                    WriteReqTestLogicCmdEcho(output, value85);
+                }
+                else if (source is ResTestGetGoods value86)
+                {
+                    WriteResTestGetGoods(output, value86);
+                }
+                else if (source is ResTestUpdateGoods value87)
+                {
+                    WriteResTestUpdateGoods(output, value87);
+                }
+                else if (source is ResTestLogicCmdEcho value88)
+                {
+                    WriteResTestLogicCmdEcho(output, value88);
+                }
+                else if (source is ReqPlayerSpawn value89)
+                {
+                    WriteReqPlayerSpawn(output, value89);
+                }
+                else if (source is ResPlayerSpawn value90)
+                {
+                    WriteResPlayerSpawn(output, value90);
+                }
+                else if (source is ReqNavToDst value91)
+                {
+                    WriteReqNavToDst(output, value91);
+                }
+                else if (source is ResNavToDst value92)
+                {
+                    WriteResNavToDst(output, value92);
+                }
+                else if (source is ReqNavInDir value93)
+                {
+                    WriteReqNavInDir(output, value93);
+                }
+                else if (source is ResNavInDir value94)
+                {
+                    WriteResNavInDir(output, value94);
                 }
                 else return false;
                 output.Flush();
@@ -375,9 +413,7 @@ namespace Framework.Core.Serializer
             try
             {
                 var input = new CodedInputStream(stream, leaveOpen: true);
-                if (messageType == typeof(ReqUserLogout)) message = ReadReqUserLogout(input);
-                else if (messageType == typeof(ResUserLogout)) message = ReadResUserLogout(input);
-                else if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
+                if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
                 else if (messageType == typeof(ReqGuestUpgrade)) message = ReadReqGuestUpgrade(input);
                 else if (messageType == typeof(ReqRegisterUser)) message = ReadReqRegisterUser(input);
                 else if (messageType == typeof(ResGuestLogin)) message = ReadResGuestLogin(input);
@@ -390,6 +426,8 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ReqGameAuthenticate)) message = ReadReqGameAuthenticate(input);
                 else if (messageType == typeof(ResGameAuthenticate)) message = ReadResGameAuthenticate(input);
                 else if (messageType == typeof(ReqInvalidateAccountSession)) message = ReadReqInvalidateAccountSession(input);
+                else if (messageType == typeof(ReqUserLogout)) message = ReadReqUserLogout(input);
+                else if (messageType == typeof(ResUserLogout)) message = ReadResUserLogout(input);
                 else if (messageType == typeof(ReqGetCharacterInfo)) message = ReadReqGetCharacterInfo(input);
                 else if (messageType == typeof(ResGetCharacterInfo)) message = ReadResGetCharacterInfo(input);
                 else if (messageType == typeof(ReqCharacterStarUp)) message = ReadReqCharacterStarUp(input);
@@ -411,6 +449,9 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ResHeartbeat)) message = ReadResHeartbeat(input);
                 else if (messageType == typeof(ReqGetPlayerItems)) message = ReadReqGetPlayerItems(input);
                 else if (messageType == typeof(ResGetPlayerItems)) message = ReadResGetPlayerItems(input);
+                else if (messageType == typeof(ReqGetPlayerBasicInfo)) message = ReadReqGetPlayerBasicInfo(input);
+                else if (messageType == typeof(ResGetPlayerBasicInfo)) message = ReadResGetPlayerBasicInfo(input);
+                else if (messageType == typeof(ResUpdatePlayerBasicInfo)) message = ReadResUpdatePlayerBasicInfo(input);
                 else if (messageType == typeof(ReqEnterLogicServer)) message = ReadReqEnterLogicServer(input);
                 else if (messageType == typeof(ReqExchangeProduct)) message = ReadReqExchangeProduct(input);
                 else if (messageType == typeof(ReqPullingBonuesList)) message = ReadReqPullingBonuesList(input);
@@ -430,6 +471,11 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ResRecvLoginBonues)) message = ReadResRecvLoginBonues(input);
                 else if (messageType == typeof(ResSelectPlayer)) message = ReadResSelectPlayer(input);
                 else if (messageType == typeof(ResUpdateMailMsg)) message = ReadResUpdateMailMsg(input);
+                else if (messageType == typeof(ReqRedDotInit)) message = ReadReqRedDotInit(input);
+                else if (messageType == typeof(ResRedDotInit)) message = ReadResRedDotInit(input);
+                else if (messageType == typeof(ReqRedDotView)) message = ReadReqRedDotView(input);
+                else if (messageType == typeof(ResRedDotView)) message = ReadResRedDotView(input);
+                else if (messageType == typeof(NotifyRedDotChanged)) message = ReadNotifyRedDotChanged(input);
                 else if (messageType == typeof(ReqSitdown)) message = ReadReqSitdown(input);
                 else if (messageType == typeof(ResSitdown)) message = ReadResSitdown(input);
                 else if (messageType == typeof(ReqStandup)) message = ReadReqStandup(input);
@@ -1295,6 +1341,86 @@ namespace Framework.Core.Serializer
                 size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeStringSize(message.nonce);
             if (message.signature != null)
                 size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeStringSize(message.signature);
+            return size;
+        }
+
+        private static void WriteReqUserLogout(CodedOutputStream output, ReqUserLogout message)
+        {
+            if (message.accessToken != null)
+            {
+                output.WriteTag(1, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.accessToken);
+            }
+        }
+
+        private static ReqUserLogout ReadReqUserLogout(CodedInputStream input)
+        {
+            var message = new ReqUserLogout();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.accessToken = input.ReadString();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqUserLogout(ReqUserLogout message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            if (message.accessToken != null)
+                size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeStringSize(message.accessToken);
+            return size;
+        }
+
+        private static void WriteResUserLogout(CodedOutputStream output, ResUserLogout message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+        }
+
+        private static ResUserLogout ReadResUserLogout(CodedInputStream input)
+        {
+            var message = new ResUserLogout();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResUserLogout(ResUserLogout message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
             return size;
         }
 
@@ -2803,6 +2929,283 @@ namespace Framework.Core.Serializer
             return size;
         }
 
+        private static void WriteReqGetPlayerBasicInfo(CodedOutputStream output, ReqGetPlayerBasicInfo message)
+        {
+        }
+
+        private static ReqGetPlayerBasicInfo ReadReqGetPlayerBasicInfo(CodedInputStream input)
+        {
+            var message = new ReqGetPlayerBasicInfo();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqGetPlayerBasicInfo(ReqGetPlayerBasicInfo message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            return size;
+        }
+
+        private static void WriteResGetPlayerBasicInfo(CodedOutputStream output, ResGetPlayerBasicInfo message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.playerId);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt32(message.avatarId);
+            if (message.name != null)
+            {
+                output.WriteTag(5, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.name);
+            }
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt64(message.guildId);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt64(message.createTime);
+            output.WriteTag(8, WireFormat.WireType.Varint);
+            output.WriteInt32(message.titleId);
+            if (message.signature != null)
+            {
+                output.WriteTag(9, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.signature);
+            }
+            output.WriteTag(10, WireFormat.WireType.Varint);
+            output.WriteInt32(message.avatarFrameId);
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt32(message.backgroundId);
+            if (message.displayAchievementIds != null)
+            {
+                output.WriteTag(12, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.displayAchievementIds);
+            }
+            if (message.displayCharacterIds != null)
+            {
+                output.WriteTag(13, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.displayCharacterIds);
+            }
+        }
+
+        private static ResGetPlayerBasicInfo ReadResGetPlayerBasicInfo(CodedInputStream input)
+        {
+            var message = new ResGetPlayerBasicInfo();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.playerId = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.avatarId = input.ReadInt32();
+                        break;
+                    case 5:
+                        message.name = input.ReadString();
+                        break;
+                    case 6:
+                        message.guildId = input.ReadInt64();
+                        break;
+                    case 7:
+                        message.createTime = input.ReadInt64();
+                        break;
+                    case 8:
+                        message.titleId = input.ReadInt32();
+                        break;
+                    case 9:
+                        message.signature = input.ReadString();
+                        break;
+                    case 10:
+                        message.avatarFrameId = input.ReadInt32();
+                        break;
+                    case 11:
+                        message.backgroundId = input.ReadInt32();
+                        break;
+                    case 12:
+                        message.displayAchievementIds = input.ReadString();
+                        break;
+                    case 13:
+                        message.displayCharacterIds = input.ReadString();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResGetPlayerBasicInfo(ResGetPlayerBasicInfo message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.playerId);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.avatarId);
+            if (message.name != null)
+                size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeStringSize(message.name);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.guildId);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt64Size(message.createTime);
+            size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeInt32Size(message.titleId);
+            if (message.signature != null)
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeStringSize(message.signature);
+            size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeInt32Size(message.avatarFrameId);
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt32Size(message.backgroundId);
+            if (message.displayAchievementIds != null)
+                size += CodedOutputStream.ComputeTagSize(12) + CodedOutputStream.ComputeStringSize(message.displayAchievementIds);
+            if (message.displayCharacterIds != null)
+                size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeStringSize(message.displayCharacterIds);
+            return size;
+        }
+
+        private static void WriteResUpdatePlayerBasicInfo(CodedOutputStream output, ResUpdatePlayerBasicInfo message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.playerId);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt32(message.avatarId);
+            if (message.name != null)
+            {
+                output.WriteTag(5, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.name);
+            }
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt64(message.guildId);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt64(message.createTime);
+            output.WriteTag(8, WireFormat.WireType.Varint);
+            output.WriteInt32(message.titleId);
+            if (message.signature != null)
+            {
+                output.WriteTag(9, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.signature);
+            }
+            output.WriteTag(10, WireFormat.WireType.Varint);
+            output.WriteInt32(message.avatarFrameId);
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt32(message.backgroundId);
+            if (message.displayAchievementIds != null)
+            {
+                output.WriteTag(12, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.displayAchievementIds);
+            }
+            if (message.displayCharacterIds != null)
+            {
+                output.WriteTag(13, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.displayCharacterIds);
+            }
+        }
+
+        private static ResUpdatePlayerBasicInfo ReadResUpdatePlayerBasicInfo(CodedInputStream input)
+        {
+            var message = new ResUpdatePlayerBasicInfo();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.playerId = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.avatarId = input.ReadInt32();
+                        break;
+                    case 5:
+                        message.name = input.ReadString();
+                        break;
+                    case 6:
+                        message.guildId = input.ReadInt64();
+                        break;
+                    case 7:
+                        message.createTime = input.ReadInt64();
+                        break;
+                    case 8:
+                        message.titleId = input.ReadInt32();
+                        break;
+                    case 9:
+                        message.signature = input.ReadString();
+                        break;
+                    case 10:
+                        message.avatarFrameId = input.ReadInt32();
+                        break;
+                    case 11:
+                        message.backgroundId = input.ReadInt32();
+                        break;
+                    case 12:
+                        message.displayAchievementIds = input.ReadString();
+                        break;
+                    case 13:
+                        message.displayCharacterIds = input.ReadString();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResUpdatePlayerBasicInfo(ResUpdatePlayerBasicInfo message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.playerId);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.avatarId);
+            if (message.name != null)
+                size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeStringSize(message.name);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.guildId);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt64Size(message.createTime);
+            size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeInt32Size(message.titleId);
+            if (message.signature != null)
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeStringSize(message.signature);
+            size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeInt32Size(message.avatarFrameId);
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt32Size(message.backgroundId);
+            if (message.displayAchievementIds != null)
+                size += CodedOutputStream.ComputeTagSize(12) + CodedOutputStream.ComputeStringSize(message.displayAchievementIds);
+            if (message.displayCharacterIds != null)
+                size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeStringSize(message.displayCharacterIds);
+            return size;
+        }
+
         private static void WriteReqEnterLogicServer(CodedOutputStream output, ReqEnterLogicServer message)
         {
             output.WriteTag(1, WireFormat.WireType.Varint);
@@ -3777,6 +4180,391 @@ namespace Framework.Core.Serializer
             if (message == null) return 0;
             int size = 0;
             size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            return size;
+        }
+
+        private static void WriteRedDotNodeMessage(CodedOutputStream output, RedDotNodeMessage message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.id);
+            if (message.name != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.name);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt32(message.parentId);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt32(message.clearType);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteBool(message.enabled);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt64(message.tipVersion);
+        }
+
+        private static RedDotNodeMessage ReadRedDotNodeMessage(CodedInputStream input)
+        {
+            var message = new RedDotNodeMessage();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.id = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.name = input.ReadString();
+                        break;
+                    case 3:
+                        message.parentId = input.ReadInt32();
+                        break;
+                    case 4:
+                        message.clearType = input.ReadInt32();
+                        break;
+                    case 5:
+                        message.enabled = input.ReadBool();
+                        break;
+                    case 6:
+                        message.tipVersion = input.ReadInt64();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeRedDotNodeMessage(RedDotNodeMessage message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.id);
+            if (message.name != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.name);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt32Size(message.parentId);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.clearType);
+            size += CodedOutputStream.ComputeTagSize(5) + 1;
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.tipVersion);
+            return size;
+        }
+
+        private static void WriteRedDotStateMessage(CodedOutputStream output, RedDotStateMessage message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nodeId);
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteBool(message.isActive);
+        }
+
+        private static RedDotStateMessage ReadRedDotStateMessage(CodedInputStream input)
+        {
+            var message = new RedDotStateMessage();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.nodeId = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.isActive = input.ReadBool();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeRedDotStateMessage(RedDotStateMessage message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.nodeId);
+            size += CodedOutputStream.ComputeTagSize(2) + 1;
+            return size;
+        }
+
+        private static void WriteReqRedDotInit(CodedOutputStream output, ReqRedDotInit message)
+        {
+        }
+
+        private static ReqRedDotInit ReadReqRedDotInit(CodedInputStream input)
+        {
+            var message = new ReqRedDotInit();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqRedDotInit(ReqRedDotInit message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            return size;
+        }
+
+        private static void WriteResRedDotInit(CodedOutputStream output, ResRedDotInit message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.configVersion != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.configVersion);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.stateVersion);
+            if (message.nodes != null)
+            {
+                for (int index = 0; index < message.nodes.Count; index++)
+                {
+                    WriteMessage(output, 4, message.nodes[index], WriteRedDotNodeMessage, ComputeSizeRedDotNodeMessage);
+                }
+            }
+            if (message.states != null)
+            {
+                for (int index = 0; index < message.states.Count; index++)
+                {
+                    WriteMessage(output, 5, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
+                }
+            }
+        }
+
+        private static ResRedDotInit ReadResRedDotInit(CodedInputStream input)
+        {
+            var message = new ResRedDotInit();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.configVersion = input.ReadString();
+                        break;
+                    case 3:
+                        message.stateVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.nodes.Add(ReadMessage(input, ReadRedDotNodeMessage));
+                        break;
+                    case 5:
+                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResRedDotInit(ResRedDotInit message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.configVersion != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.configVersion);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
+            if (message.nodes != null)
+            {
+                for (int index = 0; index < message.nodes.Count; index++)
+                {
+                    int childSize = ComputeSizeRedDotNodeMessage(message.nodes[index]);
+                    size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.states != null)
+            {
+                for (int index = 0; index < message.states.Count; index++)
+                {
+                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
+                    size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            return size;
+        }
+
+        private static void WriteReqRedDotView(CodedOutputStream output, ReqRedDotView message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nodeId);
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteInt64(message.tipVersion);
+        }
+
+        private static ReqRedDotView ReadReqRedDotView(CodedInputStream input)
+        {
+            var message = new ReqRedDotView();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.nodeId = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.tipVersion = input.ReadInt64();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqRedDotView(ReqRedDotView message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.nodeId);
+            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.tipVersion);
+            return size;
+        }
+
+        private static void WriteResRedDotView(CodedOutputStream output, ResRedDotView message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.configVersion != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.configVersion);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.stateVersion);
+            if (message.states != null)
+            {
+                for (int index = 0; index < message.states.Count; index++)
+                {
+                    WriteMessage(output, 4, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
+                }
+            }
+        }
+
+        private static ResRedDotView ReadResRedDotView(CodedInputStream input)
+        {
+            var message = new ResRedDotView();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.configVersion = input.ReadString();
+                        break;
+                    case 3:
+                        message.stateVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResRedDotView(ResRedDotView message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.configVersion != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.configVersion);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
+            if (message.states != null)
+            {
+                for (int index = 0; index < message.states.Count; index++)
+                {
+                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
+                    size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            return size;
+        }
+
+        private static void WriteNotifyRedDotChanged(CodedOutputStream output, NotifyRedDotChanged message)
+        {
+            if (message.configVersion != null)
+            {
+                output.WriteTag(1, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.configVersion);
+            }
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteInt64(message.stateVersion);
+            if (message.states != null)
+            {
+                for (int index = 0; index < message.states.Count; index++)
+                {
+                    WriteMessage(output, 3, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
+                }
+            }
+        }
+
+        private static NotifyRedDotChanged ReadNotifyRedDotChanged(CodedInputStream input)
+        {
+            var message = new NotifyRedDotChanged();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.configVersion = input.ReadString();
+                        break;
+                    case 2:
+                        message.stateVersion = input.ReadInt64();
+                        break;
+                    case 3:
+                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeNotifyRedDotChanged(NotifyRedDotChanged message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            if (message.configVersion != null)
+                size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeStringSize(message.configVersion);
+            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
+            if (message.states != null)
+            {
+                for (int index = 0; index < message.states.Count; index++)
+                {
+                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
+                    size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
             return size;
         }
 
@@ -5201,87 +5989,5 @@ namespace Framework.Core.Serializer
             T value = reader(nestedInput);
             return value;
         }
-        private static void WriteReqUserLogout(CodedOutputStream output, ReqUserLogout message)
-        {
-            if (message.accessToken != null)
-            {
-                output.WriteTag(1, WireFormat.WireType.LengthDelimited);
-                output.WriteString(message.accessToken);
-            }
-        }
-
-        private static ReqUserLogout ReadReqUserLogout(CodedInputStream input)
-        {
-            var message = new ReqUserLogout();
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (WireFormat.GetTagFieldNumber(tag))
-                {
-                    case 1:
-                        message.accessToken = input.ReadString();
-                        break;
-                    default:
-                        input.SkipLastField();
-                        break;
-                }
-            }
-            return message;
-        }
-
-        private static int ComputeSizeReqUserLogout(ReqUserLogout message)
-        {
-            if (message == null) return 0;
-            int size = 0;
-            if (message.accessToken != null)
-                size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeStringSize(message.accessToken);
-            return size;
-        }
-
-
-        private static void WriteResUserLogout(CodedOutputStream output, ResUserLogout message)
-        {
-            output.WriteTag(1, WireFormat.WireType.Varint);
-            output.WriteInt32(message.status);
-            if (message.errorMessage != null)
-            {
-                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
-                output.WriteString(message.errorMessage);
-            }
-        }
-
-        private static ResUserLogout ReadResUserLogout(CodedInputStream input)
-        {
-            var message = new ResUserLogout();
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (WireFormat.GetTagFieldNumber(tag))
-                {
-                    case 1:
-                        message.status = input.ReadInt32();
-                        break;
-                    case 2:
-                        message.errorMessage = input.ReadString();
-                        break;
-                    default:
-                        input.SkipLastField();
-                        break;
-                }
-            }
-            return message;
-        }
-
-        private static int ComputeSizeResUserLogout(ResUserLogout message)
-        {
-            if (message == null) return 0;
-            int size = 0;
-            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
-            if (message.errorMessage != null)
-                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
-            return size;
-        }
-
-
     }
 }

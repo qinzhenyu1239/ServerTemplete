@@ -53,7 +53,10 @@ namespace Framework.Core.task {
             }
             catch (Exception e)
             {
-                logger.Warn("message task execute failed" + e.Message);
+                logger.Error(e,
+                    $"message task execute failed: handler={method?.DeclaringType?.FullName}.{method?.Name}, " +
+                    $"accountId={session?.accountId ?? 0}, playerId={session?.playerId ?? 0}, " +
+                    $"requestId={requestId}, routeTag={routeTag}{Environment.NewLine}{e}");
             }
         }
     }
@@ -98,7 +101,9 @@ namespace Framework.Core.task {
             }
             catch (Exception e)
             {
-                logger.Warn("message task execute failed" + e.Message);
+                logger.Error(e,
+                    $"HTTP message task execute failed: handler={method?.DeclaringType?.FullName}.{method?.Name}" +
+                    $"{Environment.NewLine}{e}");
             }
         }
     }

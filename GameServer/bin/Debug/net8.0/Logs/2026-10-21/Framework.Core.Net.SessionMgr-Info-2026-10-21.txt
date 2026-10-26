@@ -1,0 +1,4 @@
+[2026-10-21 16:44:31.1079] Closing idle TCP session: account[281873601642168321] player[90720276391665664] idleSeconds[63.8] 
+[2026-10-21 16:46:26.0960] Closing idle TCP session: account[106311720066093056] player[106311785413353472] idleSeconds[61.2] 
+[2026-10-21 16:52:21.0851] Closing idle TCP session: account[106311720066093056] player[106311785413353472] idleSeconds[62.6] 
+[2026-10-21 17:57:35.8650] Closing idle TCP session: account[281873657426214931] player[96230230309478400] idleSeconds[61.0] 

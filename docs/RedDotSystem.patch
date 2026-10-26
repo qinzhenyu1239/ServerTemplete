@@ -1,0 +1,3479 @@
+diff --git a/server/Excels/RedDotConfig.xlsx b/server/Excels/RedDotConfig.xlsx
+Binary file added: 7411 bytes; node configuration workbook.
+--- /dev/null
++++ b/server/GameServerTests/RedDot/RedDotMySqlTests.cs
+@@ -0,0 +1,157 @@
++using DotNetty.Transport.Channels.Embedded;
++using Framework.Core.Concurrency;
++using Framework.Core.Net;
++using Game.Core.Db;
++using Game.Core.EntityMgr;
++using Game.Core.GM_RedDot;
++using Game.Datas.Excels;
++using Game.Datas.GMEntities;
++using Game.Datas.Messages;
++using Game.Entries.Modules;
++using GameServerTests.Gacha;
++using MySqlConnector;
++using System.Reflection;
++
++namespace GameServerTests.RedDot;
++
++public sealed class RedDotMySqlTests
++{
++    [DatabaseFact]
++    [Trait("Category", "Database")]
++    public async Task IsolatedDatabase_GenericBusinessRollbackViewedPersistenceAndMigration()
++    {
++        string database = "codex_reddot_" + Guid.NewGuid().ToString("N");
++        var builder = new MySqlConnectionStringBuilder(GachaMySqlTestEnvironment.ReadConnectionString()) { Database = "" };
++        await using var admin = new MySqlConnection(builder.ConnectionString);
++        await admin.OpenAsync();
++        await Execute(admin, $"CREATE DATABASE `{database}` CHARACTER SET utf8mb4");
++        builder.Database = database;
++        var channel = new EmbeddedChannel();
++        const long playerId = 910001;
++        var connectionField = typeof(DBService).GetField("connGameDataStr", BindingFlags.Instance | BindingFlags.NonPublic);
++        object previousConnection = connectionField.GetValue(DBService.Instance);
++        try
++        {
++            await using var db = new MySqlConnection(builder.ConnectionString);
++            await db.OpenAsync();
++            await Execute(db, "CREATE TABLE player(id BIGINT PRIMARY KEY);" +
++                "CREATE TABLE testcondition(playerId BIGINT PRIMARY KEY,active TINYINT NOT NULL);");
++            var current = new DirectoryInfo(AppContext.BaseDirectory);
++            while (current != null && !File.Exists(Path.Combine(current.FullName, "sql/ugame_10001.sql"))) current = current.Parent;
++            string migration = await File.ReadAllTextAsync(Path.Combine(current.FullName, "sql/migrations/20261023_001_reddot.sql"));
++            await Execute(db, migration); await Execute(db, migration);
++            // The generic migration must not require a mail table.
++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='mailmessage'"));
++            await Execute(db, $"INSERT INTO player(id) VALUES({playerId}); INSERT INTO testcondition VALUES({playerId},0)");
++            GachaMySqlTestEnvironment.InitializeServerServices(builder.ConnectionString);
++            var entity = GachaMySqlTestEnvironment.AddOnlinePlayer(playerId, new Dictionary<int, long>());
++            var session = new IdSession { playerId = playerId, accountId = playerId, client = channel };
++            entity.uPlayer.s = session;
++            var catalog = new RedDotCatalog(new[]
++            {
++                new RedDotConfig { id = 9000, name = "测试业务", enabled = true },
++                new RedDotConfig { id = 9001, name = "测试条件", parentId = 9000, clearType = 1, enabled = true },
++                new RedDotConfig { id = 3000, name = "测试查看", enabled = true },
++                new RedDotConfig { id = 3001, name = "提示", parentId = 3000, clearType = 2, enabled = true, tipVersion = 5 }
++            });
++            Configure(catalog);
++            int evaluations = 0;
++            GM_RedDotMgr.Instance.RegisterBusiness(9001, (transaction, id) =>
++            {
++                evaluations++;
++                return transaction.Ado.SqlQuery<int>("SELECT active FROM testcondition WHERE playerId=@pid", new { pid = id }).Single() == 1;
++            });
++            var initial = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
++            Assert.Equal(1, initial.status);
++            Assert.False(initial.states.Single(s => s.nodeId == 9001).isActive);
++            Assert.False(initial.states.Single(s => s.nodeId == 3001).isActive);
++            Assert.Equal(0, evaluations);
++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM playerreddot"));
++            // Even when the DB rejects writes, initialization may load and return existing records unchanged.
++            await Execute(db, $"INSERT INTO playerreddot VALUES({playerId},3001,0,3,123)");
++            await Execute(db, "CREATE TRIGGER reject_init_insert BEFORE INSERT ON playerreddot FOR EACH ROW " +
++                "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='initialization must not insert'");
++            await Execute(db, "CREATE TRIGGER reject_init_update BEFORE UPDATE ON playerreddot FOR EACH ROW " +
++                "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='initialization must not update'");
++            RedDotComponent.Reset(entity);
++            var readOnly = RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId);
++            Assert.Equal(1, readOnly.status);
++            Assert.False(readOnly.states.Single(s => s.nodeId == 3001).isActive);
++            Assert.Equal(3, await Scalar(db, "SELECT seenVersion FROM playerreddot WHERE nodeId=3001"));
++            Assert.Equal(123, await Scalar(db, "SELECT updateTime FROM playerreddot WHERE nodeId=3001"));
++            Assert.Equal(0, evaluations);
++            Assert.Equal(1, await Scalar(db, "SELECT COUNT(*) FROM playerreddot"));
++            await Execute(db, "DROP TRIGGER reject_init_insert; DROP TRIGGER reject_init_update");
++            Assert.Equal(0, await Scalar(db, "SELECT COUNT(*) FROM playerreddot WHERE nodeId IN(9000,3000)"));
++            SetBusiness(playerId, true);
++            Assert.Equal(1, evaluations);
++            Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
++            Assert.True(entity.uRedDot.StateVersion > initial.stateVersion);
++            await Execute(db, "CREATE TRIGGER reject_reddot BEFORE UPDATE ON playerreddot FOR EACH ROW " +
++                "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='test rollback'");
++            Assert.ThrowsAny<Exception>(() => SetBusiness(playerId, false));
++            Assert.Equal(1, await Scalar(db, "SELECT active FROM testcondition"));
++            Assert.Equal(1, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
++            await Execute(db, "DROP TRIGGER reject_reddot");
++            SetBusiness(playerId, false);
++            Assert.Equal(0, await Scalar(db, "SELECT isActive FROM playerreddot WHERE nodeId=9001"));
++            Assert.Equal(-103, RedDotModule.Instance.MarkViewed(session,
++                new ReqRedDotView { nodeId = 9001, tipVersion = 1 }, playerId).status);
++            var stale = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 3 }, playerId);
++            Assert.True(stale.states.Single(s => s.nodeId == 3001).isActive);
++            Assert.Equal(-103, RedDotModule.Instance.MarkViewed(session,
++                new ReqRedDotView { nodeId = 3001, tipVersion = 6 }, playerId).status);
++            var viewed = RedDotModule.Instance.MarkViewed(session, new ReqRedDotView { nodeId = 3001, tipVersion = 5 }, playerId);
++            Assert.False(viewed.states.Single(s => s.nodeId == 3001).isActive);
++            RedDotComponent.Reset(entity);
++            Assert.False(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
++                .states.Single(s => s.nodeId == 3001).isActive);
++            catalog.ById[3001].tipVersion = 6;
++            Configure(new RedDotCatalog(catalog.Nodes));
++            Assert.False(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
++                .states.Single(s => s.nodeId == 3001).isActive);
++            // A new configuration version alone does not activate a red dot; the business event does.
++            using (var transaction = DBService.Instance.GetGameInstance())
++            {
++                transaction.Ado.BeginTran();
++                GM_RedDotMgr.LockPlayer(transaction, playerId);
++                GM_RedDotMgr.Instance.WriteViewedState(transaction, playerId, 3001);
++                transaction.Ado.CommitTran();
++            }
++            GM_RedDotMgr.Instance.PublishCommitted(playerId);
++            Assert.True(RedDotModule.Instance.Initialize(session, new ReqRedDotInit(), playerId)
++                .states.Single(s => s.nodeId == 3001).isActive);
++        }
++        finally
++        {
++            GM_EntityMgr.Instance.RemovePlayer(playerId);
++            connectionField.SetValue(DBService.Instance, previousConnection);
++            await Execute(admin, $"DROP DATABASE `{database}`");
++            channel.FinishAndReleaseAll();
++        }
++    }
++    private static void Configure(RedDotCatalog catalog) => GM_RedDotMgr.Instance.Configure(catalog, snapshot =>
++        new NotifyRedDotChanged { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
++            states = snapshot.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList() });
++    private static void SetBusiness(long playerId, bool active)
++    {
++        using var lease = PlayerOperationLock.Acquire(playerId);
++        lock (lease.SyncRoot)
++        {
++            using var db = DBService.Instance.GetGameInstance();
++            try
++            {
++                db.Ado.BeginTran(); GM_RedDotMgr.LockPlayer(db, playerId);
++                db.Ado.ExecuteCommand("UPDATE testcondition SET active=@active WHERE playerId=@pid", new { active, pid = playerId });
++                GM_RedDotMgr.Instance.RefreshBusinessState(db, playerId, 9001);
++                db.Ado.CommitTran();
++            }
++            catch { db.Ado.RollbackTran(); throw; }
++            GM_RedDotMgr.Instance.PublishCommitted(playerId);
++        }
++    }
++    private static async Task Execute(MySqlConnection db, string sql)
++    { using var command = new MySqlCommand(sql, db); await command.ExecuteNonQueryAsync(); }
++    private static async Task<long> Scalar(MySqlConnection db, string sql)
++    { using var command = new MySqlCommand(sql, db); return Convert.ToInt64(await command.ExecuteScalarAsync()); }
++}
+--- /dev/null
++++ b/server/GameServerTests/RedDot/RedDotTests.cs
+@@ -0,0 +1,72 @@
++using Framework.Core.Serializer;
++using Game;
++using Game.Core.GM_RedDot;
++using Game.Datas.Excels;
++using Game.Datas.Messages;
++using Game.Entries.Modules;
++
++namespace GameServerTests.RedDot;
++
++public sealed class RedDotTests
++{
++    private static RedDotConfig Node(int id, int parent = 0, int type = 0, bool enabled = true, long version = 0) =>
++        new() { id = id, name = "node" + id, parentId = parent, clearType = type, enabled = enabled, tipVersion = version };
++
++    [Fact]
++    public void RejectsDuplicateMissingParentCycleAndBusinessParent()
++    {
++        Assert.Throws<InvalidOperationException>(() => new RedDotCatalog(new[] { Node(1), Node(1) }));
++        Assert.Throws<InvalidOperationException>(() => new RedDotCatalog(new[] { Node(1, 2) }));
++        Assert.Throws<InvalidOperationException>(() => new RedDotCatalog(new[] { Node(1, 2), Node(2, 1) }));
++        Assert.Throws<InvalidOperationException>(() => new RedDotCatalog(new[] { Node(1, type: 1), Node(2, 1) }));
++    }
++    [Fact]
++    public void DisabledAncestorDisablesEntireSubtree()
++    {
++        var c = new RedDotCatalog(new[] { Node(1, enabled: false), Node(2, 1), Node(3, 2, 1) });
++        Assert.False(c.IsEnabled(1)); Assert.False(c.IsEnabled(3)); Assert.False(c.IsEnabled(9));
++    }
++    [Fact]
++    public void VersionIsStableAcrossRowOrderAndIncludesDisabledFields()
++    {
++        var a = Node(1); var b = Node(2, 1, 2, false, 1);
++        string v = new RedDotCatalog(new[] { a, b }).Version;
++        Assert.Equal(v, new RedDotCatalog(new[] { b, a }).Version);
++        b.tipVersion = 2;
++        Assert.NotEqual(v, new RedDotCatalog(new[] { a, b }).Version);
++    }
++    [Fact]
++    public void ViewOnlyAcceptsEnabledViewedLeafAndNonFutureVersion()
++    {
++        var c = new RedDotCatalog(new[] { Node(1), Node(2, 1, 2, true, 5), Node(3, 1, 1) });
++        Assert.True(c.CanView(2, 3)); Assert.True(c.CanView(2, 5));
++        Assert.False(c.CanView(2, 6)); Assert.False(c.CanView(2, 0));
++        Assert.False(c.CanView(1, 1)); Assert.False(c.CanView(3, 1));
++    }
++    [Fact]
++    public void ModuleRejectsMissingSessionBeforeDatabaseAccess()
++    {
++        Assert.Equal((int)Respones.AccountIsNotLogin,
++            RedDotModule.Instance.Initialize(null, new ReqRedDotInit(), 0).status);
++        Assert.Equal((int)Respones.AccountIsNotLogin,
++            RedDotModule.Instance.MarkViewed(null, new ReqRedDotView(), 0).status);
++    }
++    [Fact]
++    public void GoogleCodecRoundTripsAllConfigFieldsLongVersionsAndFalseDeltas()
++    {
++        var message = new ResRedDotInit { status = 1, configVersion = "hash", stateVersion = 5_000_000_001,
++            nodes = new() { new() { id = 2, name = "邮件", parentId = 1, clearType = 2, enabled = false, tipVersion = 7_000_000_001 } },
++            states = new() { new() { nodeId = 2, isActive = false } } };
++        using var stream = new MemoryStream();
++        Assert.True(GoogleProtocolCodec.TrySerialize(message, stream, out var error), error);
++        stream.Position = 0;
++        Assert.True(GoogleProtocolCodec.TryDeserialize(typeof(ResRedDotInit), stream, out var result, out error), error);
++        var decoded = Assert.IsType<ResRedDotInit>(result);
++        Assert.Equal(message.stateVersion, decoded.stateVersion);
++        Assert.Equal(message.nodes[0].tipVersion, Assert.Single(decoded.nodes).tipVersion);
++        Assert.False(decoded.nodes[0].enabled);
++        Assert.False(Assert.Single(decoded.states).isActive);
++        Assert.Equal(95, (int)Cmd.eRedDotInitReq);
++        Assert.Equal(99, (int)Cmd.eRedDotChanged);
++    }
++}
+--- /dev/null
++++ b/server/GameServer/Configs/Csvs/RedDotConfig.csv
+@@ -0,0 +1,10 @@
++节点ID,节点名称,父节点ID,消除类型,是否启用,提示版本
++int,string,int,int,bool,long
++id,name,parentId,clearType,enabled,tipVersion
++1000,邮箱入口,0,0,false,0
++1001,邮件未读,1000,1,false,0
++2000,任务入口,0,0,false,0
++2001,日常奖励,2000,1,false,0
++2002,成就奖励,2000,1,false,0
++3000,活动入口,0,0,false,0
++3001,新活动提示,3000,2,false,1
+--- a/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
++++ b/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
+@@ -247,133 +247,153 @@
+                 {
+                     WriteResUpdateMailMsg(output, value57);
+                 }
+-                else if (source is ReqSitdown value58)
+-                {
+-                    WriteReqSitdown(output, value58);
+-                }
+-                else if (source is ResSitdown value59)
+-                {
+-                    WriteResSitdown(output, value59);
+-                }
+-                else if (source is ReqStandup value60)
+-                {
+-                    WriteReqStandup(output, value60);
+-                }
+-                else if (source is ResStandup value61)
+-                {
+-                    WriteResStandup(output, value61);
+-                }
+-                else if (source is ReqTalkMsg value62)
+-                {
+-                    WriteReqTalkMsg(output, value62);
+-                }
+-                else if (source is ResTalkMsg value63)
+-                {
+-                    WriteResTalkMsg(output, value63);
+-                }
+-                else if (source is ReqPlayerIsReady value64)
+-                {
+-                    WriteReqPlayerIsReady(output, value64);
+-                }
+-                else if (source is ResPlayerIsReady value65)
+-                {
+-                    WriteResPlayerIsReady(output, value65);
+-                }
+-                else if (source is ResEnterRoom value66)
+-                {
+-                    WriteResEnterRoom(output, value66);
+-                }
+-                else if (source is ResUserArrivedSeat value67)
+-                {
+-                    WriteResUserArrivedSeat(output, value67);
+-                }
+-                else if (source is ResUserExitSeat value68)
+-                {
+-                    WriteResUserExitSeat(output, value68);
+-                }
+-                else if (source is ResRoundReady value69)
+-                {
+-                    WriteResRoundReady(output, value69);
+-                }
+-                else if (source is ResRoundStarted value70)
+-                {
+-                    WriteResRoundStarted(output, value70);
+-                }
+-                else if (source is ResRoundCheckOut value71)
+-                {
+-                    WriteResRoundCheckOut(output, value71);
+-                }
+-                else if (source is ResRoundClear value72)
+-                {
+-                    WriteResRoundClear(output, value72);
+-                }
+-                else if (source is ResPlayerEscape value73)
+-                {
+-                    WriteResPlayerEscape(output, value73);
+-                }
+-                else if (source is ReqPlayerOpt value74)
+-                {
+-                    WriteReqPlayerOpt(output, value74);
+-                }
+-                else if (source is ResPlayerOpt value75)
+-                {
+-                    WriteResPlayerOpt(output, value75);
+-                }
+-                else if (source is ReqExitLogicServer value76)
+-                {
+-                    WriteReqExitLogicServer(output, value76);
+-                }
+-                else if (source is ResExitLogicServer value77)
+-                {
+-                    WriteResExitLogicServer(output, value77);
+-                }
+-                else if (source is ReqTestGetGoods value78)
+-                {
+-                    WriteReqTestGetGoods(output, value78);
+-                }
+-                else if (source is ReqTestUpdateGooods value79)
+-                {
+-                    WriteReqTestUpdateGooods(output, value79);
+-                }
+-                else if (source is ReqTestLogicCmdEcho value80)
+-                {
+-                    WriteReqTestLogicCmdEcho(output, value80);
+-                }
+-                else if (source is ResTestGetGoods value81)
+-                {
+-                    WriteResTestGetGoods(output, value81);
+-                }
+-                else if (source is ResTestUpdateGoods value82)
+-                {
+-                    WriteResTestUpdateGoods(output, value82);
+-                }
+-                else if (source is ResTestLogicCmdEcho value83)
+-                {
+-                    WriteResTestLogicCmdEcho(output, value83);
+-                }
+-                else if (source is ReqPlayerSpawn value84)
+-                {
+-                    WriteReqPlayerSpawn(output, value84);
+-                }
+-                else if (source is ResPlayerSpawn value85)
+-                {
+-                    WriteResPlayerSpawn(output, value85);
+-                }
+-                else if (source is ReqNavToDst value86)
+-                {
+-                    WriteReqNavToDst(output, value86);
+-                }
+-                else if (source is ResNavToDst value87)
+-                {
+-                    WriteResNavToDst(output, value87);
+-                }
+-                else if (source is ReqNavInDir value88)
+-                {
+-                    WriteReqNavInDir(output, value88);
+-                }
+-                else if (source is ResNavInDir value89)
+-                {
+-                    WriteResNavInDir(output, value89);
++                else if (source is ReqRedDotInit value58)
++                {
++                    WriteReqRedDotInit(output, value58);
++                }
++                else if (source is ResRedDotInit value59)
++                {
++                    WriteResRedDotInit(output, value59);
++                }
++                else if (source is ReqRedDotView value60)
++                {
++                    WriteReqRedDotView(output, value60);
++                }
++                else if (source is ResRedDotView value61)
++                {
++                    WriteResRedDotView(output, value61);
++                }
++                else if (source is NotifyRedDotChanged value62)
++                {
++                    WriteNotifyRedDotChanged(output, value62);
++                }
++                else if (source is ReqSitdown value63)
++                {
++                    WriteReqSitdown(output, value63);
++                }
++                else if (source is ResSitdown value64)
++                {
++                    WriteResSitdown(output, value64);
++                }
++                else if (source is ReqStandup value65)
++                {
++                    WriteReqStandup(output, value65);
++                }
++                else if (source is ResStandup value66)
++                {
++                    WriteResStandup(output, value66);
++                }
++                else if (source is ReqTalkMsg value67)
++                {
++                    WriteReqTalkMsg(output, value67);
++                }
++                else if (source is ResTalkMsg value68)
++                {
++                    WriteResTalkMsg(output, value68);
++                }
++                else if (source is ReqPlayerIsReady value69)
++                {
++                    WriteReqPlayerIsReady(output, value69);
++                }
++                else if (source is ResPlayerIsReady value70)
++                {
++                    WriteResPlayerIsReady(output, value70);
++                }
++                else if (source is ResEnterRoom value71)
++                {
++                    WriteResEnterRoom(output, value71);
++                }
++                else if (source is ResUserArrivedSeat value72)
++                {
++                    WriteResUserArrivedSeat(output, value72);
++                }
++                else if (source is ResUserExitSeat value73)
++                {
++                    WriteResUserExitSeat(output, value73);
++                }
++                else if (source is ResRoundReady value74)
++                {
++                    WriteResRoundReady(output, value74);
++                }
++                else if (source is ResRoundStarted value75)
++                {
++                    WriteResRoundStarted(output, value75);
++                }
++                else if (source is ResRoundCheckOut value76)
++                {
++                    WriteResRoundCheckOut(output, value76);
++                }
++                else if (source is ResRoundClear value77)
++                {
++                    WriteResRoundClear(output, value77);
++                }
++                else if (source is ResPlayerEscape value78)
++                {
++                    WriteResPlayerEscape(output, value78);
++                }
++                else if (source is ReqPlayerOpt value79)
++                {
++                    WriteReqPlayerOpt(output, value79);
++                }
++                else if (source is ResPlayerOpt value80)
++                {
++                    WriteResPlayerOpt(output, value80);
++                }
++                else if (source is ReqExitLogicServer value81)
++                {
++                    WriteReqExitLogicServer(output, value81);
++                }
++                else if (source is ResExitLogicServer value82)
++                {
++                    WriteResExitLogicServer(output, value82);
++                }
++                else if (source is ReqTestGetGoods value83)
++                {
++                    WriteReqTestGetGoods(output, value83);
++                }
++                else if (source is ReqTestUpdateGooods value84)
++                {
++                    WriteReqTestUpdateGooods(output, value84);
++                }
++                else if (source is ReqTestLogicCmdEcho value85)
++                {
++                    WriteReqTestLogicCmdEcho(output, value85);
++                }
++                else if (source is ResTestGetGoods value86)
++                {
++                    WriteResTestGetGoods(output, value86);
++                }
++                else if (source is ResTestUpdateGoods value87)
++                {
++                    WriteResTestUpdateGoods(output, value87);
++                }
++                else if (source is ResTestLogicCmdEcho value88)
++                {
++                    WriteResTestLogicCmdEcho(output, value88);
++                }
++                else if (source is ReqPlayerSpawn value89)
++                {
++                    WriteReqPlayerSpawn(output, value89);
++                }
++                else if (source is ResPlayerSpawn value90)
++                {
++                    WriteResPlayerSpawn(output, value90);
++                }
++                else if (source is ReqNavToDst value91)
++                {
++                    WriteReqNavToDst(output, value91);
++                }
++                else if (source is ResNavToDst value92)
++                {
++                    WriteResNavToDst(output, value92);
++                }
++                else if (source is ReqNavInDir value93)
++                {
++                    WriteReqNavInDir(output, value93);
++                }
++                else if (source is ResNavInDir value94)
++                {
++                    WriteResNavInDir(output, value94);
+                 }
+                 else return false;
+                 output.Flush();
+@@ -451,6 +471,11 @@
+                 else if (messageType == typeof(ResRecvLoginBonues)) message = ReadResRecvLoginBonues(input);
+                 else if (messageType == typeof(ResSelectPlayer)) message = ReadResSelectPlayer(input);
+                 else if (messageType == typeof(ResUpdateMailMsg)) message = ReadResUpdateMailMsg(input);
++                else if (messageType == typeof(ReqRedDotInit)) message = ReadReqRedDotInit(input);
++                else if (messageType == typeof(ResRedDotInit)) message = ReadResRedDotInit(input);
++                else if (messageType == typeof(ReqRedDotView)) message = ReadReqRedDotView(input);
++                else if (messageType == typeof(ResRedDotView)) message = ReadResRedDotView(input);
++                else if (messageType == typeof(NotifyRedDotChanged)) message = ReadNotifyRedDotChanged(input);
+                 else if (messageType == typeof(ReqSitdown)) message = ReadReqSitdown(input);
+                 else if (messageType == typeof(ResSitdown)) message = ReadResSitdown(input);
+                 else if (messageType == typeof(ReqStandup)) message = ReadReqStandup(input);
+@@ -4158,6 +4183,391 @@
+             return size;
+         }
+ 
++        private static void WriteRedDotNodeMessage(CodedOutputStream output, RedDotNodeMessage message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.id);
++            if (message.name != null)
++            {
++                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.name);
++            }
++            output.WriteTag(3, WireFormat.WireType.Varint);
++            output.WriteInt32(message.parentId);
++            output.WriteTag(4, WireFormat.WireType.Varint);
++            output.WriteInt32(message.clearType);
++            output.WriteTag(5, WireFormat.WireType.Varint);
++            output.WriteBool(message.enabled);
++            output.WriteTag(6, WireFormat.WireType.Varint);
++            output.WriteInt64(message.tipVersion);
++        }
++
++        private static RedDotNodeMessage ReadRedDotNodeMessage(CodedInputStream input)
++        {
++            var message = new RedDotNodeMessage();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.id = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.name = input.ReadString();
++                        break;
++                    case 3:
++                        message.parentId = input.ReadInt32();
++                        break;
++                    case 4:
++                        message.clearType = input.ReadInt32();
++                        break;
++                    case 5:
++                        message.enabled = input.ReadBool();
++                        break;
++                    case 6:
++                        message.tipVersion = input.ReadInt64();
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeRedDotNodeMessage(RedDotNodeMessage message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.id);
++            if (message.name != null)
++                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.name);
++            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt32Size(message.parentId);
++            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.clearType);
++            size += CodedOutputStream.ComputeTagSize(5) + 1;
++            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.tipVersion);
++            return size;
++        }
++
++        private static void WriteRedDotStateMessage(CodedOutputStream output, RedDotStateMessage message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.nodeId);
++            output.WriteTag(2, WireFormat.WireType.Varint);
++            output.WriteBool(message.isActive);
++        }
++
++        private static RedDotStateMessage ReadRedDotStateMessage(CodedInputStream input)
++        {
++            var message = new RedDotStateMessage();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.nodeId = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.isActive = input.ReadBool();
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeRedDotStateMessage(RedDotStateMessage message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.nodeId);
++            size += CodedOutputStream.ComputeTagSize(2) + 1;
++            return size;
++        }
++
++        private static void WriteReqRedDotInit(CodedOutputStream output, ReqRedDotInit message)
++        {
++        }
++
++        private static ReqRedDotInit ReadReqRedDotInit(CodedInputStream input)
++        {
++            var message = new ReqRedDotInit();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeReqRedDotInit(ReqRedDotInit message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            return size;
++        }
++
++        private static void WriteResRedDotInit(CodedOutputStream output, ResRedDotInit message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.status);
++            if (message.configVersion != null)
++            {
++                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.configVersion);
++            }
++            output.WriteTag(3, WireFormat.WireType.Varint);
++            output.WriteInt64(message.stateVersion);
++            if (message.nodes != null)
++            {
++                for (int index = 0; index < message.nodes.Count; index++)
++                {
++                    WriteMessage(output, 4, message.nodes[index], WriteRedDotNodeMessage, ComputeSizeRedDotNodeMessage);
++                }
++            }
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    WriteMessage(output, 5, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
++                }
++            }
++        }
++
++        private static ResRedDotInit ReadResRedDotInit(CodedInputStream input)
++        {
++            var message = new ResRedDotInit();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.status = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.configVersion = input.ReadString();
++                        break;
++                    case 3:
++                        message.stateVersion = input.ReadInt64();
++                        break;
++                    case 4:
++                        message.nodes.Add(ReadMessage(input, ReadRedDotNodeMessage));
++                        break;
++                    case 5:
++                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeResRedDotInit(ResRedDotInit message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
++            if (message.configVersion != null)
++                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.configVersion);
++            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
++            if (message.nodes != null)
++            {
++                for (int index = 0; index < message.nodes.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotNodeMessage(message.nodes[index]);
++                    size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
++                    size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            return size;
++        }
++
++        private static void WriteReqRedDotView(CodedOutputStream output, ReqRedDotView message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.nodeId);
++            output.WriteTag(2, WireFormat.WireType.Varint);
++            output.WriteInt64(message.tipVersion);
++        }
++
++        private static ReqRedDotView ReadReqRedDotView(CodedInputStream input)
++        {
++            var message = new ReqRedDotView();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.nodeId = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.tipVersion = input.ReadInt64();
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeReqRedDotView(ReqRedDotView message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.nodeId);
++            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.tipVersion);
++            return size;
++        }
++
++        private static void WriteResRedDotView(CodedOutputStream output, ResRedDotView message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.status);
++            if (message.configVersion != null)
++            {
++                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.configVersion);
++            }
++            output.WriteTag(3, WireFormat.WireType.Varint);
++            output.WriteInt64(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    WriteMessage(output, 4, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
++                }
++            }
++        }
++
++        private static ResRedDotView ReadResRedDotView(CodedInputStream input)
++        {
++            var message = new ResRedDotView();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.status = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.configVersion = input.ReadString();
++                        break;
++                    case 3:
++                        message.stateVersion = input.ReadInt64();
++                        break;
++                    case 4:
++                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeResRedDotView(ResRedDotView message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
++            if (message.configVersion != null)
++                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.configVersion);
++            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
++                    size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            return size;
++        }
++
++        private static void WriteNotifyRedDotChanged(CodedOutputStream output, NotifyRedDotChanged message)
++        {
++            if (message.configVersion != null)
++            {
++                output.WriteTag(1, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.configVersion);
++            }
++            output.WriteTag(2, WireFormat.WireType.Varint);
++            output.WriteInt64(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    WriteMessage(output, 3, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
++                }
++            }
++        }
++
++        private static NotifyRedDotChanged ReadNotifyRedDotChanged(CodedInputStream input)
++        {
++            var message = new NotifyRedDotChanged();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.configVersion = input.ReadString();
++                        break;
++                    case 2:
++                        message.stateVersion = input.ReadInt64();
++                        break;
++                    case 3:
++                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeNotifyRedDotChanged(NotifyRedDotChanged message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            if (message.configVersion != null)
++                size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeStringSize(message.configVersion);
++            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
++                    size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            return size;
++        }
++
+         private static void WriteReqSitdown(CodedOutputStream output, ReqSitdown message)
+         {
+             output.WriteTag(1, WireFormat.WireType.Varint);
+--- a/server/GameServer/src/Framework/Core/utils/ExcelUtils.cs
++++ b/server/GameServer/src/Framework/Core/utils/ExcelUtils.cs
+@@ -116,6 +116,9 @@
+ 
+                     switch (fis[i].FieldType.ToString())
+                     {
++                        case "System.Boolean":
++                            setValue = bool.Parse(fieldValue);
++                            break;
+                         case "System.Int32":
+                             setValue = int.Parse(fieldValue);
+                             break;
+@@ -187,6 +190,9 @@
+ 
+ 					switch (fis[i].FieldType.ToString())
+ 					{
++						case "System.Boolean":
++							setValue = bool.Parse(fieldValue);
++							break;
+ 						case "System.Int32":
+ 							setValue = int.Parse(fieldValue);
+ 							break;
+--- a/server/GameServer/src/Game/Constants.cs
++++ b/server/GameServer/src/Game/Constants.cs
+@@ -199,6 +199,11 @@
+         eGetPlayerBasicInfoRes = 92,
+         eUpdatePlayerBasicInfoReq = 93,
+         eUpdatePlayerBasicInfoRes = 94,
++        eRedDotInitReq = 95,
++        eRedDotInitRes = 96,
++        eRedDotViewReq = 97,
++        eRedDotViewRes = 98,
++        eRedDotChanged = 99,
+     }
+ 
+     public enum QuitReason { 
+@@ -283,4 +288,3 @@
+         
+     }
+ }
+-
+--- a/server/GameServer/src/Game/Core/Configs/ConfigMgr.cs
++++ b/server/GameServer/src/Game/Core/Configs/ConfigMgr.cs
+@@ -42,7 +42,8 @@
+             ExcelUtils.ReadConfigData<SkillBConfig>();
+             ExcelUtils.ReadConfigData<WeaponGoods>();
+             ExcelUtils.ReadConfigData<WearGoods>();
+-            ExcelUtils.ReadConfigData<ZoneConfig>();
++            ExcelUtils.ReadConfigData<ZoneConfig>();
++            ExcelUtils.ReadConfigData<RedDotConfig>();
+ 
+         }
+     }
+--- /dev/null
++++ b/server/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs
+@@ -0,0 +1,191 @@
++using Framework.Core.Concurrency;
++using Framework.Core.Serializer;
++using Game.Core.Db;
++using Game.Core.EntityMgr;
++using Game.Datas.DBEntities;
++using Game.Datas.GMEntities;
++using SqlSugar;
++using System;
++using System.Collections.Generic;
++using System.Linq;
++
++namespace Game.Core.GM_RedDot
++{
++    public sealed class GM_RedDotMgr
++    {
++        public static GM_RedDotMgr Instance { get; } = new();
++        private readonly Dictionary<int, Func<SqlSugarClient, long, bool>> providers = new();
++        private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
++        private Func<RedDotSnapshot, Message> createNotification;
++        public RedDotCatalog Catalog { get; private set; }
++        private GM_RedDotMgr() { }
++
++        public void Configure(RedDotCatalog catalog, Func<RedDotSnapshot, Message> notificationFactory)
++        {
++            Catalog = catalog;
++            createNotification = notificationFactory;
++        }
++
++        // Register only at server startup. The owning business manager evaluates its own data.
++        public void RegisterBusiness(int nodeId, Func<SqlSugarClient, long, bool> evaluate) =>
++            providers.Add(nodeId, evaluate ?? throw new ArgumentNullException(nameof(evaluate)));
++
++        public RedDotSnapshot Initialize(long playerId)
++        {
++            using var lease = PlayerOperationLock.Acquire(playerId);
++            lock (lease.SyncRoot)
++            {
++                return InitializeLocked(playerId);
++            }
++        }
++
++        private RedDotSnapshot InitializeLocked(long playerId)
++        {
++            var component = GetState(playerId);
++            component.IsInitialized = true;
++            return Snapshot(component);
++        }
++
++        // Initialization reads existing state only; it never triggers a business condition.
++        private RedDotComponent GetState(long playerId)
++        {
++            var entity = GM_EntityMgr.Instance.Get(playerId);
++            if (entity != null)
++            {
++                var component = entity.uRedDot;
++                if (component == null || !ReferenceEquals(component.Session, entity.uPlayer.s))
++                    entity.uRedDot = component = new RedDotComponent { Session = entity.uPlayer.s };
++                if (!component.IsLoaded || component.ConfigVersion != Catalog.Version)
++                {
++                    using var db = DBService.Instance.GetGameInstance();
++                    component = ApplyCommitted(playerId, ReadPersisted(db, playerId), false);
++                }
++                return component;
++            }
++            using var offlineDb = DBService.Instance.GetGameInstance();
++            return new RedDotComponent { IsLoaded = true, ConfigVersion = Catalog.Version,
++                States = ReadPersisted(offlineDb, playerId) };
++        }
++
++        public RedDotSnapshot MarkViewed(long playerId, int nodeId, long version)
++        {
++            using var lease = PlayerOperationLock.Acquire(playerId);
++            lock (lease.SyncRoot)
++            {
++                if (!Catalog.CanView(nodeId, version)) throw new ArgumentException("Invalid viewed red-dot node/version.");
++                using var db = DBService.Instance.GetGameInstance();
++                try
++                {
++                    db.Ado.BeginTran();
++                    LockPlayer(db, playerId);
++                    var node = Catalog.ById[nodeId];
++                    db.Ado.ExecuteCommand(
++                        "INSERT INTO playerreddot(playerId,nodeId,isActive,seenVersion,updateTime) " +
++                        "VALUES(@pid,@nid,@active,@seen,@now) ON DUPLICATE KEY UPDATE " +
++                        "seenVersion=GREATEST(seenVersion,@seen),isActive=(seenVersion<@current),updateTime=@now",
++                        new { pid = playerId, nid = nodeId, active = version < node.tipVersion,
++                            seen = version, current = node.tipVersion, now = Now() });
++                    var states = ReadPersisted(db, playerId);
++                    db.Ado.CommitTran();
++                    return Snapshot(ApplyCommitted(playerId, states, true));
++                }
++                catch { db.Ado.RollbackTran(); throw; }
++            }
++        }
++
++        public static void LockPlayer(SqlSugarClient db, long playerId)
++        {
++            if (db.Ado.SqlQuery<long>("SELECT id FROM player WHERE id=@pid FOR UPDATE", new { pid = playerId }).Count != 1)
++                throw new InvalidOperationException("Player does not exist.");
++        }
++
++        // Caller owns the player lock and transaction. PublishCommitted must run after commit.
++        public void WriteBusinessState(SqlSugarClient db, long playerId, int nodeId, bool active)
++        {
++            if (Catalog == null) throw new InvalidOperationException("Red-dot configuration is not initialized.");
++            if (!Catalog.ById.TryGetValue(nodeId, out var node) || node.clearType != 1)
++                throw new ArgumentException("Not a business leaf node.");
++            if (!Catalog.IsEnabled(nodeId)) return;
++            db.Ado.ExecuteCommand(
++                "INSERT INTO playerreddot(playerId,nodeId,isActive,seenVersion,updateTime) " +
++                "VALUES(@pid,@nid,@active,0,@now) ON DUPLICATE KEY UPDATE isActive=@active,updateTime=@now",
++                new { pid = playerId, nid = nodeId, active, now = Now() });
++        }
++
++        // Explicit business event entry points. Caller owns the lock/transaction and publishes after commit.
++        public void RefreshBusinessState(SqlSugarClient db, long playerId, int nodeId)
++        {
++            if (!providers.TryGetValue(nodeId, out var evaluate))
++                throw new ArgumentException("No business provider for this red-dot node.");
++            WriteBusinessState(db, playerId, nodeId, evaluate(db, playerId));
++        }
++
++        public void WriteViewedState(SqlSugarClient db, long playerId, int nodeId)
++        {
++            if (!Catalog.ById.TryGetValue(nodeId, out var node) || node.clearType != 2)
++                throw new ArgumentException("Not a viewed leaf node.");
++            if (!Catalog.IsEnabled(nodeId)) return;
++            db.Ado.ExecuteCommand(
++                "INSERT INTO playerreddot(playerId,nodeId,isActive,seenVersion,updateTime) " +
++                "VALUES(@pid,@nid,1,0,@now) ON DUPLICATE KEY UPDATE " +
++                "isActive=(seenVersion<@version),updateTime=@now",
++                new { pid = playerId, nid = node.id, now = Now(), version = node.tipVersion });
++        }
++
++        public void PublishCommitted(long playerId)
++        {
++            // A push failure must never turn a committed business operation into a failure/retry.
++            try
++            {
++                using var lease = PlayerOperationLock.Acquire(playerId);
++                lock (lease.SyncRoot)
++                {
++                    if (GM_EntityMgr.Instance.Get(playerId) == null) return;
++                    using var db = DBService.Instance.GetGameInstance();
++                    ApplyCommitted(playerId, ReadPersisted(db, playerId), true);
++                }
++            }
++            catch (Exception ex) { logger.Error(ex, "Red-dot post-commit synchronization failed."); }
++        }
++
++        private Dictionary<int, Playerreddot> ReadPersisted(SqlSugarClient db, long playerId) =>
++            db.Queryable<Playerreddot>().Where(r => r.playerId == playerId).ToList()
++                .Where(r => Catalog.ById.TryGetValue(r.nodeId, out var n) && n.clearType != 0 && Catalog.IsEnabled(r.nodeId))
++                .ToDictionary(r => r.nodeId);
++
++        private RedDotComponent ApplyCommitted(long playerId, Dictionary<int, Playerreddot> states, bool notify)
++        {
++            var entity = GM_EntityMgr.Instance.Get(playerId);
++            if (entity == null) throw new InvalidOperationException("Player is offline.");
++            var c = entity.uRedDot;
++            if (c == null || !ReferenceEquals(c.Session, entity.uPlayer.s))
++                entity.uRedDot = c = new RedDotComponent { Session = entity.uPlayer.s };
++            var changed = states.Values.Where(r => !c.States.TryGetValue(r.nodeId, out var old)
++                ? r.isActive : old.isActive != r.isActive)
++                .Select(r => new RedDotValue { NodeId = r.nodeId, IsActive = r.isActive }).ToArray();
++            c.States = states;
++            c.IsLoaded = true;
++            c.ConfigVersion = Catalog.Version;
++            if (changed.Length > 0) c.StateVersion++;
++            if (notify && c.IsInitialized && changed.Length > 0 && c.Session != null)
++            {
++                try
++                {
++                    MessagePusher.PushMessage(c.Session, createNotification(new RedDotSnapshot
++                    { ConfigVersion = Catalog.Version, StateVersion = c.StateVersion, States = changed }), playerId);
++                }
++                catch (Exception ex) { logger.Error(ex, "Red-dot push failed; client will resynchronize."); }
++            }
++            return c;
++        }
++
++        private RedDotSnapshot Snapshot(RedDotComponent c) => new()
++        {
++            ConfigVersion = Catalog.Version, StateVersion = c.StateVersion,
++            States = Catalog.Nodes.Where(n => n.clearType != 0 && Catalog.IsEnabled(n.id))
++                .Select(n => new RedDotValue { NodeId = n.id,
++                    IsActive = c.States.TryGetValue(n.id, out var r) && r.isActive }).ToArray()
++        };
++        private static long Now() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
++    }
++}
+--- /dev/null
++++ b/server/GameServer/src/Game/Core/GM_RedDot/RedDotDefinitions.cs
+@@ -0,0 +1,72 @@
++using Game.Datas.Excels;
++using System;
++using System.Collections.Generic;
++using System.Linq;
++using System.Security.Cryptography;
++using System.Text;
++using System.Text.Json;
++
++namespace Game.Core.GM_RedDot
++{
++    public enum RedDotClearType { Aggregate = 0, Business = 1, Viewed = 2 }
++    public sealed class RedDotValue
++    {
++        public int NodeId { get; init; }
++        public bool IsActive { get; init; }
++    }
++    public sealed class RedDotSnapshot
++    {
++        public string ConfigVersion { get; init; }
++        public long StateVersion { get; init; }
++        public IReadOnlyList<RedDotValue> States { get; init; }
++    }
++    public sealed class RedDotCatalog
++    {
++        public IReadOnlyList<RedDotConfig> Nodes { get; }
++        public IReadOnlyDictionary<int, RedDotConfig> ById { get; }
++        public string Version { get; }
++
++        public RedDotCatalog(IEnumerable<RedDotConfig> source)
++        {
++            var nodes = source.OrderBy(n => n.id).ToArray();
++            var map = new Dictionary<int, RedDotConfig>();
++            foreach (var node in nodes)
++            {
++                if (node.id <= 0 || string.IsNullOrWhiteSpace(node.name) ||
++                    !Enum.IsDefined(typeof(RedDotClearType), node.clearType) ||
++                    node.tipVersion < 0 || (node.clearType == 2 ? node.tipVersion == 0 : node.tipVersion != 0) ||
++                    !map.TryAdd(node.id, node))
++                    throw new InvalidOperationException("Invalid or duplicate red-dot node.");
++            }
++            foreach (var node in nodes)
++            {
++                var visited = new HashSet<int> { node.id };
++                var current = node;
++                while (current.parentId != 0)
++                {
++                    if (!map.TryGetValue(current.parentId, out current) || !visited.Add(current.id))
++                        throw new InvalidOperationException("Missing parent or cycle in red-dot configuration.");
++                    if (current.clearType != 0)
++                        throw new InvalidOperationException("A business red-dot node cannot have children.");
++                }
++            }
++            Nodes = Array.AsReadOnly(nodes);
++            ById = map;
++            Version = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
++                JsonSerializer.Serialize(nodes, new JsonSerializerOptions { IncludeFields = true }))));
++        }
++
++        public bool IsEnabled(int id)
++        {
++            if (!ById.TryGetValue(id, out var node)) return false;
++            while (true)
++            {
++                if (!node.enabled) return false;
++                if (node.parentId == 0) return true;
++                node = ById[node.parentId];
++            }
++        }
++        public bool CanView(int id, long version) => ById.TryGetValue(id, out var node) &&
++            IsEnabled(id) && node.clearType == 2 && version > 0 && version <= node.tipVersion;
++    }
++}
+--- /dev/null
++++ b/server/GameServer/src/Game/Datas/DbEntities/Playerreddot.cs
+@@ -0,0 +1,14 @@
++using SqlSugar;
++
++namespace Game.Datas.DBEntities
++{
++    [SugarTable("playerreddot")]
++    public sealed class Playerreddot
++    {
++        [SugarColumn(IsPrimaryKey = true)] public long playerId { get; set; }
++        [SugarColumn(IsPrimaryKey = true)] public int nodeId { get; set; }
++        public bool isActive { get; set; }
++        public long seenVersion { get; set; }
++        public long updateTime { get; set; }
++    }
++}
+--- /dev/null
++++ b/server/GameServer/src/Game/Datas/Excels/RedDotConfig.cs
+@@ -0,0 +1,15 @@
++using System;
++
++namespace Game.Datas.Excels
++{
++    [Serializable]
++    public sealed class RedDotConfig
++    {
++        public int id;
++        public string name;
++        public int parentId;
++        public int clearType;
++        public bool enabled;
++        public long tipVersion;
++    }
++}
+--- /dev/null
++++ b/server/GameServer/src/Game/Datas/GMEntities/Components/RedDotComponent.cs
+@@ -0,0 +1,18 @@
++using Framework.Core.Net;
++using Game.Datas.DBEntities;
++using System.Collections.Generic;
++
++namespace Game.Datas.GMEntities
++{
++    public sealed class RedDotComponent
++    {
++        public bool IsLoaded;
++        public bool IsInitialized;
++        public long StateVersion;
++        public string ConfigVersion;
++        public IdSession Session;
++        public Dictionary<int, Playerreddot> States = new();
++        public static void Init(GM_PlayerEntity entity) => Reset(entity);
++        public static void Reset(GM_PlayerEntity entity) => entity.uRedDot = new RedDotComponent();
++    }
++}
+--- a/server/GameServer/src/Game/Datas/GMEntities/GM_Entity.cs
++++ b/server/GameServer/src/Game/Datas/GMEntities/GM_Entity.cs
+@@ -37,7 +37,8 @@
+ 
+         public GachaComponent uGacha;
+ 
+-        public FormationComponent uFormation;
++        public FormationComponent uFormation;
++        public RedDotComponent uRedDot;
+ 
+     }
+ 
+--- /dev/null
++++ b/server/GameServer/src/Game/Datas/Messages/RedDotMessage.cs
+@@ -0,0 +1,61 @@
++using Framework.Core.Serializer;
++using Framework.Core.Utils;
++using ProtoBuf;
++using System.Collections.Generic;
++
++namespace Game.Datas.Messages
++{
++    [ProtoContract]
++    public sealed class RedDotNodeMessage
++    {
++        [ProtoMember(1)] public int id;
++        [ProtoMember(2)] public string name;
++        [ProtoMember(3)] public int parentId;
++        [ProtoMember(4)] public int clearType;
++        [ProtoMember(5)] public bool enabled;
++        [ProtoMember(6)] public long tipVersion;
++    }
++    [ProtoContract]
++    public sealed class RedDotStateMessage
++    {
++        [ProtoMember(1)] public int nodeId;
++        [ProtoMember(2)] public bool isActive;
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotInitReq)]
++    public sealed class ReqRedDotInit : Message { }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotInitRes)]
++    public sealed class ResRedDotInit : Message
++    {
++        [ProtoMember(1)] public int status;
++        [ProtoMember(2)] public string configVersion;
++        [ProtoMember(3)] public long stateVersion;
++        [ProtoMember(4)] public List<RedDotNodeMessage> nodes = new();
++        [ProtoMember(5)] public List<RedDotStateMessage> states = new();
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotViewReq)]
++    public sealed class ReqRedDotView : Message
++    {
++        [ProtoMember(1)] public int nodeId;
++        [ProtoMember(2)] public long tipVersion;
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotViewRes)]
++    public sealed class ResRedDotView : Message
++    {
++        [ProtoMember(1)] public int status;
++        [ProtoMember(2)] public string configVersion;
++        [ProtoMember(3)] public long stateVersion;
++        [ProtoMember(4)] public List<RedDotStateMessage> states = new();
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotChanged)]
++    public sealed class NotifyRedDotChanged : Message
++    {
++        [ProtoMember(1)] public string configVersion;
++        [ProtoMember(2)] public long stateVersion;
++        [ProtoMember(3)] public List<RedDotStateMessage> states = new();
++    }
++}
+--- /dev/null
++++ b/server/GameServer/src/Game/Entries/Controllers/RedDotController.cs
+@@ -0,0 +1,18 @@
++using Framework.Core.Net;
++using Framework.Core.Utils;
++using Game.Datas.Messages;
++using Game.Entries.Modules;
++
++namespace Game.Entries.Controllers
++{
++    [Controller]
++    public sealed class RedDotController
++    {
++        [RequestMapping]
++        public object Initialize(IdSession session, ReqRedDotInit request, long playerId) =>
++            RedDotModule.Instance.Initialize(session, request, playerId);
++        [RequestMapping]
++        public object MarkViewed(IdSession session, ReqRedDotView request, long playerId) =>
++            RedDotModule.Instance.MarkViewed(session, request, playerId);
++    }
++}
+--- /dev/null
++++ b/server/GameServer/src/Game/Entries/Modules/RedDotModule.cs
+@@ -0,0 +1,56 @@
++using Framework.Core.Net;
++using Framework.Core.Utils;
++using Game.Core.EntityMgr;
++using Game.Core.GM_RedDot;
++using Game.Datas.Excels;
++using Game.Datas.Messages;
++using System;
++using System.Linq;
++
++namespace Game.Entries.Modules
++{
++    public sealed class RedDotModule
++    {
++        public static RedDotModule Instance { get; } = new();
++        public void Init() => GM_RedDotMgr.Instance.Configure(
++            new RedDotCatalog(ExcelUtils.GetConfigDatas<RedDotConfig>(null)),
++            result => new NotifyRedDotChanged { configVersion = result.ConfigVersion,
++                stateVersion = result.StateVersion, states = MapStates(result) });
++
++        public ResRedDotInit Initialize(IdSession session, ReqRedDotInit request, long playerId)
++        {
++            if (!IsCurrent(session, playerId)) return new() { status = (int)Respones.AccountIsNotLogin };
++            if (request == null) return new() { status = (int)Respones.InvalidParams };
++            try
++            {
++                var result = GM_RedDotMgr.Instance.Initialize(playerId);
++                return new() { status = (int)Respones.OK, configVersion = result.ConfigVersion,
++                    stateVersion = result.StateVersion, states = MapStates(result),
++                    nodes = GM_RedDotMgr.Instance.Catalog.Nodes.Select(n => new RedDotNodeMessage
++                    { id = n.id, name = n.name, parentId = n.parentId, clearType = n.clearType,
++                        enabled = n.enabled, tipVersion = n.tipVersion }).ToList() };
++            }
++            catch (Exception ex) { NLog.LogManager.GetCurrentClassLogger().Error(ex, "Red-dot initialization failed.");
++                return new() { status = (int)Respones.SystemErr }; }
++        }
++
++        public ResRedDotView MarkViewed(IdSession session, ReqRedDotView request, long playerId)
++        {
++            if (!IsCurrent(session, playerId)) return new() { status = (int)Respones.AccountIsNotLogin };
++            if (request == null || !GM_RedDotMgr.Instance.Catalog.CanView(request.nodeId, request.tipVersion))
++                return new() { status = (int)Respones.InvalidParams };
++            try
++            {
++                var result = GM_RedDotMgr.Instance.MarkViewed(playerId, request.nodeId, request.tipVersion);
++                return new() { status = (int)Respones.OK, configVersion = result.ConfigVersion,
++                    stateVersion = result.StateVersion, states = MapStates(result) };
++            }
++            catch (Exception ex) { NLog.LogManager.GetCurrentClassLogger().Error(ex, "Red-dot view failed.");
++                return new() { status = (int)Respones.SystemErr }; }
++        }
++        private static bool IsCurrent(IdSession session, long playerId) => playerId > 0 && session != null &&
++            session.playerId == playerId && ReferenceEquals(GM_EntityMgr.Instance.Get(playerId)?.uPlayer.s, session);
++        private static System.Collections.Generic.List<RedDotStateMessage> MapStates(RedDotSnapshot result) =>
++            result.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList();
++    }
++}
+--- a/server/GameServer/src/Game/GameServer.cs
++++ b/server/GameServer/src/Game/GameServer.cs
+@@ -132,6 +132,7 @@
+             }
+ 
+             ConfigMgr.Instance.Init();
++            RedDotModule.Instance.Init();
+             CharacterStarUpModule.Instance.Init();
+             GachaModule.Instance.Init();
+             ServerZoneModule.Instance.Init();
+@@ -166,8 +167,8 @@
+ 
+         public async Task Shutdown()
+         {
+-            await SessionMgr.Instance.StopAsync();
+-            await GM_AuthSessionMgr.Instance.StopLogoutRetriesAsync();
++            await SessionMgr.Instance.StopAsync();
++            await GM_AuthSessionMgr.Instance.StopLogoutRetriesAsync();
+             if (server != null) await server.Shutdown();
+             if (role == ServerRole.ServerZone) return;
+ 
+--- /dev/null
++++ b/server/docs/RedDotChanges.md
+@@ -0,0 +1,94 @@
++# 本次红点系统变更清单
++
++下列差异以本次修改前的工作区快照为基准；不包含用户此前已有的代码修改。没有删除或重命名项目源文件。
++
++完整实际差异：[RedDotSystem.patch](RedDotSystem.patch)。安装、接口和验证说明：[RedDotSystem.md](RedDotSystem.md)。
++
++## 项目文件
++
++| 操作 | 文件 | 内容及原因 |
++|---|---|---|
++| 新增 | [RedDotConfig.xlsx](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/Excels/RedDotConfig.xlsx) | Luban 三行表头及样式与 ResonanceLv 一致，七个预留节点全部禁用；两处副本内容一致。 |
++| 新增 | [RedDotMySqlTests.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServerTests/RedDot/RedDotMySqlTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
++| 新增 | [RedDotTests.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServerTests/RedDot/RedDotTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
++| 新增 | [RedDotConfig.csv](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/Configs/Csvs/RedDotConfig.csv) | 七节点预留配置，全部禁用。 |
++| 修改 | [GoogleProtocolCodec.Generated.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs) | 生成红点协议编解码；不移除原有已支持合同。 |
++| 修改 | [ExcelUtils.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Framework/Core/utils/ExcelUtils.cs) | 泛型与非泛型配置读取入口支持 bool 字段。 |
++| 修改 | [Constants.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Constants.cs) | 追加 PLAYER 红点命令 95–99，保留原命令号。 |
++| 修改 | [ConfigMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/Configs/ConfigMgr.cs) | 启动预加载 RedDotConfig。 |
++| 新增 | [GM_RedDotMgr.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_RedDot/GM_RedDotMgr.cs) | 叶子持久化、查看记录、事务同步和提交后推送。 |
++| 新增 | [RedDotDefinitions.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Core/GM_RedDot/RedDotDefinitions.cs) | 领域快照、配置图校验与稳定配置版本。 |
++| 新增 | [Playerreddot.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/DbEntities/Playerreddot.cs) | 新增红点数据库实体和联合主键映射。 |
++| 新增 | [RedDotConfig.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/Excels/RedDotConfig.cs) | 与配置字段一致的类型定义。 |
++| 新增 | [RedDotComponent.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/GMEntities/Components/RedDotComponent.cs) | 保存当前连接的有界红点状态及同步版本。 |
++| 修改 | [GM_Entity.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/GMEntities/GM_Entity.cs) | 在线玩家持有 RedDotComponent。 |
++| 新增 | [RedDotMessage.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Datas/Messages/RedDotMessage.cs) | 两端一致的节点、状态及五种协议定义。 |
++| 新增 | [RedDotController.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Controllers/RedDotController.cs) | 初始化及查看请求路由。 |
++| 新增 | [RedDotModule.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/Entries/Modules/RedDotModule.cs) | 登录/参数校验和协议响应、通知映射。 |
++| 修改 | [GameServer.cs](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/GameServer/src/Game/GameServer.cs) | 初始化通用红点模块；不再强制校验业务判断方法注册。 |
++| 新增 | [RedDotChanges.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotChanges.md) | 接入、安装、验证及本次完整变更说明。 |
++| 新增 | [RedDotSystem.md](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/docs/RedDotSystem.md) | 接入、安装、验证及本次完整变更说明。 |
++| 新增 | [20261023_001_reddot.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/migrations/20261023_001_reddot.sql) | 已有库的可重复迁移，保留旧邮件数据。 |
++| 修改 | [ugame_10001.sql](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/sql/ugame_10001.sql) | 完整建库结构同步红点表；邮件结构恢复原状，保留原有玩家资料改动。 |
++| 修改 | [Export-LubanExcelToCsv.ps1](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1) | 兼容三行和四行 Excel 表头，正确读取说明及首条数据。 |
++| 修改 | [LubanExcelToCsv.json](D:/BaiduNetdiskDownload/CSharpGame/CSharpGameServer/tools/LubanExcelToCsv/LubanExcelToCsv.json) | 现有 Excel → CSV 导出流程登记 RedDotConfig。 |
++| 新增 | [RedDotConfig.xlsx](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx) | Luban 三行表头及样式与 ResonanceLv 一致，七个预留节点全部禁用；两处副本内容一致。 |
++| 新增 | [RedDotConfig.xlsx.meta](D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 修改 | [Cmd.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/Protocol/Definitions/Cmd.cs) | 追加 PLAYER 红点命令 95–99，保留原命令号。 |
++| 新增 | [RedDotMessage.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/Protocol/Messages/RedDotMessage.cs) | 两端一致的节点、状态及五种协议定义。 |
++| 新增 | [RedDotMessage.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/Protocol/Messages/RedDotMessage.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 修改 | [GoogleProtocolCodecNetwork.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/Protocol/Network/GoogleProtocolCodecNetwork.cs) | 生成红点协议编解码；不移除原有已支持合同。 |
++| 新增 | [RedDot.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [Manager.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Manager.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotManager.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotManager.cs) | 网络与会话流程调用树 Manager，对 UI 提供查询和通知。 |
++| 新增 | [RedDotManager.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotManager.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotTreeManager.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotTreeManager.cs) | 接管配置校验、版本判断、状态应用、父子汇总和通知。 |
++| 新增 | [RedDotTreeManager.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotTreeManager.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [Models.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Models.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotNodeModel.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotNodeModel.cs) | 独立的单节点数据模型。 |
++| 新增 | [RedDotNodeModel.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotNodeModel.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotTreeModel.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotTreeModel.cs) | 纯数据模型，保存节点/状态集合及版本，不含操作和事件。 |
++| 新增 | [RedDotTreeModel.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotTreeModel.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [Network.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Network.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotNetwork.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotNetwork.cs) | 请求封装及超时、重复请求策略。 |
++| 新增 | [RedDotNetwork.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotNetwork.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotRecoveryHandler.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotRecoveryHandler.cs) | 登录及重连后自动初始化红点。 |
++| 新增 | [RedDotRecoveryHandler.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotRecoveryHandler.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDot.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/UI/Shared/RedDot.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 新增 | [RedDotBinding.cs](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/UI/Shared/RedDot/RedDotBinding.cs) | UI 根据节点 ID 自动订阅、刷新和解绑。 |
++| 新增 | [RedDotBinding.cs.meta](D:/iaowu/MiaoWu/Assets/Scripts/HotUpdate/UI/Shared/RedDot/RedDotBinding.cs.meta) | Unity 资源 GUID / 文件夹元数据，确保新增资源可识别。 |
++| 修改 | [HotUpdate.csproj](D:/iaowu/MiaoWu/HotUpdate.csproj) | 将新增客户端脚本加入当前编译项目。 |
++| 新增 | [RedDot.Tests.csproj](D:/iaowu/MiaoWu/Tools/RedDotTests/RedDot.Tests.csproj) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
++| 新增 | [RedDotTreeTests.cs](D:/iaowu/MiaoWu/Tools/RedDotTests/RedDotTreeTests.cs) | 规则、协议、临时 MySQL 事务或实际客户端红点树测试。 |
++
++## 验证与限制
++
++- 服务端编译通过，客户端 HotUpdate 编译通过；红点服务端测试 6 项、客户端测试 9 项和隔离 MySQL 测试 1 项通过。
++- Game 角色真实启动、TCP 鉴权、完整禁用配置、空状态快照和非法查看拒绝均通过。未迁移用户业务数据库。
++- 全量非数据库测试 93 通过、1 失败；已用修改前 codec 单独编译验证，失败来自已有玩家资料更新请求未生成编解码。
++- 原客户端网络测试项目引用的 7 个源文件不存在，无法完整编译；未恢复用户移除的文件。Unity 场景/视觉验收未运行。
++
++## 临时与构建文件
++
++- 修改前快照、工作簿生成器与预览、隔离游戏服 smoke 工程、原 codec 验证工程及日志位于 `C:/Users/Windows/AppData/Local/Temp/codex-reddot-20261023/`；不作为游戏资源交付。
++- 验证日志另外保存为同级 `codex-reddot-*.log`。临时数据库均已删除，临时含连接信息的 smoke.config 已清理。
++- 工作簿自动产生的 inspect.ndjson 已移入上述临时目录。
++- dotnet 编译产生/更新服务端、服务端测试、客户端及独立红点测试的 bin/obj 等构建产物；这些目录中部分文件在本任务前已修改，不纳入源代码差异。
++- Unity 新增的全部 .meta 已在上表逐项列出。
++
++## 本次撤回邮件接入
++
++- GM_MailMsgMgr、Mailmessage、PlayerModule 的邮件处理已恢复至本功能实施前，取消默认期限、容量清理、定时扫描及邮件红点事务。
++- 1000/1001 节点在 Excel 和 CSV 中禁用；SQL 和迁移脚本不再增加邮件字段。
++- MySQL 测试改用独立测试业务表，不依赖邮件。
++- 撤回前后完整差异：[RedDotMailDetach.patch](RedDotMailDetach.patch)。
++
++## 初始化只读修订
++
++- 初始化只读取已有状态，缺少记录按隐藏处理；不执行 upsert、不校准业务条件。
++- 业务刷新和查看提示激活由显式业务事件触发；详情见 [RedDotReadonlyInitChanges.md](RedDotReadonlyInitChanges.md)，本次完整差异见 [RedDotReadonlyInit.patch](RedDotReadonlyInit.patch)。
++
++## 客户端 Model 分层修订
++
++- Models 只保存数据；RedDotTreeManager 承担树规则与事件，UI 改为通过 RedDotManager 查询和订阅。
++- 完整文件说明见 [RedDotModelRefactorChanges.md](RedDotModelRefactorChanges.md)，本轮差异见 [RedDotModelRefactor.patch](RedDotModelRefactor.patch)。
+--- /dev/null
++++ b/server/docs/RedDotSystem.md
+@@ -0,0 +1,77 @@
++# 通用红点系统
++
++实现范围：服务端持久化业务叶子节点、完整配置同步、查看记录、增量推送、客户端父子汇总，当前没有接入任何实际业务。邮箱、任务和活动仅保留禁用的示例节点。
++
++## 配置与数据
++
++- 编辑 `D:/iaowu/MiaoWu/Assets/Luban/Template/Datas/RedDotConfig.xlsx`，使用现有 `tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1` 导出。工作簿副本位于 `Excels/RedDotConfig.xlsx`。
++- RedDotConfig 的 Excel 格式与 ResonanceLv 一致：三行表头依次为 `##var`、`##type`、`##`，第四行开始为数据；字体、表头填色和边框沿用参考表。红点字段类型保留 int/string/bool/long。服务端 CSV 继续使用“中文说明、类型、字段名”三行表头。导出脚本兼容上述三行表头及原来的四行表头，不漏掉首条数据。
++- 字段：`id:int`、`name:string`、`parentId:int`、`clearType:int`、`enabled:bool`、`tipVersion:long`。
++- 类型 0 为汇总，1 为业务条件，2 为查看消除。业务节点只能是叶子；节点 ID 必须唯一、正数；父节点必须存在且为汇总节点；禁止循环。
++- 全部示例节点默认禁用，包括 1000 邮箱入口和 1001 邮件未读；仅开启配置不能替代业务接入。业务条件节点可以直接调用 WriteBusinessState 更新，不强制注册判断方法。只有调用 RefreshBusinessState 时，才要求已通过 RegisterBusiness 注册对应方法，否则该次刷新报错。
++- 查看型节点的 `tipVersion` 从 1 起递增，其他节点为 0。发布后不要复用 ID 或把已有节点改作不相关业务。
++- `configVersion` 为按 ID 排序后的全部配置字段的 SHA-256，包括禁用节点。本期在启动时加载配置，不提供运行时修改入口。
++
++数据库 `playerreddot` 使用 `(playerId,nodeId)` 联合主键，仅保存叶子，字段为 `isActive`、`seenVersion`、`updateTime`。父节点不保存到数据库，客户端从有效子节点汇总。禁用的父节点会禁用其整棵子树。
++
++## 安装数据库
++
++新建环境使用 `sql/ugame_10001.sql`，其中已同步加入红点表。已有环境在对应游戏数据库执行 `sql/migrations/20261023_001_reddot.sql` 后再启动更新后的游戏服。迁移兼容 MySQL 5.7，可重复执行，不会删除现有数据。
++
++本次已撤回所有邮件接入：GM_MailMsgMgr、邮件实体及 PlayerModule 的邮件处理恢复为本功能实施前的代码。没有新增邮件有效期、容量清理、定时扫描或邮件红点写入。迁移脚本只创建 playerreddot，不依赖或修改 mailmessage。
++
++本次没有对现有业务数据库执行迁移，数据库测试和启动验证均使用独立临时数据库。
++
++## 协议与状态同步
++
++沿用 PLAYER 模块 102，使用新命令 95–99：
++
++| 命令 | 协议 | 作用 |
++|---|---|---|
++|95|ReqRedDotInit|登录、重连或发现版本不连续时请求初始化|
++|96|ResRedDotInit|status、configVersion、stateVersion、完整 nodes、有效叶子 states|
++|97|ReqRedDotView|nodeId、实际展示的 tipVersion|
++|98|ResRedDotView|status、configVersion、stateVersion、完整有效叶子 states|
++|99|NotifyRedDotChanged|configVersion、stateVersion、变化叶子 states；requestId=0|
++
++节点消息包含配置六个字段，状态消息包含 nodeId 和 isActive。初始化发送禁用节点，无须客户端维护本地 Excel。stateVersion 随当前连接的叶子亮灭变化递增，重连后以新快照为准。
++
++初始化接口只读取配置和已有玩家状态，不插入、更新记录，不锁数据库 player 行，也不调用业务判断方法。缺少记录的有效叶子按隐藏返回；重复请求优先读取当前连接的在线组件，首次请求或连接/配置版本变化时从数据库加载。修改配置提示版本本身不会自动点亮红点，必须由业务事件显式触发。
++
++客户端在临时树上建立配置并应用快照，初始化期间暂存推送，按版本回放成功后一次刷新 UI。旧推送不覆盖新状态；缺失版本、配置不匹配触发全量同步。全量查看响应也按版本应用，防止旧响应恢复旧红点。登出、断线、重新鉴权时隐藏旧状态。
++
++查看请求只接受已启用的查看型叶子，版本必须大于 0 且不超过当前版本。seenVersion 单调递增，旧查看请求不能清掉新版本。客户端须在实际展示内容后调用查看接口，不得通过打开父入口清除所有节点。
++
++## 开发接入
++
++职责链：Controller 解码和路由 → RedDotModule 校验及组装协议 → GM_RedDotMgr 管理事务、状态和推送 → 玩家 RedDotComponent / MySQL。各业务 Manager 提供自身条件；红点 Manager 不查询其他业务表。当前没有注册邮件业务提供方。
++
++注册业务叶子示例：
++
++```csharp
++GM_RedDotMgr.Instance.RegisterBusiness(nodeId, (db, playerId) => EvaluateOwnBusiness(db, playerId));
++```
++
++业务变化时使用 PlayerOperationLock，同一事务先锁定 player 行，再修改业务状态、调用 `WriteBusinessState(db,playerId,nodeId,active)`，提交后调用 `PublishCommitted(playerId)`。不要在提交前改在线组件或发推送。幂等 upsert 允许无变化时影响行数为 0；业务条件更新需要检查对应影响行数。
++
++如果已注册业务判断方法，可在业务事件事务中调用 `RefreshBusinessState(db,playerId,nodeId)` 重新判断并写入。查看型提示在业务生效时调用 `WriteViewedState(db,playerId,nodeId)`，再于提交后发布变化；该方法保留历史 seenVersion，只在玩家尚未看过当前版本时点亮。以上写入入口均不会在初始化查询中调用。
++
++客户端实现位于 `Assets/Scripts/HotUpdate/Game/RedDot`。使用 `MiaoWu.Networking.RedDot.RedDotManager.Singleton.IsActive(nodeId)` 查询，查看型节点调用 `MarkViewedAsync(nodeId, displayedVersion)`。在内容展示时记录实际版本，提交时不要改用刚同步到的新版本。重连注册器自动在每次鉴权后初始化，管理器跨场景保留。
++
++客户端 Models 只保存数据：RedDotNodeModel 保存节点字段，RedDotTreeModel 保存节点、亮灭状态、有效启用状态和版本。Models 不包含校验、版本处理、父子汇总、状态操作或 Changed 事件。RedDotTreeManager 是可独立测试的普通 Manager，负责这些树规则；RedDotManager 负责网络流程、会话生命周期和对外查询/通知。UI 订阅 RedDotManager.Changed，通过 Manager 查询状态，不再调用 Model 方法或订阅 Model 事件。
++
++UI 入口挂载 `RedDotBinding`，设置 nodeId 与独立子对象 indicator；组件启用时订阅、禁用时解除订阅。不要把 indicator 指向挂载组件的对象本身，以免隐藏后无法重新订阅。现有 `Game/Presentation` 下的本地技能红点及已有界面引用保留；本期没有新增邮箱 UI 或绑定邮箱入口；1000/1001 仅是禁用的配置预留。
++
++两端协议 DTO 一致，Google protobuf codec 使用客户端现有 `Tools/Protocol/GenerateGoogleProtocolCodec.py` 生成。此次未移除旧 codec 中已支持的任何合同。
++
++## 验证结果
++
++- .NET 8 服务端编译通过；MiaoWu `HotUpdate.csproj` 编译通过。
++- 服务端红点规则与协议测试 6 项通过；客户端重构后的独立红点测试 9 项通过，包括 Models 只包含数据、Manager 在汇总后通知及原父子联动/版本处理场景。
++- MySQL 隔离测试通过：红点迁移两次、独立测试业务表与红点状态的事务回滚、通用状态变化、查看版本与重连持久化；测试数据库没有邮件表，随机临时库在结束后删除。
++- 初始化只读回归通过：空表不新增记录；禁止 INSERT/UPDATE 的触发器下仍能初始化；原 isActive、seenVersion、updateTime 保持不变；不调用业务提供方；提示版本提高后仍不自动点亮，直到业务显式触发。
++- 真实 Game 角色启动及 TCP 验证通过：HMAC 鉴权、完整七个禁用节点配置、空叶子状态、拒绝清除禁用节点。此前邮件推送验证属于已撤回的接入，不计入当前业务能力。使用独立临时游戏库、账号库与空闲端口，结束后关闭并删除临时库。
++- 服务端全部非数据库测试：93 项通过，1 项失败。失败项为已有 `PlayerProfileUpdateTests.BothCodecsPreserveNullableZeroJsonStringsAndLongIds`；修改前 codec 同样不包含 `ReqUpdatePlayerBasicInfo` 的编解码分支，原生成器不支持其枚举数组和 nullable 字段，本次未扩大处理范围。
++- `MiaoWu.NetworkAuth.Tests.csproj` 因已有 7 个测试源文件路径不存在而无法完成编译；其引用的 HotUpdate 业务程序集可编译。本次另建 `Tools/RedDotTests` 独立测试工程验证实际红点树代码。未运行 Unity Editor 场景及 prefab 视觉验收。
++
++运行红点核心测试：`dotnet test GameServerTests/GameServerTests.csproj --filter FullyQualifiedName~RedDotTests`；客户端：`dotnet test D:/iaowu/MiaoWu/Tools/RedDotTests/RedDot.Tests.csproj`。MySQL 测试沿用 GACHA_RUN_DATABASE_TESTS 和 GACHA_DB_CONFIGURATION_PATH 环境变量，并仅创建/删除随机命名的私有测试库。
+--- /dev/null
++++ b/server/sql/migrations/20261023_001_reddot.sql
+@@ -0,0 +1,10 @@
++-- Run against the intended ugame database before starting the updated game server.
++CREATE TABLE IF NOT EXISTS `playerreddot` (
++  `playerId` bigint NOT NULL COMMENT '玩家ID',
++  `nodeId` int NOT NULL COMMENT '红点叶子节点ID',
++  `isActive` tinyint NOT NULL DEFAULT 0 COMMENT '0隐藏，1显示',
++  `seenVersion` bigint NOT NULL DEFAULT 0 COMMENT '已查看提示版本',
++  `updateTime` bigint NOT NULL DEFAULT 0 COMMENT '更新时间，Unix秒',
++  PRIMARY KEY (`playerId`,`nodeId`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家红点状态';
++
+--- a/server/sql/ugame_10001.sql
++++ b/server/sql/ugame_10001.sql
+@@ -91,6 +91,17 @@
+   PRIMARY KEY (`id`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='登陆奖励管理';
+ 
++-- 导出  表 ugame_10001.playerreddot 结构
++CREATE TABLE IF NOT EXISTS `playerreddot` (
++  `playerId` bigint NOT NULL COMMENT '玩家ID',
++  `nodeId` int NOT NULL COMMENT '红点叶子节点ID',
++  `isActive` tinyint NOT NULL DEFAULT 0 COMMENT '0隐藏，1显示',
++  `seenVersion` bigint NOT NULL DEFAULT 0 COMMENT '已查看提示版本',
++  `updateTime` bigint NOT NULL DEFAULT 0 COMMENT '更新时间，Unix秒',
++  PRIMARY KEY (`playerId`,`nodeId`)
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家红点状态';
++
++
+ -- 导出  表 ugame_10001.mailmessage 结构
+ CREATE TABLE IF NOT EXISTS `mailmessage` (
+   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '邮件消息的唯一ID号',
+@@ -109,16 +120,16 @@
+   `id` bigint(20) NOT NULL DEFAULT '10000' COMMENT 'playerId',
+   `accountId` bigint(20) NOT NULL DEFAULT '0' COMMENT '账号ID',
+   `level` int(11) NOT NULL DEFAULT '1' COMMENT '等级',
+-  `name` varchar(128) DEFAULT NULL COMMENT '用户名字',
+-  `avatarId` int(11) NOT NULL DEFAULT '0' COMMENT '头像ID，0表示未设置',
+-  `guildId` bigint(20) NOT NULL DEFAULT '0' COMMENT '公会ID，0表示未加入公会',
+-  `titleId` int(11) NOT NULL DEFAULT '0' COMMENT '称号ID，0表示未佩戴称号',
+-  `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '' COMMENT '个性签名',
+-  `createTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '创建角色Unix秒时间戳，0表示未知',
+-  `avatarFrameId` int(11) NOT NULL DEFAULT '0' COMMENT '头像框ID，0表示未设置',
+-  `backgroundId` int(11) NOT NULL DEFAULT '0' COMMENT '资料背景ID，0表示默认背景',
+-  `displayAchievementIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0,0]' COMMENT '展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位',
+-  `displayCharacterIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0]' COMMENT '展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位',
++  `name` varchar(128) DEFAULT NULL COMMENT '用户名字',
++  `avatarId` int(11) NOT NULL DEFAULT '0' COMMENT '头像ID，0表示未设置',
++  `guildId` bigint(20) NOT NULL DEFAULT '0' COMMENT '公会ID，0表示未加入公会',
++  `titleId` int(11) NOT NULL DEFAULT '0' COMMENT '称号ID，0表示未佩戴称号',
++  `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '' COMMENT '个性签名',
++  `createTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '创建角色Unix秒时间戳，0表示未知',
++  `avatarFrameId` int(11) NOT NULL DEFAULT '0' COMMENT '头像框ID，0表示未设置',
++  `backgroundId` int(11) NOT NULL DEFAULT '0' COMMENT '资料背景ID，0表示默认背景',
++  `displayAchievementIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0,0]' COMMENT '展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位',
++  `displayCharacterIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0]' COMMENT '展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位',
+   `usex` int(11) NOT NULL DEFAULT '0',
+   `job` int(11) NOT NULL DEFAULT '0' COMMENT '职业',
+   `exp` int(11) NOT NULL DEFAULT '0' COMMENT '经验',
+@@ -134,92 +145,92 @@
+   PRIMARY KEY (`id`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+ 
+--- 兼容已有player表：仅添加缺少的资料字段，重复执行不会重复添加列（兼容MySQL 5.7）。
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `avatarId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像ID，0表示未设置'' AFTER `name`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'guildId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `guildId` bigint(20) NOT NULL DEFAULT 0 COMMENT ''公会ID，0表示未加入公会'' AFTER `avatarId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'titleId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `titleId` int(11) NOT NULL DEFAULT 0 COMMENT ''称号ID，0表示未佩戴称号'' AFTER `guildId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'signature'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '''' COMMENT ''个性签名'' AFTER `titleId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'createTime'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `createTime` bigint(20) NOT NULL DEFAULT 0 COMMENT ''创建角色Unix秒时间戳，0表示未知'' AFTER `signature`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+--- MySQL 5.7的JSON列不支持非NULL默认值，展示槽位使用varchar保存JSON数组文本。
+--- 数组长度、ID有效性、重复ID和归属由服务端保存时校验。
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarFrameId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `avatarFrameId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像框ID，0表示未设置'' AFTER `createTime`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'backgroundId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `backgroundId` int(11) NOT NULL DEFAULT 0 COMMENT ''资料背景ID，0表示默认背景'' AFTER `avatarFrameId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayAchievementIds'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `displayAchievementIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0,0]'' COMMENT ''展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位'' AFTER `backgroundId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayCharacterIds'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `displayCharacterIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0]'' COMMENT ''展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位'' AFTER `displayAchievementIds`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+--- 抽奖使用的玩家角色、道具、保底和记录表。全部使用 InnoDB，确保一次抽奖可原子提交。
+-CREATE TABLE IF NOT EXISTS `player_item` (
++-- 兼容已有player表：仅添加缺少的资料字段，重复执行不会重复添加列（兼容MySQL 5.7）。
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarId'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `avatarId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像ID，0表示未设置'' AFTER `name`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'guildId'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `guildId` bigint(20) NOT NULL DEFAULT 0 COMMENT ''公会ID，0表示未加入公会'' AFTER `avatarId`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'titleId'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `titleId` int(11) NOT NULL DEFAULT 0 COMMENT ''称号ID，0表示未佩戴称号'' AFTER `guildId`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'signature'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '''' COMMENT ''个性签名'' AFTER `titleId`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'createTime'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `createTime` bigint(20) NOT NULL DEFAULT 0 COMMENT ''创建角色Unix秒时间戳，0表示未知'' AFTER `signature`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++-- MySQL 5.7的JSON列不支持非NULL默认值，展示槽位使用varchar保存JSON数组文本。
++-- 数组长度、ID有效性、重复ID和归属由服务端保存时校验。
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarFrameId'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `avatarFrameId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像框ID，0表示未设置'' AFTER `createTime`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'backgroundId'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `backgroundId` int(11) NOT NULL DEFAULT 0 COMMENT ''资料背景ID，0表示默认背景'' AFTER `avatarFrameId`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayAchievementIds'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `displayAchievementIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0,0]'' COMMENT ''展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位'' AFTER `backgroundId`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++SET @player_profile_sql = IF(
++  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayCharacterIds'),
++  'SELECT 1',
++  'ALTER TABLE `player` ADD COLUMN `displayCharacterIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0]'' COMMENT ''展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位'' AFTER `displayAchievementIds`'
++);
++PREPARE player_profile_statement FROM @player_profile_sql;
++EXECUTE player_profile_statement;
++DEALLOCATE PREPARE player_profile_statement;
++
++-- 抽奖使用的玩家角色、道具、保底和记录表。全部使用 InnoDB，确保一次抽奖可原子提交。
++CREATE TABLE IF NOT EXISTS `player_item` (
+   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+   `player_id` bigint(20) NOT NULL COMMENT '玩家ID',
+   `item_id` int(11) NOT NULL COMMENT 'Item配置表ID',
+--- a/server/tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1
++++ b/server/tools/LubanExcelToCsv/Export-LubanExcelToCsv.ps1
+@@ -165,7 +165,11 @@
+ 
+         $workbook = $application.Workbooks.Open($copiedWorkbook, 0, $true)
+         try {
+-            $worksheet = $workbook.Worksheets.Item([string]$table.worksheet)
++            $worksheet = $workbook.Worksheets.Item([string]$table.worksheet)
++            # Three-row Luban metadata uses ## in row 3; older tables may have ##group plus ##comment.
++            $thirdRowMarker = ([string]$worksheet.Cells.Item(3, 1).Text).Trim()
++            $descriptionRow = if ($thirdRowMarker -in @('##', '##comment')) { 3 } else { 4 }
++            $firstDataRow = $descriptionRow + 1
+             $seenSourceFields = @{}
+             $outputDescriptions = @()
+             $outputTypes = @()
+@@ -181,7 +185,7 @@
+                 $seenSourceFields[$normalized] = $true
+ 
+                 $sourceType = Convert-LubanType ([string]$worksheet.Cells.Item(2, $column).Text)
+-                $sourceDescription = [string]$worksheet.Cells.Item(4, $column).Text
++                $sourceDescription = [string]$worksheet.Cells.Item($descriptionRow, $column).Text
+                 if ($existingMetadata.ContainsKey($normalized)) {
+                     $metadata = $existingMetadata[$normalized]
+                     $outputFields += $metadata.Field
+@@ -216,7 +220,7 @@
+                 }
+ 
+                 $writtenRows = 0
+-                for ($row = 5; $row -le $worksheet.UsedRange.Rows.Count; $row++) {
++                for ($row = $firstDataRow; $row -le $worksheet.UsedRange.Rows.Count; $row++) {
+                     $keyValue = $worksheet.Cells.Item($row, $columnMappings[0]).Value2
+                     if ($null -eq $keyValue -or ([string]$keyValue).Trim().Length -eq 0) { continue }
+ 
+--- a/server/tools/LubanExcelToCsv/LubanExcelToCsv.json
++++ b/server/tools/LubanExcelToCsv/LubanExcelToCsv.json
+@@ -18,41 +18,48 @@
+       "workbook": "Trap.xlsx",
+       "worksheet": "Sheet1",
+       "outputCsv": "Trap.csv"
+-    },   
++    },
+     {
+       "enabled": true,
+       "name": "GachaPoolConfig",
+       "workbook": "GachaPoolConfig.xlsx",
+       "worksheet": "Sheet1",
+       "outputCsv": "GachaPoolConfig.csv"
+-    }, 
++    },
+     {
+       "enabled": true,
+       "name": "GachaPoolRewardConfig",
+       "workbook": "GachaPoolRewardConfig.xlsx",
+       "worksheet": "Sheet1",
+       "outputCsv": "GachaPoolRewardConfig.csv"
+-    }, 
++    },
+     {
+       "enabled": true,
+       "name": "Character",
+       "workbook": "Character.xlsx",
+       "worksheet": "Sheet1",
+       "outputCsv": "Character.csv"
+-    }, 
++    },
+     {
+       "enabled": true,
+       "name": "BaseInventory",
+       "workbook": "BaseInventory.xlsx",
+       "worksheet": "Sheet1",
+       "outputCsv": "BaseInventory.csv"
+-    }, 
++    },
+     {
+       "enabled": true,
+       "name": "StarLevel",
+       "workbook": "StarLevel.xlsx",
+       "worksheet": "Sheet1",
+       "outputCsv": "StarLevel.csv"
++    },
++    {
++      "enabled": true,
++      "name": "RedDotConfig",
++      "workbook": "RedDotConfig.xlsx",
++      "worksheet": "Sheet1",
++      "outputCsv": "RedDotConfig.csv"
+     }
+   ]
+ }
+diff --git a/client/Assets/Luban/Template/Datas/RedDotConfig.xlsx b/client/Assets/Luban/Template/Datas/RedDotConfig.xlsx
+Binary file added: 7411 bytes; node configuration workbook.
+--- /dev/null
++++ b/client/Assets/Luban/Template/Datas/RedDotConfig.xlsx.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: c5e8013b85ad4d858398960885617004
+--- a/client/Assets/Scripts/HotUpdate/Game/Protocol/Definitions/Cmd.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Definitions/Cmd.cs
+@@ -1,107 +1,112 @@
+-
+-
+-public enum Cmd
+-{
+-    eUserLoginReq = 1001,
+-    eUserLoginRes = 1002,
+-        eUserLogoutReq = 1008,
+-        eUserLogoutRes = 1009,
+-    eIssueGameTicketReq = 1003,
+-    eIssueGameTicketRes = 1004,
+-    eGameAuthenticateReq = 1005,
+-    eGameAuthenticateRes = 1006,
+-    // 登录服通知游戏服淘汰旧认证会话
+-    eInvalidateAccountSessionReq = 1007,
+-    eGetGachaPoolInfoReq = 75,
+-    eGetGachaPoolInfoRes = 76,
+-    eGachaDrawReq = 77,
+-    eGachaDrawRes = 78,
+-    eGetCharacterInfoReq = 79,
+-    eGetCharacterInfoRes = 80,
+-    eCharacterStarUpReq = 81,
+-    eCharacterStarUpRes = 82,
+-    eHeartbeatReq = 83,
+-    eHeartbeatRes = 84,
+-    eGetPlayerFormationsReq = 85,
+-    eGetPlayerFormationsRes = 86,
+-    eSavePlayerFormationReq = 87,
+-    eSavePlayerFormationRes = 88,
+-    eGetPlayerItemsReq = 89,
+-    eGetPlayerItemsRes = 90,
+-    eGetPlayerBasicInfoReq = 91,
+-    eGetPlayerBasicInfoRes = 92,
+-        eUpdatePlayerBasicInfoReq = 93,
+-        eUpdatePlayerBasicInfoRes = 94,
+-    /*eGuestLoginReq = 1,
+-    eGuestLoginRes = 2,
+-    eRegisterUserReq = 3,
+-    eRegisterUserRes = 4,
+-    eGuestUpgradeReq = 7,
+-    eGuestUpgradeRes = 8,
+-    ePullingPlayerDataReq = 9,
+-    ePullingPlayerDataRes = 10,
+-    eRecvLoginBonuesReq = 11,
+-    eRecvLoginBonuesRes = 12,
+-    ePullingBonuesListReq = 13,
+-    ePullingBonuesListRes = 14,
+-    eRecvBonuesReq = 15,
+-    eRecvBonuesRes = 16,
+-    eSelectPlayerReq = 17,
+-    eSelectPlayerRes = 18,
+-    ePullingTaskListReq = 19,
+-    ePullingTaskListRes = 20,
+-    ePullingMailMsgReq = 21,
+-    ePullingMailMsgRes = 22,
+-    eUpdateMailMsgReq = 23,
+-    eUpdategMailMsgRes = 24,
+-    ePullingRankReq = 25,
+-    ePullingRankRes = 26,
+-    ePullingPackDataReq = 27,
+-    ePullingPackDataRes = 28,
+-    eExchangeProductReq = 29,
+-    eExchangeProductRes = 30,
+-    eEnterLogicServerReq = 31,
+-    eEnterLogicServerRes = 32,
+-    eExitLogicServerReq = 33,
+-    eExitLogicServerRes = 34,
+-    eSitdownReq = 35,
+-    eSitdownRes = 36,
+-    eStandupReq = 37,
+-    eStandupRes = 38,
+-    eTalkMsgReq = 39,
+-    eTalkMsgRes = 40,
+-    ePlayerIsReadyReq = 41,
+-    ePlayerIsReadyRes = 42,
+-    ePlayerOptReq = 43,
+-    ePlayerOptRes = 44,
+-    eEnterRoomRes = 45,
+-    eUserArrivedSeatRes = 46,
+-    eUserExitSeatRes = 47,
+-    eRoundReadyRes = 48,
+-    eRoundStartedRes = 49,
+-    eRoundCheckOutRes = 50,
+-    eRoundClearRes = 51,
+-    eReconnRoomRes = 52,
+-    ePlayerEscapeRes = 53,
+-    eFrameSyncDataRes = 54,
+-    ePlayerSpawnReq = 55,
+-    ePlayerSpawnRes = 56,
+-    eNavToDstReq = 57,
+-    eNavToDstRes = 58,
+-    eNavInDirReq = 59,
+-    eNavInDirRes = 60,
+-    eStartSkillReq = 61,
+-    eStartSkillRes = 62,
+-    eStartBuffReq = 63,
+-    eStartBuffRes = 64,
+-    eEnterAOIRes = 65,
+-    eLeaveAOIRes = 66,
+-    eSyncCharactorRes = 67,
+-    eLostHpRes = 68,
+-    eTestGetGoodReq = 69,
+-    eTestGetGoodRes = 70,
+-    eTestUpdateGoodsReq = 71,
+-    eTestUpdateGoddsRes = 72,
+-    eTestLogicCmdEchoReq = 73,
+-    eTestLogicCmdEchoRes = 74,*/
+-}
++
++
++public enum Cmd
++{
++    eRedDotInitReq = 95,
++    eRedDotInitRes = 96,
++    eRedDotViewReq = 97,
++    eRedDotViewRes = 98,
++    eRedDotChanged = 99,
++    eUserLoginReq = 1001,
++    eUserLoginRes = 1002,
++        eUserLogoutReq = 1008,
++        eUserLogoutRes = 1009,
++    eIssueGameTicketReq = 1003,
++    eIssueGameTicketRes = 1004,
++    eGameAuthenticateReq = 1005,
++    eGameAuthenticateRes = 1006,
++    // 登录服通知游戏服淘汰旧认证会话
++    eInvalidateAccountSessionReq = 1007,
++    eGetGachaPoolInfoReq = 75,
++    eGetGachaPoolInfoRes = 76,
++    eGachaDrawReq = 77,
++    eGachaDrawRes = 78,
++    eGetCharacterInfoReq = 79,
++    eGetCharacterInfoRes = 80,
++    eCharacterStarUpReq = 81,
++    eCharacterStarUpRes = 82,
++    eHeartbeatReq = 83,
++    eHeartbeatRes = 84,
++    eGetPlayerFormationsReq = 85,
++    eGetPlayerFormationsRes = 86,
++    eSavePlayerFormationReq = 87,
++    eSavePlayerFormationRes = 88,
++    eGetPlayerItemsReq = 89,
++    eGetPlayerItemsRes = 90,
++    eGetPlayerBasicInfoReq = 91,
++    eGetPlayerBasicInfoRes = 92,
++        eUpdatePlayerBasicInfoReq = 93,
++        eUpdatePlayerBasicInfoRes = 94,
++    /*eGuestLoginReq = 1,
++    eGuestLoginRes = 2,
++    eRegisterUserReq = 3,
++    eRegisterUserRes = 4,
++    eGuestUpgradeReq = 7,
++    eGuestUpgradeRes = 8,
++    ePullingPlayerDataReq = 9,
++    ePullingPlayerDataRes = 10,
++    eRecvLoginBonuesReq = 11,
++    eRecvLoginBonuesRes = 12,
++    ePullingBonuesListReq = 13,
++    ePullingBonuesListRes = 14,
++    eRecvBonuesReq = 15,
++    eRecvBonuesRes = 16,
++    eSelectPlayerReq = 17,
++    eSelectPlayerRes = 18,
++    ePullingTaskListReq = 19,
++    ePullingTaskListRes = 20,
++    ePullingMailMsgReq = 21,
++    ePullingMailMsgRes = 22,
++    eUpdateMailMsgReq = 23,
++    eUpdategMailMsgRes = 24,
++    ePullingRankReq = 25,
++    ePullingRankRes = 26,
++    ePullingPackDataReq = 27,
++    ePullingPackDataRes = 28,
++    eExchangeProductReq = 29,
++    eExchangeProductRes = 30,
++    eEnterLogicServerReq = 31,
++    eEnterLogicServerRes = 32,
++    eExitLogicServerReq = 33,
++    eExitLogicServerRes = 34,
++    eSitdownReq = 35,
++    eSitdownRes = 36,
++    eStandupReq = 37,
++    eStandupRes = 38,
++    eTalkMsgReq = 39,
++    eTalkMsgRes = 40,
++    ePlayerIsReadyReq = 41,
++    ePlayerIsReadyRes = 42,
++    ePlayerOptReq = 43,
++    ePlayerOptRes = 44,
++    eEnterRoomRes = 45,
++    eUserArrivedSeatRes = 46,
++    eUserExitSeatRes = 47,
++    eRoundReadyRes = 48,
++    eRoundStartedRes = 49,
++    eRoundCheckOutRes = 50,
++    eRoundClearRes = 51,
++    eReconnRoomRes = 52,
++    ePlayerEscapeRes = 53,
++    eFrameSyncDataRes = 54,
++    ePlayerSpawnReq = 55,
++    ePlayerSpawnRes = 56,
++    eNavToDstReq = 57,
++    eNavToDstRes = 58,
++    eNavInDirReq = 59,
++    eNavInDirRes = 60,
++    eStartSkillReq = 61,
++    eStartSkillRes = 62,
++    eStartBuffReq = 63,
++    eStartBuffRes = 64,
++    eEnterAOIRes = 65,
++    eLeaveAOIRes = 66,
++    eSyncCharactorRes = 67,
++    eLostHpRes = 68,
++    eTestGetGoodReq = 69,
++    eTestGetGoodRes = 70,
++    eTestUpdateGoodsReq = 71,
++    eTestUpdateGoddsRes = 72,
++    eTestLogicCmdEchoReq = 73,
++    eTestLogicCmdEchoRes = 74,*/
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Messages/RedDotMessage.cs
+@@ -0,0 +1,61 @@
++using Framework.Core.Serializer;
++using Framework.Core.Utils;
++using ProtoBuf;
++using System.Collections.Generic;
++
++namespace Game.Datas.Messages
++{
++    [ProtoContract]
++    public sealed class RedDotNodeMessage
++    {
++        [ProtoMember(1)] public int id;
++        [ProtoMember(2)] public string name;
++        [ProtoMember(3)] public int parentId;
++        [ProtoMember(4)] public int clearType;
++        [ProtoMember(5)] public bool enabled;
++        [ProtoMember(6)] public long tipVersion;
++    }
++    [ProtoContract]
++    public sealed class RedDotStateMessage
++    {
++        [ProtoMember(1)] public int nodeId;
++        [ProtoMember(2)] public bool isActive;
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotInitReq)]
++    public sealed class ReqRedDotInit : Message { }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotInitRes)]
++    public sealed class ResRedDotInit : Message
++    {
++        [ProtoMember(1)] public int status;
++        [ProtoMember(2)] public string configVersion;
++        [ProtoMember(3)] public long stateVersion;
++        [ProtoMember(4)] public List<RedDotNodeMessage> nodes = new();
++        [ProtoMember(5)] public List<RedDotStateMessage> states = new();
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotViewReq)]
++    public sealed class ReqRedDotView : Message
++    {
++        [ProtoMember(1)] public int nodeId;
++        [ProtoMember(2)] public long tipVersion;
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotViewRes)]
++    public sealed class ResRedDotView : Message
++    {
++        [ProtoMember(1)] public int status;
++        [ProtoMember(2)] public string configVersion;
++        [ProtoMember(3)] public long stateVersion;
++        [ProtoMember(4)] public List<RedDotStateMessage> states = new();
++    }
++    [ProtoContract]
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotChanged)]
++    public sealed class NotifyRedDotChanged : Message
++    {
++        [ProtoMember(1)] public string configVersion;
++        [ProtoMember(2)] public long stateVersion;
++        [ProtoMember(3)] public List<RedDotStateMessage> states = new();
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Messages/RedDotMessage.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 137cf52b6191459b81562d256f4bc797
+--- a/client/Assets/Scripts/HotUpdate/Game/Protocol/Network/GoogleProtocolCodecNetwork.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Network/GoogleProtocolCodecNetwork.cs
+@@ -28,101 +28,121 @@
+                 {
+                     WriteResUpdatePlayerBasicInfo(output, value2);
+                 }
+-                else if (source is ReqCharacterStarUp value3)
+-                {
+-                    WriteReqCharacterStarUp(output, value3);
+-                }
+-                else if (source is ReqGachaDraw value4)
+-                {
+-                    WriteReqGachaDraw(output, value4);
+-                }
+-                else if (source is ReqGameAuthenticate value5)
+-                {
+-                    WriteReqGameAuthenticate(output, value5);
+-                }
+-                else if (source is ReqGetCharacterInfo value6)
+-                {
+-                    WriteReqGetCharacterInfo(output, value6);
+-                }
+-                else if (source is ReqGetGachaPoolInfo value7)
+-                {
+-                    WriteReqGetGachaPoolInfo(output, value7);
+-                }
+-                else if (source is ReqGetPlayerFormations value8)
+-                {
+-                    WriteReqGetPlayerFormations(output, value8);
+-                }
+-                else if (source is ReqGetPlayerItems value9)
+-                {
+-                    WriteReqGetPlayerItems(output, value9);
+-                }
+-                else if (source is ReqHeartbeat value10)
+-                {
+-                    WriteReqHeartbeat(output, value10);
+-                }
+-                else if (source is ReqIssueGameTicket value11)
+-                {
+-                    WriteReqIssueGameTicket(output, value11);
+-                }
+-                else if (source is ReqSavePlayerFormation value12)
+-                {
+-                    WriteReqSavePlayerFormation(output, value12);
+-                }
+-                else if (source is ReqUserLogin value13)
+-                {
+-                    WriteReqUserLogin(output, value13);
+-                }
+-                else if (source is ReqUserLogout value14)
+-                {
+-                    WriteReqUserLogout(output, value14);
+-                }
+-                else if (source is ResCharacterStarUp value15)
+-                {
+-                    WriteResCharacterStarUp(output, value15);
+-                }
+-                else if (source is ResGachaDraw value16)
+-                {
+-                    WriteResGachaDraw(output, value16);
+-                }
+-                else if (source is ResGameAuthenticate value17)
+-                {
+-                    WriteResGameAuthenticate(output, value17);
+-                }
+-                else if (source is ResGetCharacterInfo value18)
+-                {
+-                    WriteResGetCharacterInfo(output, value18);
+-                }
+-                else if (source is ResGetGachaPoolInfo value19)
+-                {
+-                    WriteResGetGachaPoolInfo(output, value19);
+-                }
+-                else if (source is ResGetPlayerFormations value20)
+-                {
+-                    WriteResGetPlayerFormations(output, value20);
+-                }
+-                else if (source is ResGetPlayerItems value21)
+-                {
+-                    WriteResGetPlayerItems(output, value21);
+-                }
+-                else if (source is ResHeartbeat value22)
+-                {
+-                    WriteResHeartbeat(output, value22);
+-                }
+-                else if (source is ResIssueGameTicket value23)
+-                {
+-                    WriteResIssueGameTicket(output, value23);
+-                }
+-                else if (source is ResSavePlayerFormation value24)
+-                {
+-                    WriteResSavePlayerFormation(output, value24);
+-                }
+-                else if (source is ResUserLogin value25)
+-                {
+-                    WriteResUserLogin(output, value25);
+-                }
+-                else if (source is ResUserLogout value26)
+-                {
+-                    WriteResUserLogout(output, value26);
++                else if (source is ReqRedDotInit value3)
++                {
++                    WriteReqRedDotInit(output, value3);
++                }
++                else if (source is ResRedDotInit value4)
++                {
++                    WriteResRedDotInit(output, value4);
++                }
++                else if (source is ReqRedDotView value5)
++                {
++                    WriteReqRedDotView(output, value5);
++                }
++                else if (source is ResRedDotView value6)
++                {
++                    WriteResRedDotView(output, value6);
++                }
++                else if (source is NotifyRedDotChanged value7)
++                {
++                    WriteNotifyRedDotChanged(output, value7);
++                }
++                else if (source is ReqCharacterStarUp value8)
++                {
++                    WriteReqCharacterStarUp(output, value8);
++                }
++                else if (source is ReqGachaDraw value9)
++                {
++                    WriteReqGachaDraw(output, value9);
++                }
++                else if (source is ReqGameAuthenticate value10)
++                {
++                    WriteReqGameAuthenticate(output, value10);
++                }
++                else if (source is ReqGetCharacterInfo value11)
++                {
++                    WriteReqGetCharacterInfo(output, value11);
++                }
++                else if (source is ReqGetGachaPoolInfo value12)
++                {
++                    WriteReqGetGachaPoolInfo(output, value12);
++                }
++                else if (source is ReqGetPlayerFormations value13)
++                {
++                    WriteReqGetPlayerFormations(output, value13);
++                }
++                else if (source is ReqGetPlayerItems value14)
++                {
++                    WriteReqGetPlayerItems(output, value14);
++                }
++                else if (source is ReqHeartbeat value15)
++                {
++                    WriteReqHeartbeat(output, value15);
++                }
++                else if (source is ReqIssueGameTicket value16)
++                {
++                    WriteReqIssueGameTicket(output, value16);
++                }
++                else if (source is ReqSavePlayerFormation value17)
++                {
++                    WriteReqSavePlayerFormation(output, value17);
++                }
++                else if (source is ReqUserLogin value18)
++                {
++                    WriteReqUserLogin(output, value18);
++                }
++                else if (source is ReqUserLogout value19)
++                {
++                    WriteReqUserLogout(output, value19);
++                }
++                else if (source is ResCharacterStarUp value20)
++                {
++                    WriteResCharacterStarUp(output, value20);
++                }
++                else if (source is ResGachaDraw value21)
++                {
++                    WriteResGachaDraw(output, value21);
++                }
++                else if (source is ResGameAuthenticate value22)
++                {
++                    WriteResGameAuthenticate(output, value22);
++                }
++                else if (source is ResGetCharacterInfo value23)
++                {
++                    WriteResGetCharacterInfo(output, value23);
++                }
++                else if (source is ResGetGachaPoolInfo value24)
++                {
++                    WriteResGetGachaPoolInfo(output, value24);
++                }
++                else if (source is ResGetPlayerFormations value25)
++                {
++                    WriteResGetPlayerFormations(output, value25);
++                }
++                else if (source is ResGetPlayerItems value26)
++                {
++                    WriteResGetPlayerItems(output, value26);
++                }
++                else if (source is ResHeartbeat value27)
++                {
++                    WriteResHeartbeat(output, value27);
++                }
++                else if (source is ResIssueGameTicket value28)
++                {
++                    WriteResIssueGameTicket(output, value28);
++                }
++                else if (source is ResSavePlayerFormation value29)
++                {
++                    WriteResSavePlayerFormation(output, value29);
++                }
++                else if (source is ResUserLogin value30)
++                {
++                    WriteResUserLogin(output, value30);
++                }
++                else if (source is ResUserLogout value31)
++                {
++                    WriteResUserLogout(output, value31);
+                 }
+                 else return false;
+                 output.Flush();
+@@ -145,6 +165,11 @@
+                 if (messageType == typeof(ReqGetPlayerBasicInfo)) message = ReadReqGetPlayerBasicInfo(input);
+                 else if (messageType == typeof(ResGetPlayerBasicInfo)) message = ReadResGetPlayerBasicInfo(input);
+                 else if (messageType == typeof(ResUpdatePlayerBasicInfo)) message = ReadResUpdatePlayerBasicInfo(input);
++                else if (messageType == typeof(ReqRedDotInit)) message = ReadReqRedDotInit(input);
++                else if (messageType == typeof(ResRedDotInit)) message = ReadResRedDotInit(input);
++                else if (messageType == typeof(ReqRedDotView)) message = ReadReqRedDotView(input);
++                else if (messageType == typeof(ResRedDotView)) message = ReadResRedDotView(input);
++                else if (messageType == typeof(NotifyRedDotChanged)) message = ReadNotifyRedDotChanged(input);
+                 else if (messageType == typeof(ReqCharacterStarUp)) message = ReadReqCharacterStarUp(input);
+                 else if (messageType == typeof(ReqGachaDraw)) message = ReadReqGachaDraw(input);
+                 else if (messageType == typeof(ReqGameAuthenticate)) message = ReadReqGameAuthenticate(input);
+@@ -805,6 +830,391 @@
+             return size;
+         }
+ 
++        private static void WriteRedDotNodeMessage(CodedOutputStream output, RedDotNodeMessage message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.id);
++            if (message.name != null)
++            {
++                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.name);
++            }
++            output.WriteTag(3, WireFormat.WireType.Varint);
++            output.WriteInt32(message.parentId);
++            output.WriteTag(4, WireFormat.WireType.Varint);
++            output.WriteInt32(message.clearType);
++            output.WriteTag(5, WireFormat.WireType.Varint);
++            output.WriteBool(message.enabled);
++            output.WriteTag(6, WireFormat.WireType.Varint);
++            output.WriteInt64(message.tipVersion);
++        }
++
++        private static RedDotNodeMessage ReadRedDotNodeMessage(CodedInputStream input)
++        {
++            var message = new RedDotNodeMessage();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.id = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.name = input.ReadString();
++                        break;
++                    case 3:
++                        message.parentId = input.ReadInt32();
++                        break;
++                    case 4:
++                        message.clearType = input.ReadInt32();
++                        break;
++                    case 5:
++                        message.enabled = input.ReadBool();
++                        break;
++                    case 6:
++                        message.tipVersion = input.ReadInt64();
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeRedDotNodeMessage(RedDotNodeMessage message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.id);
++            if (message.name != null)
++                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.name);
++            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt32Size(message.parentId);
++            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.clearType);
++            size += CodedOutputStream.ComputeTagSize(5) + 1;
++            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.tipVersion);
++            return size;
++        }
++
++        private static void WriteRedDotStateMessage(CodedOutputStream output, RedDotStateMessage message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.nodeId);
++            output.WriteTag(2, WireFormat.WireType.Varint);
++            output.WriteBool(message.isActive);
++        }
++
++        private static RedDotStateMessage ReadRedDotStateMessage(CodedInputStream input)
++        {
++            var message = new RedDotStateMessage();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.nodeId = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.isActive = input.ReadBool();
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeRedDotStateMessage(RedDotStateMessage message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.nodeId);
++            size += CodedOutputStream.ComputeTagSize(2) + 1;
++            return size;
++        }
++
++        private static void WriteReqRedDotInit(CodedOutputStream output, ReqRedDotInit message)
++        {
++        }
++
++        private static ReqRedDotInit ReadReqRedDotInit(CodedInputStream input)
++        {
++            var message = new ReqRedDotInit();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeReqRedDotInit(ReqRedDotInit message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            return size;
++        }
++
++        private static void WriteResRedDotInit(CodedOutputStream output, ResRedDotInit message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.status);
++            if (message.configVersion != null)
++            {
++                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.configVersion);
++            }
++            output.WriteTag(3, WireFormat.WireType.Varint);
++            output.WriteInt64(message.stateVersion);
++            if (message.nodes != null)
++            {
++                for (int index = 0; index < message.nodes.Count; index++)
++                {
++                    WriteMessage(output, 4, message.nodes[index], WriteRedDotNodeMessage, ComputeSizeRedDotNodeMessage);
++                }
++            }
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    WriteMessage(output, 5, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
++                }
++            }
++        }
++
++        private static ResRedDotInit ReadResRedDotInit(CodedInputStream input)
++        {
++            var message = new ResRedDotInit();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.status = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.configVersion = input.ReadString();
++                        break;
++                    case 3:
++                        message.stateVersion = input.ReadInt64();
++                        break;
++                    case 4:
++                        message.nodes.Add(ReadMessage(input, ReadRedDotNodeMessage));
++                        break;
++                    case 5:
++                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeResRedDotInit(ResRedDotInit message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
++            if (message.configVersion != null)
++                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.configVersion);
++            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
++            if (message.nodes != null)
++            {
++                for (int index = 0; index < message.nodes.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotNodeMessage(message.nodes[index]);
++                    size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
++                    size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            return size;
++        }
++
++        private static void WriteReqRedDotView(CodedOutputStream output, ReqRedDotView message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.nodeId);
++            output.WriteTag(2, WireFormat.WireType.Varint);
++            output.WriteInt64(message.tipVersion);
++        }
++
++        private static ReqRedDotView ReadReqRedDotView(CodedInputStream input)
++        {
++            var message = new ReqRedDotView();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.nodeId = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.tipVersion = input.ReadInt64();
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeReqRedDotView(ReqRedDotView message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.nodeId);
++            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.tipVersion);
++            return size;
++        }
++
++        private static void WriteResRedDotView(CodedOutputStream output, ResRedDotView message)
++        {
++            output.WriteTag(1, WireFormat.WireType.Varint);
++            output.WriteInt32(message.status);
++            if (message.configVersion != null)
++            {
++                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.configVersion);
++            }
++            output.WriteTag(3, WireFormat.WireType.Varint);
++            output.WriteInt64(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    WriteMessage(output, 4, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
++                }
++            }
++        }
++
++        private static ResRedDotView ReadResRedDotView(CodedInputStream input)
++        {
++            var message = new ResRedDotView();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.status = input.ReadInt32();
++                        break;
++                    case 2:
++                        message.configVersion = input.ReadString();
++                        break;
++                    case 3:
++                        message.stateVersion = input.ReadInt64();
++                        break;
++                    case 4:
++                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeResRedDotView(ResRedDotView message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
++            if (message.configVersion != null)
++                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.configVersion);
++            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
++                    size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            return size;
++        }
++
++        private static void WriteNotifyRedDotChanged(CodedOutputStream output, NotifyRedDotChanged message)
++        {
++            if (message.configVersion != null)
++            {
++                output.WriteTag(1, WireFormat.WireType.LengthDelimited);
++                output.WriteString(message.configVersion);
++            }
++            output.WriteTag(2, WireFormat.WireType.Varint);
++            output.WriteInt64(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    WriteMessage(output, 3, message.states[index], WriteRedDotStateMessage, ComputeSizeRedDotStateMessage);
++                }
++            }
++        }
++
++        private static NotifyRedDotChanged ReadNotifyRedDotChanged(CodedInputStream input)
++        {
++            var message = new NotifyRedDotChanged();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (WireFormat.GetTagFieldNumber(tag))
++                {
++                    case 1:
++                        message.configVersion = input.ReadString();
++                        break;
++                    case 2:
++                        message.stateVersion = input.ReadInt64();
++                        break;
++                    case 3:
++                        message.states.Add(ReadMessage(input, ReadRedDotStateMessage));
++                        break;
++                    default:
++                        input.SkipLastField();
++                        break;
++                }
++            }
++            return message;
++        }
++
++        private static int ComputeSizeNotifyRedDotChanged(NotifyRedDotChanged message)
++        {
++            if (message == null) return 0;
++            int size = 0;
++            if (message.configVersion != null)
++                size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeStringSize(message.configVersion);
++            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.stateVersion);
++            if (message.states != null)
++            {
++                for (int index = 0; index < message.states.Count; index++)
++                {
++                    int childSize = ComputeSizeRedDotStateMessage(message.states[index]);
++                    size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
++                }
++            }
++            return size;
++        }
++
+         private static void WriteReqCharacterStarUp(CodedOutputStream output, ReqCharacterStarUp message)
+         {
+             output.WriteTag(1, WireFormat.WireType.Varint);
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot.meta
+@@ -0,0 +1,3 @@
++fileFormatVersion: 2
++guid: 2edd815eb0f34f0084b969962b56d24f
++folderAsset: yes
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Manager.meta
+@@ -0,0 +1,3 @@
++fileFormatVersion: 2
++guid: 839373fcb4e5496a9f0789ea6840ddd0
++folderAsset: yes
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotManager.cs
+@@ -0,0 +1,121 @@
++using System;
++using System.Collections.Generic;
++using System.Linq;
++using System.Threading;
++using Cysharp.Threading.Tasks;
++using Game.Datas.Messages;
++using MiaoWu.Networking.Auth;
++using UniFramework.Event;
++
++namespace MiaoWu.Networking.RedDot
++{
++    public sealed class RedDotManager : Singleton_Mono<RedDotManager>
++    {
++        private readonly RedDotTreeManager treeManager = new();
++        public RedDotTreeModel Tree => treeManager.State;
++        public event Action Changed
++        { add => treeManager.Changed += value; remove => treeManager.Changed -= value; }
++        public bool IsActive(int nodeId) => treeManager.IsActive(nodeId);
++        public RedDotNodeModel GetNode(int nodeId) => treeManager.GetNode(nodeId);
++        private readonly SortedDictionary<long, NotifyRedDotChanged> pending = new();
++        private bool loading;
++        private int generation;
++        protected override bool Can_AutoInstance() => true;
++        protected override void OnInit()
++        {
++            gameObject.name = "ServerRedDotManager";
++            DontDestroyOnLoad(gameObject);
++            UniEvent.AddListener<NotifyRedDotChanged>(OnPush);
++            UniEvent.AddListener<UserLogoutStartedEvent>(OnReset);
++            UniEvent.AddListener<NetworkDisconnectedEvent>(OnReset);
++            UniEvent.AddListener<NetworkRecoveryStartedEvent>(OnReset);
++        }
++
++        private void OnReset(IEventMessage message)
++        { generation++; pending.Clear(); treeManager.Reset(); }
++
++        public async UniTask InitializeAsync(CancellationToken token = default)
++        {
++            if (loading) throw new InvalidOperationException("Red-dot initialization already running.");
++            using var scope = CancellationTokenSource.CreateLinkedTokenSource(token, UserLoginManager.Singleton.SessionCancellation);
++            token = scope.Token;
++            loading = true;
++            int expectedGeneration = generation;
++            treeManager.Reset();
++            try
++            {
++                for (int attempt = 0; attempt < 3; attempt++)
++                {
++                    var response = await RedDotNetwork.InitializeAsync(token);
++                    token.ThrowIfCancellationRequested();
++                    if (generation != expectedGeneration) throw new OperationCanceledException("Red-dot session changed.");
++                    if (response.status != (int)Respones.OK) throw new NetworkRequestException("Red-dot initialization failed: " + response.status);
++                    // Build and replay on a temporary tree; observers only see a complete, current snapshot.
++                    var next = new RedDotTreeManager();
++                    next.Replace(response.configVersion, response.stateVersion,
++                        response.nodes.Select(n => new RedDotNodeModel { Id = n.id, Name = n.name, ParentId = n.parentId,
++                            ClearType = n.clearType, Enabled = n.enabled, TipVersion = n.tipVersion }), Values(response.states));
++                    bool valid = true;
++                    var replayed = new Dictionary<int, bool>(Values(response.states));
++                    foreach (var push in pending.Values)
++                    {
++                        if (!next.ApplyDelta(push.configVersion, push.stateVersion, Values(push.states))) { valid = false; break; }
++                        if (push.stateVersion > response.stateVersion)
++                            foreach (var value in push.states) replayed[value.nodeId] = value.isActive;
++                    }
++                    pending.Clear();
++                    if (valid)
++                    {
++                        treeManager.Replace(next.ConfigVersion, next.StateVersion,
++                            response.nodes.Select(n => new RedDotNodeModel { Id = n.id, Name = n.name, ParentId = n.parentId,
++                                ClearType = n.clearType, Enabled = n.enabled, TipVersion = n.tipVersion }), replayed);
++                        return;
++                    }
++                }
++                throw new NetworkRequestException("Red-dot synchronization did not converge.");
++            }
++            finally { loading = false; }
++        }
++
++        public async UniTask MarkViewedAsync(int nodeId, long displayedVersion, CancellationToken token = default)
++        {
++            var node = GetNode(nodeId);
++            if (node == null || node.ClearType != 2 || !node.Enabled || !Tree.HasSnapshot ||
++                displayedVersion <= 0 || displayedVersion > node.TipVersion)
++                throw new ArgumentException("Only a configured view node can be cleared.");
++            int expectedGeneration = generation;
++            using var scope = CancellationTokenSource.CreateLinkedTokenSource(token, UserLoginManager.Singleton.SessionCancellation);
++            var result = await RedDotNetwork.ViewAsync(nodeId, displayedVersion, scope.Token);
++            scope.Token.ThrowIfCancellationRequested();
++            if (generation != expectedGeneration) throw new OperationCanceledException();
++            if (result.status != (int)Respones.OK) throw new NetworkRequestException("Red-dot view rejected: " + result.status);
++            if (!loading && !treeManager.ApplyFullState(result.configVersion, result.stateVersion, Values(result.states)))
++                await InitializeAsync(scope.Token);
++        }
++
++        private void OnPush(IEventMessage message)
++        {
++            if (!SessionNetwork.Singleton.IsGameAuthenticated) return;
++            var push = (NotifyRedDotChanged)message;
++            if (loading) { pending[push.stateVersion] = push; return; }
++            if (!treeManager.ApplyDelta(push.configVersion, push.stateVersion, Values(push.states)))
++                ResynchronizeAsync().Forget();
++        }
++        private async UniTask ResynchronizeAsync()
++        {
++            try { await InitializeAsync(); }
++            catch (Exception ex) { UnityEngine.Debug.LogWarning("Red-dot resynchronization failed: " + ex.Message); }
++        }
++        private static Dictionary<int, bool> Values(IEnumerable<RedDotStateMessage> states) =>
++            states.ToDictionary(s => s.nodeId, s => s.isActive);
++        protected override void OnDestroy()
++        {
++            UniEvent.RemoveListener<NotifyRedDotChanged>(OnPush);
++            UniEvent.RemoveListener<UserLogoutStartedEvent>(OnReset);
++            UniEvent.RemoveListener<NetworkDisconnectedEvent>(OnReset);
++            UniEvent.RemoveListener<NetworkRecoveryStartedEvent>(OnReset);
++            generation++; pending.Clear(); treeManager.Reset();
++            base.OnDestroy();
++        }
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotManager.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 7e641fbc613644dabaf2f8d56b887e53
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotTreeManager.cs
+@@ -0,0 +1,102 @@
++using System;
++using System.Collections.Generic;
++using System.Collections.ObjectModel;
++using System.Linq;
++
++namespace MiaoWu.Networking.RedDot
++{
++    /// <summary>Configuration is received from the server. UI never owns parent relationships.</summary>
++    public sealed class RedDotTreeManager
++    {
++        private Dictionary<int, RedDotNodeModel> nodes = new();
++        private Dictionary<int, bool> states = new();
++        private readonly Dictionary<int, bool> enabled = new();
++        public RedDotTreeModel State { get; } = new();
++        public bool HasSnapshot => State.HasSnapshot;
++        public string ConfigVersion => State.ConfigVersion;
++        public long StateVersion => State.StateVersion;
++        public event Action Changed;
++
++        public bool IsActive(int nodeId) => HasSnapshot && states.TryGetValue(nodeId, out var value) && value;
++        public RedDotNodeModel GetNode(int nodeId) => nodes.TryGetValue(nodeId, out var n)
++            ? Copy(n) : null;
++
++        public void Reset()
++        {
++            nodes.Clear(); states.Clear(); enabled.Clear(); State.HasSnapshot = false;
++            State.ConfigVersion = null; State.StateVersion = 0;
++            Changed?.Invoke();
++        }
++
++        public void Replace(string configVersion, long stateVersion, IEnumerable<RedDotNodeModel> configuration,
++            IReadOnlyDictionary<int, bool> leaves)
++        {
++            if (string.IsNullOrEmpty(configVersion) || stateVersion < 0) throw new ArgumentException("Invalid red-dot snapshot.");
++            var map = new Dictionary<int, RedDotNodeModel>();
++            foreach (var n in configuration)
++            {
++                if (n.Id <= 0 || n.ClearType < 0 || n.ClearType > 2 || map.ContainsKey(n.Id))
++                    throw new ArgumentException("Invalid red-dot configuration.");
++                map.Add(n.Id, Copy(n));
++            }
++            var activeNodes = new Dictionary<int, bool>();
++            foreach (var n in map.Values)
++            {
++                var path = new HashSet<int> { n.Id };
++                var current = n;
++                bool active = n.Enabled;
++                while (current.ParentId != 0)
++                {
++                    if (!map.TryGetValue(current.ParentId, out current) || !path.Add(current.Id) || current.ClearType != 0)
++                        throw new ArgumentException("Missing parent, non-aggregate parent, or cycle.");
++                    active &= current.Enabled;
++                }
++                activeNodes[n.Id] = active;
++            }
++            // Validate before replacing any previous state.
++            nodes = map; enabled.Clear();
++            foreach (var pair in activeNodes) enabled.Add(pair.Key, pair.Value);
++            states = map.Keys.ToDictionary(id => id, _ => false);
++            ApplyLeaves(leaves, true);
++            State.Nodes = new ReadOnlyDictionary<int, RedDotNodeModel>(nodes);
++            State.States = new ReadOnlyDictionary<int, bool>(states);
++            State.EnabledNodes = new ReadOnlyDictionary<int, bool>(enabled);
++            State.ConfigVersion = configVersion; State.StateVersion = stateVersion; State.HasSnapshot = true;
++            Changed?.Invoke();
++        }
++
++        public bool ApplyDelta(string configVersion, long version, IReadOnlyDictionary<int, bool> changes)
++        {
++            if (!HasSnapshot || configVersion != ConfigVersion) return false;
++            if (version <= StateVersion) return true;
++            if (version != StateVersion + 1 || changes.Keys.Any(id =>
++                !nodes.TryGetValue(id, out var n) || n.ClearType == 0 || !enabled[id])) return false;
++            ApplyLeaves(changes, false); State.StateVersion = version; Changed?.Invoke(); return true;
++        }
++
++        public bool ApplyFullState(string configVersion, long version, IReadOnlyDictionary<int, bool> leaves)
++        {
++            if (!HasSnapshot || configVersion != ConfigVersion) return false;
++            if (version < StateVersion) return true;
++            ApplyLeaves(leaves, true); State.StateVersion = version; Changed?.Invoke(); return true;
++        }
++
++        private void ApplyLeaves(IReadOnlyDictionary<int, bool> leaves, bool replace)
++        {
++            if (replace)
++                foreach (var n in nodes.Values.Where(n => n.ClearType != 0)) states[n.Id] = false;
++            foreach (var pair in leaves)
++                if (nodes.TryGetValue(pair.Key, out var n) && n.ClearType != 0 && enabled[pair.Key])
++                    states[pair.Key] = pair.Value;
++            foreach (var n in nodes.Values.Where(n => n.ClearType == 0)) states[n.Id] = false;
++            foreach (var n in nodes.Values.Where(n => n.ClearType != 0 && states[n.Id]))
++            {
++                int parent = n.ParentId;
++                while (parent != 0) { states[parent] = true; parent = nodes[parent].ParentId; }
++            }
++        }
++        private static RedDotNodeModel Copy(RedDotNodeModel n) => new()
++        { Id = n.Id, Name = n.Name, ParentId = n.ParentId, ClearType = n.ClearType,
++            Enabled = n.Enabled, TipVersion = n.TipVersion };
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotTreeManager.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: dbc83d2dee26b09408598bf794f5fdb0
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Models.meta
+@@ -0,0 +1,3 @@
++fileFormatVersion: 2
++guid: 89022cae2f544720af4a4a402efbb9b8
++folderAsset: yes
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotNodeModel.cs
+@@ -0,0 +1,12 @@
++namespace MiaoWu.Networking.RedDot
++{
++    public sealed class RedDotNodeModel
++    {
++        public int Id;
++        public string Name;
++        public int ParentId;
++        public int ClearType;
++        public bool Enabled;
++        public long TipVersion;
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotNodeModel.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: 72fbce66f0f17f341b91a603f01f5bf1
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotTreeModel.cs
+@@ -0,0 +1,19 @@
++using System.Collections.Generic;
++using System.Collections.ObjectModel;
++
++namespace MiaoWu.Networking.RedDot
++{
++    /// <summary>Data only. RedDotTreeManager owns validation, mutation, aggregation and notifications.</summary>
++    public sealed class RedDotTreeModel
++    {
++        public bool HasSnapshot { get; internal set; }
++        public string ConfigVersion { get; internal set; }
++        public long StateVersion { get; internal set; }
++        public IReadOnlyDictionary<int, RedDotNodeModel> Nodes { get; internal set; } =
++            new ReadOnlyDictionary<int, RedDotNodeModel>(new Dictionary<int, RedDotNodeModel>());
++        public IReadOnlyDictionary<int, bool> States { get; internal set; } =
++            new ReadOnlyDictionary<int, bool>(new Dictionary<int, bool>());
++        public IReadOnlyDictionary<int, bool> EnabledNodes { get; internal set; } =
++            new ReadOnlyDictionary<int, bool>(new Dictionary<int, bool>());
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotTreeModel.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: d21a1bed87214b5fb989d819b52215d5
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Network.meta
+@@ -0,0 +1,3 @@
++fileFormatVersion: 2
++guid: ddedd9348f5148d9b72f2ed2bb7211eb
++folderAsset: yes
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotNetwork.cs
+@@ -0,0 +1,18 @@
++using System;
++using System.Threading;
++using Cysharp.Threading.Tasks;
++using Game.Datas.Messages;
++
++namespace MiaoWu.Networking.RedDot
++{
++    public static class RedDotNetwork
++    {
++        public static UniTask<ResRedDotInit> InitializeAsync(CancellationToken token) =>
++            SessionNetwork.Singleton.RequestAsync<ResRedDotInit>(new ReqRedDotInit(), Options("red-dot.init"), token);
++        public static UniTask<ResRedDotView> ViewAsync(int nodeId, long version, CancellationToken token) =>
++            SessionNetwork.Singleton.RequestAsync<ResRedDotView>(
++                new ReqRedDotView { nodeId = nodeId, tipVersion = version }, Options("red-dot.view." + nodeId), token);
++        private static NetworkRequestOptions Options(string key) => new()
++        { Timeout = TimeSpan.FromSeconds(10), OperationKey = key, DuplicatePolicy = DuplicateRequestPolicy.RejectNew };
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotNetwork.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 6fa12ed091db41e98ded959f8777f236
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotRecoveryHandler.cs
+@@ -0,0 +1,17 @@
++using System.Collections.Generic;
++using MiaoWu.Networking.Recovery;
++
++namespace MiaoWu.Networking.RedDot
++{
++    [UnityEngine.Scripting.Preserve]
++    public sealed class RedDotRecoveryHandler : IReconnectRecoveryHandler
++    {
++        public string ModuleId => "red-dot";
++        public IEnumerable<RecoveryTask> CollectTasks(RecoveryContext context)
++        {
++            // Install push listeners before any initialization request is sent.
++            var manager = RedDotManager.Singleton;
++            yield return new RecoveryTask(RecoveryPhase.Refresh, 100, "red-dot.init", manager.InitializeAsync);
++        }
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/Game/RedDot/Network/RedDotRecoveryHandler.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 9a79daffa5064c45b6e2513228890035
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/UI/Shared/RedDot.meta
+@@ -0,0 +1,3 @@
++fileFormatVersion: 2
++guid: 295b82c5309748baa851e95545f46f2d
++folderAsset: yes
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/UI/Shared/RedDot/RedDotBinding.cs
+@@ -0,0 +1,24 @@
++using MiaoWu.Networking.RedDot;
++using UnityEngine;
++
++public sealed class RedDotBinding : MonoBehaviour
++{
++    [SerializeField] private int nodeId;
++    [SerializeField] private GameObject indicator;
++    private MiaoWu.Networking.RedDot.RedDotManager manager;
++    public void Bind(int id) { nodeId = id; Refresh(); }
++    private void OnEnable()
++    {
++        manager = MiaoWu.Networking.RedDot.RedDotManager.Singleton;
++        manager.Changed += Refresh;
++        Refresh();
++    }
++    private void OnDisable()
++    { if (manager != null) manager.Changed -= Refresh; manager = null; }
++    private void Refresh()
++    {
++        // Attach this component to the button, with a separate child as indicator.
++        if (indicator != null && indicator != gameObject)
++            indicator.SetActive(manager != null && manager.IsActive(nodeId));
++    }
++}
+--- /dev/null
++++ b/client/Assets/Scripts/HotUpdate/UI/Shared/RedDot/RedDotBinding.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 4eaac2e479b34b4882f50f55c3dd9744
+--- a/client/HotUpdate.csproj
++++ b/client/HotUpdate.csproj
+@@ -826,6 +826,14 @@
+     <Compile Include="Assets\Scripts\HotUpdate\Game\Account\Events\UserLoginSucceededEvent.cs" />
+     <Compile Include="Assets\Scripts\HotUpdate\UI\Inventory\Filtering\UIStatFilterTag.cs" />
+     <Compile Include="Assets\Scripts\HotUpdate\Game\Skills\Implementations\Player\Skill宠物射击.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Manager\RedDotManager.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Models\RedDotTreeModel.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Network\RedDotRecoveryHandler.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Network\RedDotNetwork.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\UI\Shared\RedDot\RedDotBinding.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\Protocol\Messages\RedDotMessage.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Manager\RedDotTreeManager.cs" />
++    <Compile Include="Assets\Scripts\HotUpdate\Game\RedDot\Models\RedDotNodeModel.cs" />
+     <None Include="Assets\Scripts\HotUpdate\HotUpdate.asmdef" />
+     <None Include="Assets\Scripts\HotUpdate\Buffs\Core\Metadata\package.json" />
+     <Reference Include="UnityEngine">
+--- /dev/null
++++ b/client/Tools/RedDotTests/RedDot.Tests.csproj
+@@ -0,0 +1,16 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <TargetFramework>net8.0</TargetFramework>
++    <ImplicitUsings>enable</ImplicitUsings>
++    <IsTestProject>true</IsTestProject>
++    <IsPackable>false</IsPackable>
++  </PropertyGroup>
++  <ItemGroup>
++    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
++    <PackageReference Include="xunit" Version="2.9.2" />
++    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
++    <Compile Include="../../Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotTreeModel.cs" Link="RedDotTreeModel.cs" />
++    <Compile Include="../../Assets/Scripts/HotUpdate/Game/RedDot/Models/RedDotNodeModel.cs" Link="RedDotNodeModel.cs" />
++    <Compile Include="../../Assets/Scripts/HotUpdate/Game/RedDot/Manager/RedDotTreeManager.cs" Link="RedDotTreeManager.cs" />
++  </ItemGroup>
++</Project>
+--- /dev/null
++++ b/client/Tools/RedDotTests/RedDotTreeTests.cs
+@@ -0,0 +1,105 @@
++using MiaoWu.Networking.RedDot;
++using Xunit;
++
++public sealed class RedDotTreeTests
++{
++    [Fact]
++    public void ModelsContainDataWithoutOperationsOrEvents()
++    {
++        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Public |
++            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly;
++        foreach (var type in new[] { typeof(RedDotTreeModel), typeof(RedDotNodeModel) })
++        {
++            Assert.Empty(type.GetEvents(flags));
++            Assert.DoesNotContain(type.GetMethods(flags), method => !method.IsSpecialName);
++        }
++    }
++
++    [Fact]
++    public void ManagerNotifiesAfterStateAndParentAggregationAreApplied()
++    {
++        var manager = new RedDotTreeManager();
++        int notifications = 0;
++        manager.Changed += () =>
++        {
++            notifications++;
++            Assert.Equal(manager.IsActive(1), manager.State.States[1]);
++        };
++        manager.Replace("a", 0, Nodes(), new Dictionary<int, bool> { [2] = true });
++        Assert.True(manager.State.States[1]);
++        manager.ApplyDelta("a", 1, new Dictionary<int, bool> { [2] = false });
++        Assert.False(manager.State.States[1]);
++        Assert.Equal(2, notifications);
++    }
++
++    private static RedDotNodeModel[] Nodes(bool enabled = true) => new[]
++    {
++        new RedDotNodeModel { Id = 1, ClearType = 0, Enabled = enabled },
++        new RedDotNodeModel { Id = 2, ParentId = 1, ClearType = 1, Enabled = true },
++        new RedDotNodeModel { Id = 3, ParentId = 1, ClearType = 1, Enabled = true }
++    };
++    [Fact]
++    public void ParentOnlyClearsAfterLastChildClears()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 0, Nodes(), new Dictionary<int, bool> { [2] = true, [3] = true });
++        Assert.True(tree.IsActive(1));
++        Assert.True(tree.ApplyDelta("a", 1, new Dictionary<int, bool> { [2] = false }));
++        Assert.True(tree.IsActive(1));
++        Assert.True(tree.ApplyDelta("a", 2, new Dictionary<int, bool> { [3] = false }));
++        Assert.False(tree.IsActive(1));
++    }
++    [Fact]
++    public void DisabledSubtreeCannotContributeToParent()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 0, Nodes(false), new Dictionary<int, bool> { [2] = true });
++        Assert.False(tree.IsActive(1)); Assert.False(tree.IsActive(2));
++    }
++    [Fact]
++    public void OldDeltaCannotOverwriteNewStateAndGapRequiresSnapshot()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 5, Nodes(), new Dictionary<int, bool> { [2] = true });
++        Assert.True(tree.ApplyDelta("a", 4, new Dictionary<int, bool> { [2] = false }));
++        Assert.True(tree.IsActive(2));
++        Assert.False(tree.ApplyDelta("a", 7, new Dictionary<int, bool> { [2] = false }));
++        Assert.True(tree.IsActive(2));
++        Assert.False(tree.ApplyDelta("b", 6, new Dictionary<int, bool>()));
++    }
++    [Fact]
++    public void ReplacementRemovesOldNodesAndUsesNewParentRelationship()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 2, Nodes(), new Dictionary<int, bool> { [2] = true, [3] = true });
++        var nodes = Nodes(); nodes[1].ParentId = 0;
++        tree.Replace("b", 0, nodes.Take(2), new Dictionary<int, bool> { [2] = true });
++        Assert.True(tree.IsActive(2)); Assert.False(tree.IsActive(1)); Assert.False(tree.IsActive(3));
++    }
++    [Fact]
++    public void InvalidTreeDoesNotPartiallyReplacePreviousSnapshot()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 0, Nodes(), new Dictionary<int, bool> { [2] = true });
++        var nodes = Nodes(); nodes[0].ParentId = 2;
++        Assert.Throws<ArgumentException>(() => tree.Replace("b", 0, nodes, new Dictionary<int, bool>()));
++        Assert.Equal("a", tree.ConfigVersion); Assert.True(tree.IsActive(1));
++    }
++    [Fact]
++    public void ReconnectResetHidesOldAccountStateAndAcceptsResetVersion()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 99, Nodes(), new Dictionary<int, bool> { [2] = true });
++        tree.Reset(); Assert.False(tree.IsActive(1)); Assert.False(tree.HasSnapshot);
++        tree.Replace("a", 0, Nodes(), new Dictionary<int, bool>());
++        Assert.Equal(0, tree.StateVersion); Assert.False(tree.IsActive(1));
++    }
++    [Fact]
++    public void StaleViewResponseCannotRestoreClearedNode()
++    {
++        var tree = new RedDotTreeManager();
++        tree.Replace("a", 10, Nodes(), new Dictionary<int, bool>());
++        Assert.True(tree.ApplyFullState("a", 9, new Dictionary<int, bool> { [2] = true }));
++        Assert.False(tree.IsActive(1));
++    }
++}

@@ -166,6 +166,10 @@ try {
         $workbook = $application.Workbooks.Open($copiedWorkbook, 0, $true)
         try {
             $worksheet = $workbook.Worksheets.Item([string]$table.worksheet)
+            # Three-row Luban metadata uses ## in row 3; older tables may have ##group plus ##comment.
+            $thirdRowMarker = ([string]$worksheet.Cells.Item(3, 1).Text).Trim()
+            $descriptionRow = if ($thirdRowMarker -in @('##', '##comment')) { 3 } else { 4 }
+            $firstDataRow = $descriptionRow + 1
             $seenSourceFields = @{}
             $outputDescriptions = @()
             $outputTypes = @()
@@ -181,7 +185,7 @@ try {
                 $seenSourceFields[$normalized] = $true
 
                 $sourceType = Convert-LubanType ([string]$worksheet.Cells.Item(2, $column).Text)
-                $sourceDescription = [string]$worksheet.Cells.Item(4, $column).Text
+                $sourceDescription = [string]$worksheet.Cells.Item($descriptionRow, $column).Text
                 if ($existingMetadata.ContainsKey($normalized)) {
                     $metadata = $existingMetadata[$normalized]
                     $outputFields += $metadata.Field
@@ -216,7 +220,7 @@ try {
                 }
 
                 $writtenRows = 0
-                for ($row = 5; $row -le $worksheet.UsedRange.Rows.Count; $row++) {
+                for ($row = $firstDataRow; $row -le $worksheet.UsedRange.Rows.Count; $row++) {
                     $keyValue = $worksheet.Cells.Item($row, $columnMappings[0]).Value2
                     if ($null -eq $keyValue -or ([string]$keyValue).Trim().Length -eq 0) { continue }
 

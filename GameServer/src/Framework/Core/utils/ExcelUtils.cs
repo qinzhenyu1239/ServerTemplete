@@ -116,6 +116,9 @@ namespace Framework.Core.Utils {
 
                     switch (fis[i].FieldType.ToString())
                     {
+                        case "System.Boolean":
+                            setValue = bool.Parse(fieldValue);
+                            break;
                         case "System.Int32":
                             setValue = int.Parse(fieldValue);
                             break;
@@ -187,6 +190,9 @@ namespace Framework.Core.Utils {
 
 					switch (fis[i].FieldType.ToString())
 					{
+						case "System.Boolean":
+							setValue = bool.Parse(fieldValue);
+							break;
 						case "System.Int32":
 							setValue = int.Parse(fieldValue);
 							break;

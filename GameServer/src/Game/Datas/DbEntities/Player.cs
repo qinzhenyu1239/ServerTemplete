@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 
@@ -40,6 +40,26 @@ namespace Game.Datas.DBEntities
            /// Nullable:True
            /// </summary>           
            public string name {get;set;}
+
+           /// <summary>头像ID，0表示未设置。</summary>
+           public int avatarId {get;set;}
+
+           /// <summary>公会ID，0表示未加入公会。</summary>
+           public long guildId {get;set;}
+
+           /// <summary>称号ID，0表示未佩戴称号。</summary>
+           public int titleId {get;set;}
+
+           /// <summary>个性签名，最多255个字符。</summary>
+           public string signature {get;set;} = string.Empty;
+
+           /// <summary>创建角色的Unix秒时间戳，0表示历史创建时间未知。</summary>
+           public long createTime {get;set;}
+
+           public int avatarFrameId {get;set;}
+           public int backgroundId {get;set;}
+           public string displayAchievementIds {get;set;} = "[0,0,0,0,0,0,0]";
+           public string displayCharacterIds {get;set;} = "[0,0,0,0,0,0]";
 
            /// <summary>
            /// Desc:
