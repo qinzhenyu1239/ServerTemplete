@@ -1,0 +1,36 @@
+[2026-10-27 11:44:06.4272] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:07.0917] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:08.1848] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:09.2810] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:10.3722] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:11.4674] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:12.5554] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:13.6500] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:14.7438] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:15.8386] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:16.9351] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
+[2026-10-27 11:44:18.0318] Mail expiry scan failed. Unknown column 'm.deleteTime' in 'where clause' 
+ TimerTaskMgr.Update => <>c__DisplayClass11_0.<Run>b__0 => GM_MailMsgMgr.ExpireDue 
+
