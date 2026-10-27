@@ -117,5 +117,38 @@ namespace Game.Core.GM_Item
             GM_PlayerEntity entity = GM_EntityMgr.Instance.Get(playerId);
             if (entity != null) entity.uItem.quantities = null;
         }
+
+        // Caller owns the transaction. Lock even missing rows before checking additions.
+        public Dictionary<int, long> LockRewardQuantities(SqlSugarClient db, long playerId, IEnumerable<int> itemIds)
+        {
+            var result = new Dictionary<int, long>();
+            foreach (int id in itemIds.Distinct().OrderBy(id => id))
+            {
+                db.Ado.ExecuteCommand("INSERT IGNORE INTO player_item(player_id,item_id,quantity) VALUES(@pid,@id,0)",
+                    new { pid = playerId, id });
+                result[id] = db.Ado.SqlQuery<long>("SELECT quantity FROM player_item WHERE player_id=@pid AND item_id=@id FOR UPDATE",
+                    new { pid = playerId, id }).Single();
+            }
+            return result;
+        }
+
+        public void GrantLocked(SqlSugarClient db, long playerId, IReadOnlyDictionary<int, long> additions)
+        {
+            foreach (var pair in additions.OrderBy(p => p.Key))
+            {
+                if (pair.Value <= 0) throw new ArgumentOutOfRangeException(nameof(additions));
+                int affected = db.Ado.ExecuteCommand("UPDATE player_item SET quantity=quantity+@amount " +
+                    "WHERE player_id=@pid AND item_id=@id AND quantity>=0 AND quantity<=@maximum",
+                    new { pid = playerId, id = pair.Key, amount = pair.Value, maximum = long.MaxValue - pair.Value });
+                if (affected != 1) throw new InvalidOperationException("Reward quantity changed or overflowed.");
+            }
+        }
+
+        public void SyncCommittedQuantities(long playerId, IReadOnlyDictionary<int, long> quantities)
+        {
+            var entity = GM_EntityMgr.Instance.Get(playerId);
+            if (entity?.uItem.quantities == null) return;
+            foreach (var pair in quantities) entity.uItem.quantities[pair.Key] = pair.Value;
+        }
     }
 }

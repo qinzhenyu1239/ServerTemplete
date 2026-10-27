@@ -39,6 +39,7 @@
 
         public FormationComponent uFormation;
         public RedDotComponent uRedDot;
+        public MailComponent uMail;
 
     }
 

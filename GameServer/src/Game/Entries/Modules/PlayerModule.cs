@@ -545,55 +545,11 @@ namespace Game.Entries.Modules
         }
 
         public ResUpdateMailMsg HandlerReqUpdateMailMsg(IdSession s, ReqUpdateMailMsg req, long playerId) {
-            ResUpdateMailMsg res = new ResUpdateMailMsg();
-            // ��֤accountId, playerID�˺�;
-            if (playerId <= 0)
-            {
-                res.status = (int)Respones.AccountIsNotLogin;
-                return res;
-            }
-            GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);
-            if (player == null) {
-                res.status = (int)Respones.InvalidOpt;
-                return res;
-            }
-
-            GM_MailMsgMgr.Instance.UpdateMailMsgStatus(req.mailMsgId, req.status);
-            res.status = (int)Respones.OK;
-            return res;
+            return MailModule.Instance.HandlerReqUpdateMailMsg(s, req, playerId);
         }
 
         public ResPullingMailMsg HandlerReqPullingMailMsg(IdSession s, ReqPullingMailMsg req, long playerId) {
-            ResPullingMailMsg res = new ResPullingMailMsg();
-            // ��֤accountId, playerID�˺�;
-            if (playerId <= 0)
-            {
-                res.status = (int)Respones.AccountIsNotLogin;
-                return res;
-            }
-
-            GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);
-            if (player == null) {
-                res.status = (int)Respones.InvalidOpt;
-                return res;
-            }
-
-            res.status = (int)Respones.OK;
-
-            Game.Datas.DBEntities.Mailmessage[] mailMessages = GM_MailMsgMgr.Instance.PullingMailMsg(playerId, 0);
-            if (mailMessages != null && mailMessages.Length > 0) {
-                res.mailMessages = new MailMsgItem[mailMessages.Length];
-                for (int i = 0; i < mailMessages.Length; i++) {
-                    res.mailMessages[i] = new MailMsgItem();
-                    res.mailMessages[i].msgBody = mailMessages[i].msgBody;
-                    res.mailMessages[i].status = mailMessages[i].status;
-                    res.mailMessages[i].sendTime = mailMessages[i].sendTime;
-                    res.mailMessages[i].msgId = mailMessages[i].id;
-                }
-            }
-
-
-            return res;
+            return MailModule.Instance.HandlerReqPullingMailMsg(s, req, playerId);
         }
 
         public ResPullingRank HandlerReqPullingRank(IdSession s, ReqPullingRank req, long playerId) {

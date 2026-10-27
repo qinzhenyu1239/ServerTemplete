@@ -104,16 +104,36 @@ CREATE TABLE IF NOT EXISTS `playerreddot` (
 
 -- 导出  表 ugame_10001.mailmessage 结构
 CREATE TABLE IF NOT EXISTS `mailmessage` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '邮件消息的唯一ID号',
-  `fromPlayerId` bigint(20) NOT NULL DEFAULT '-1' COMMENT '来自与哪个玩家Id发送的邮件',
-  `toPlayerId` bigint(20) NOT NULL DEFAULT '0' COMMENT '发送给哪个玩家Id的邮件',
-  `msgBody` varchar(256) NOT NULL DEFAULT '' COMMENT '邮件消息主题内容',
-  `status` int(11) NOT NULL DEFAULT '0' COMMENT '当前邮件消息的状态，0，表示未读， 1表示已读，2表示已删除;',
-  `sendTime` int(11) NOT NULL DEFAULT '0' COMMENT '邮件消息发送的时间',
-  `userData` bigint(20) NOT NULL DEFAULT '0' COMMENT '消息邮件要关联的一些用户数据，具体可以根据游戏项目来定,暂定用BigInt,带任务ID，奖励ID等',
-  `readTime` int(11) NOT NULL DEFAULT '0' COMMENT '邮件消息被玩家阅读的时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='邮件消息管理';
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '邮件唯一ID',
+  `fromPlayerId` bigint NOT NULL DEFAULT -1 COMMENT '发件玩家，系统为-1',
+  `toPlayerId` bigint NOT NULL COMMENT '收件玩家',
+  `msgBody` text NOT NULL COMMENT '发送时正文快照',
+  `status` int NOT NULL DEFAULT 0 COMMENT '旧协议兼容列，新业务不使用',
+  `sendTime` bigint NOT NULL DEFAULT 0 COMMENT '实际发送Unix秒',
+  `userData` bigint NOT NULL DEFAULT 0 COMMENT '旧数据保留列',
+  `readTime` bigint NOT NULL DEFAULT 0 COMMENT '0未读，否则首次阅读Unix秒',
+  `mailType` tinyint NOT NULL DEFAULT 0 COMMENT '0普通，1资源',
+  `title` varchar(128) NOT NULL DEFAULT '' COMMENT '发送时标题快照',
+  `sourceType` int NOT NULL DEFAULT 0 COMMENT '来源类型',
+  `sourceKey` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '来源去重标识',
+  `expireTime` bigint NOT NULL DEFAULT 0 COMMENT '到期Unix秒，0仅兼容旧邮件',
+  `claimTime` bigint NOT NULL DEFAULT 0 COMMENT '附件领取Unix秒',
+  `deleteTime` bigint NOT NULL DEFAULT 0 COMMENT '删除Unix秒',
+  `deleteReason` tinyint NOT NULL DEFAULT 0 COMMENT '1玩家删除，2到期，3超容量',
+  PRIMARY KEY (`id`),
+  KEY `ix_mail_recipient_active` (`toPlayerId`,`deleteTime`,`expireTime`),
+  KEY `ix_mail_expiry` (`deleteTime`,`expireTime`),
+  UNIQUE KEY `uk_mail_source` (`toPlayerId`,`sourceType`,`sourceKey`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='玩家邮件';
+
+CREATE TABLE IF NOT EXISTS `mailattachment` (
+  `mailId` bigint NOT NULL COMMENT '邮件ID',
+  `sortOrder` int NOT NULL COMMENT '附件展示顺序，从1开始',
+  `itemId` int NOT NULL COMMENT '物品配置ID',
+  `quantity` bigint NOT NULL COMMENT '奖励数量',
+  PRIMARY KEY (`mailId`,`sortOrder`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件附件快照';
+
 
 -- 导出  表 ugame_10001.player 结构
 CREATE TABLE IF NOT EXISTS `player` (

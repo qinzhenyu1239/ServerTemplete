@@ -1,0 +1,181 @@
+--- a/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
++++ b/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+@@ -1,9 +1,11 @@
+ using Framework.Core.Concurrency;
+ using Framework.Core.Serializer;
++using Framework.Core.Utils;
+ using Game.Core.Db;
+ using Game.Core.EntityMgr;
+ using Game.Core.GM_Item;
+ using Game.Datas.DBEntities;
++using Game.Datas.Excels;
+ using Game.Datas.GMEntities;
+ using SqlSugar;
+ using System;
+@@ -17,18 +19,16 @@
+     {
+         public static GM_MailMsgMgr Instance { get; } = new();
+         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+-        private Func<int, bool> validItem;
+         private Func<MailResult, Message> notificationFactory;
+         private Timer timer;
+         private int scanning;
+         public int Capacity { get; private set; }
+         private const string ValidWhere = "toPlayerId=@pid AND deleteTime=0 AND (expireTime=0 OR expireTime>@now)";
+ 
+-        public void Configure(int capacity, Func<int, bool> itemValidator, Func<MailResult, Message> notifications)
++        public void Configure(int capacity, Func<MailResult, Message> notifications)
+         {
+             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity), "MailboxCapacity must be explicitly configured.");
+             Capacity = capacity;
+-            validItem = itemValidator ?? throw new ArgumentNullException(nameof(itemValidator));
+             notificationFactory = notifications ?? throw new ArgumentNullException(nameof(notifications));
+         }
+         public void Init()
+@@ -64,9 +64,10 @@
+ 
+         public MailResult Send(MailSendCommand command)
+         {
+-            if (Capacity <= 0 || validItem == null) return new MailResult { Status = MailStatus.Failed };
++            if (Capacity <= 0) return new MailResult { Status = MailStatus.Failed };
+             if (!MailRules.ValidSend(command)) return new MailResult { Status = MailStatus.Invalid };
+-            if (command.Rewards.Any(r => !validItem(r.ItemId))) return new MailResult { Status = MailStatus.InvalidReward };
++            if (command.Rewards.Any(r => ExcelUtils.GetConfigData<Item>(r.ItemId.ToString()) == null))
++                return new MailResult { Status = MailStatus.InvalidReward };
+             using var lease = PlayerOperationLock.Acquire(command.PlayerId);
+             lock (lease.SyncRoot)
+             {
+@@ -166,7 +167,8 @@
+                     if (attachments.Count == 0) { result.Status = MailStatus.InvalidReward; return; }
+                     foreach (var a in attachments)
+                     {
+-                        if (a.quantity <= 0 || !validItem(a.itemId)) { result.Status = MailStatus.InvalidReward; return; }
++                        if (a.quantity <= 0 || ExcelUtils.GetConfigData<Item>(a.itemId.ToString()) == null)
++                        { result.Status = MailStatus.InvalidReward; return; }
+                         additions.TryGetValue(a.itemId, out long existing);
+                         additions[a.itemId] = checked(existing + a.quantity);
+                     }
+--- a/GameServer/src/Game/Entries/Modules/MailModule.cs
++++ b/GameServer/src/Game/Entries/Modules/MailModule.cs
+@@ -1,8 +1,6 @@
+ using Framework.Core.Net;
+-using Framework.Core.Utils;
+ using Game.Core.EntityMgr;
+ using Game.Core.GM_MailMessage;
+-using Game.Datas.Excels;
+ using Game.Datas.Messages;
+ using System;
+ using System.Configuration;
+@@ -16,11 +14,19 @@
+         {
+             if (!int.TryParse(ConfigurationManager.AppSettings["MailboxCapacity"], out int capacity) || capacity <= 0)
+                 throw new ConfigurationErrorsException("Explicit positive MailboxCapacity is required for the game server.");
+-            GM_MailMsgMgr.Instance.Configure(capacity, id => ExcelUtils.GetConfigData<Item>(id.ToString()) != null,
+-                r => new NotifyMailChanged { mailboxVersion=r.MailboxVersion,serverTime=r.ServerTime,
+-                    count=r.Count,unreadCount=r.UnreadCount,capacity=r.Capacity,
+-                    addedIds=r.AddedIds.Distinct().ToList(),changedIds=r.ChangedIds.Distinct().ToList(),deletedIds=r.DeletedIds.Distinct().ToList() });
++            GM_MailMsgMgr.Instance.Configure(capacity, CreateNotification);
+         }
++        private static NotifyMailChanged CreateNotification(MailResult result) => new NotifyMailChanged
++        {
++            mailboxVersion = result.MailboxVersion,
++            serverTime = result.ServerTime,
++            count = result.Count,
++            unreadCount = result.UnreadCount,
++            capacity = result.Capacity,
++            addedIds = result.AddedIds.Distinct().ToList(),
++            changedIds = result.ChangedIds.Distinct().ToList(),
++            deletedIds = result.DeletedIds.Distinct().ToList()
++        };
+         private static bool Current(IdSession session,long playerId) => playerId>0 && session!=null && session.playerId==playerId &&
+             ReferenceEquals(GM_EntityMgr.Instance.Get(playerId)?.uPlayer.s,session);
+         private static MailResult Run(IdSession session,long playerId,MailAction action,long id,bool hasRequest)
+--- a/GameServerTests/Mail/MailMySqlTests.cs
++++ b/GameServerTests/Mail/MailMySqlTests.cs
+@@ -2,10 +2,12 @@
+ using System.Text.RegularExpressions;
+ using DotNetty.Transport.Channels.Embedded;
+ using Framework.Core.Net;
++using Framework.Core.Utils;
+ using Game.Core.Db;
+ using Game.Core.EntityMgr;
+ using Game.Core.GM_MailMessage;
+ using Game.Datas.GMEntities;
++using Game.Datas.Excels;
+ using Game.Datas.Messages;
+ using Game.Entries.Modules;
+ using GameServerTests.Gacha;
+@@ -50,14 +52,14 @@
+     public async Task ClaimAllValidationFailureMarksAllReadButGrantsNothing() => await Run(async e=>
+     {
+         e.Send("ordinary");e.Send("valid",true);e.Send("invalid",true,null,new[]{new MailReward{ItemId=2,Quantity=9}});
+-        e.ValidItems.Remove(2);
++        e.ItemConfigs.Remove("2");
+         var failed=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.ClaimAll);
+         Assert.Equal(MailStatus.InvalidReward,failed.Status);Assert.Equal(0,failed.UnreadCount);
+         Assert.Equal(0,await e.Scalar("SELECT COUNT(*) FROM player_item WHERE quantity>0"));
+         Assert.Equal(0,await e.Scalar("SELECT COUNT(*) FROM mailmessage WHERE claimTime>0"));
+         var deletion=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.DeleteRead);
+         Assert.Equal(2,deletion.Count);
+-        e.ValidItems.Add(2);
++        e.ItemConfigs.Add("2",new Item { id=2 });
+         var claimed=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.ClaimAll);
+         Assert.Equal(MailStatus.Success,claimed.Status);Assert.Equal(2,await e.Scalar("SELECT COUNT(*) FROM mailmessage WHERE claimTime>0"));
+         Assert.Equal(MailStatus.NoRewards,GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.ClaimAll).Status);
+@@ -87,7 +89,7 @@
+     [DatabaseFact, Trait("Category","Database")]
+     public async Task ExpiryAndCapacityCleanUnreadUnclaimedMailAndReadsStayIdempotent() => await Run(async e=>
+     {
+-        GM_MailMsgMgr.Instance.Configure(2,e.ValidItems.Contains,_=>new NotifyMailChanged());
++        GM_MailMsgMgr.Instance.Configure(2,_=>new NotifyMailChanged());
+         var a=e.Send("old",true);var b=e.Send("new");var c=e.Send("newest");
+         Assert.Equal(3,await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={a.MailId}"));
+         var list=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.List);
+@@ -115,6 +117,9 @@
+         builder.Database=name;
+         var field=typeof(DBService).GetField("connGameDataStr",BindingFlags.Instance|BindingFlags.NonPublic);
+         var old=field.GetValue(DBService.Instance);var channel=new EmbeddedChannel();
++        var configs=(Dictionary<string,Dictionary<string,object>>)typeof(ExcelUtils)
++            .GetField("dataDic",BindingFlags.Static|BindingFlags.NonPublic).GetValue(null);
++        bool hadItems=configs.TryGetValue(nameof(Item),out var previousItems);
+         try
+         {
+             await using var db=new MySqlConnection(builder.ConnectionString);await db.OpenAsync();
+@@ -135,13 +140,15 @@
+             var entity=GachaMySqlTestEnvironment.AddOnlinePlayer(910001,new Dictionary<int,long>());
+             var session=new IdSession{playerId=910001,accountId=910001,client=channel};entity.uPlayer.s=session;
+             var env=new Environment(db,entity,session);
+-            GM_MailMsgMgr.Instance.Configure(20,env.ValidItems.Contains,r=>new NotifyMailChanged{mailboxVersion=r.MailboxVersion});
++            configs[nameof(Item)]=env.ItemConfigs;
++            GM_MailMsgMgr.Instance.Configure(20,r=>new NotifyMailChanged{mailboxVersion=r.MailboxVersion});
+             await test(env);
+         }
+         finally
+         {
+             GM_MailMsgMgr.Instance.Stop();GM_EntityMgr.Instance.RemovePlayer(910001);
+             field.SetValue(DBService.Instance,old);channel.FinishAndReleaseAll();
++            if(hadItems)configs[nameof(Item)]=previousItems;else configs.Remove(nameof(Item));
+             await Command(admin,$"DROP DATABASE `{name}`");
+         }
+     }
+@@ -151,7 +158,8 @@
+         public readonly GM_PlayerEntity Entity;
+         public readonly IdSession Session;
+         public long PlayerId=>910001;
+-        public readonly HashSet<int> ValidItems=new(){1,2,3};
++        public readonly Dictionary<string,object> ItemConfigs=new()
++        { ["1"]=new Item{id=1},["2"]=new Item{id=2},["3"]=new Item{id=3} };
+         public Environment(MySqlConnection db,GM_PlayerEntity entity,IdSession session){Db=db;Entity=entity;Session=session;}
+         public MailResult Send(string title,bool reward=false,string source=null,MailReward[] rewards=null)=>GM_MailMsgMgr.Instance.Send(
+             new MailSendCommand{PlayerId=PlayerId,Title=title,Body="body-"+title,LifetimeSeconds=3600,
+--- a/GameServerTests/Mail/MailRulesTests.cs
++++ b/GameServerTests/Mail/MailRulesTests.cs
+@@ -27,7 +27,7 @@
+         Assert.False(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b"}));
+         Assert.False(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b",LifetimeSeconds=1,MailType=1}));
+         Assert.True(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b",LifetimeSeconds=1}));
+-        Assert.Throws<ArgumentOutOfRangeException>(()=>GM_MailMsgMgr.Instance.Configure(0,_=>true,_=>new NotifyMailChanged()));
++        Assert.Throws<ArgumentOutOfRangeException>(()=>GM_MailMsgMgr.Instance.Configure(0,_=>new NotifyMailChanged()));
+     }
+     [Fact]
+     public void ModuleRejectsUnauthenticatedRequestsBeforeAccessingDatabase()

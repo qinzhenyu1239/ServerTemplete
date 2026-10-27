@@ -1,0 +1,335 @@
+--- a/server/GameServer/src/Game/Constants.cs
++++ b/server/GameServer/src/Game/Constants.cs
+@@ -218,7 +218,7 @@
+         eMailDeleteRes = 121,
+         eMailDeleteReadReq = 122,
+         eMailDeleteReadRes = 123,
+-        eMailChanged = 124,
++        eMailChangedRes = 124,
+ 
+     }
+ 
+--- a/server/GameServer/src/Game/Datas/Messages/MailMessage.cs
++++ b/server/GameServer/src/Game/Datas/Messages/MailMessage.cs
+@@ -181,16 +181,31 @@
+         [ProtoMember(13)] public int nextOffset;
+     }
+     [ProtoContract]
+-    [MessageMeta((short)Module.PLAYER, (short)Cmd.eMailChanged)]
+-    public sealed class NotifyMailChanged : Message
+-    {
+-        [ProtoMember(1)] public long mailboxVersion;
+-        [ProtoMember(2)] public long serverTime;
+-        [ProtoMember(3)] public int count;
+-        [ProtoMember(4)] public int unreadCount;
+-        [ProtoMember(5)] public int capacity;
+-        [ProtoMember(6)] public List<long> addedIds = new List<long>();
+-        [ProtoMember(7)] public List<long> changedIds = new List<long>();
+-        [ProtoMember(8)] public List<long> deletedIds = new List<long>();
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eMailChangedRes)]
++    public sealed class ResMailChanged : Message
++    {
++        [ProtoMember(1)]
++        public long mailboxVersion;
++
++        [ProtoMember(2)]
++        public long serverTime;
++
++        [ProtoMember(3)]
++        public int count;
++
++        [ProtoMember(4)]
++        public int unreadCount;
++
++        [ProtoMember(5)]
++        public int capacity;
++
++        [ProtoMember(6)]
++        public List<long> addedIds = new List<long>();
++
++        [ProtoMember(7)]
++        public List<long> changedIds = new List<long>();
++
++        [ProtoMember(8)]
++        public List<long> deletedIds = new List<long>();
+     }
+ }
+--- a/server/GameServer/src/Game/Entries/Modules/MailModule.cs
++++ b/server/GameServer/src/Game/Entries/Modules/MailModule.cs
+@@ -17,7 +17,7 @@
+                 throw new ConfigurationErrorsException("Explicit positive MailboxCapacity is required for the game server.");
+             GM_MailMsgMgr.Instance.Configure(capacity, CreateNotification);
+         }
+-        private static NotifyMailChanged CreateNotification(MailResult result) => new NotifyMailChanged
++        private static ResMailChanged CreateNotification(MailResult result) => new ResMailChanged
+         {
+             mailboxVersion = result.MailboxVersion,
+             serverTime = result.ServerTime,
+--- a/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
++++ b/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
+@@ -215,9 +215,9 @@
+                 {
+                     WriteResMailDeleteRead(output, value49);
+                 }
+-                else if (source is NotifyMailChanged value50)
+-                {
+-                    WriteNotifyMailChanged(output, value50);
++                else if (source is ResMailChanged value50)
++                {
++                    WriteResMailChanged(output, value50);
+                 }
+                 else if (source is ReqGetPlayerBasicInfo value51)
+                 {
+@@ -527,7 +527,7 @@
+                 else if (messageType == typeof(ResMailDelete)) message = ReadResMailDelete(input);
+                 else if (messageType == typeof(ReqMailDeleteRead)) message = ReadReqMailDeleteRead(input);
+                 else if (messageType == typeof(ResMailDeleteRead)) message = ReadResMailDeleteRead(input);
+-                else if (messageType == typeof(NotifyMailChanged)) message = ReadNotifyMailChanged(input);
++                else if (messageType == typeof(ResMailChanged)) message = ReadResMailChanged(input);
+                 else if (messageType == typeof(ReqGetPlayerBasicInfo)) message = ReadReqGetPlayerBasicInfo(input);
+                 else if (messageType == typeof(ResGetPlayerBasicInfo)) message = ReadResGetPlayerBasicInfo(input);
+                 else if (messageType == typeof(ResUpdatePlayerBasicInfo)) message = ReadResUpdatePlayerBasicInfo(input);
+@@ -4326,7 +4326,7 @@
+             return size;
+         }
+ 
+-        private static void WriteNotifyMailChanged(CodedOutputStream output, NotifyMailChanged message)
++        private static void WriteResMailChanged(CodedOutputStream output, ResMailChanged message)
+         {
+             output.WriteTag(1, WireFormat.WireType.Varint);
+             output.WriteInt64(message.mailboxVersion);
+@@ -4364,9 +4364,9 @@
+             }
+         }
+ 
+-        private static NotifyMailChanged ReadNotifyMailChanged(CodedInputStream input)
+-        {
+-            var message = new NotifyMailChanged();
++        private static ResMailChanged ReadResMailChanged(CodedInputStream input)
++        {
++            var message = new ResMailChanged();
+             uint tag;
+             while ((tag = input.ReadTag()) != 0)
+             {
+@@ -4431,7 +4431,7 @@
+             return message;
+         }
+ 
+-        private static int ComputeSizeNotifyMailChanged(NotifyMailChanged message)
++        private static int ComputeSizeResMailChanged(ResMailChanged message)
+         {
+             if (message == null) return 0;
+             int size = 0;
+--- a/server/GameServerTests/Mail/MailRulesTests.cs
++++ b/server/GameServerTests/Mail/MailRulesTests.cs
+@@ -27,7 +27,7 @@
+         Assert.False(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b"}));
+         Assert.False(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b",LifetimeSeconds=1,MailType=1}));
+         Assert.True(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b",LifetimeSeconds=1}));
+-        Assert.Throws<ArgumentOutOfRangeException>(()=>GM_MailMsgMgr.Instance.Configure(0,_=>new NotifyMailChanged()));
++        Assert.Throws<ArgumentOutOfRangeException>(()=>GM_MailMsgMgr.Instance.Configure(0,_=>new ResMailChanged()));
+     }
+     [Fact]
+     public void ModuleRejectsUnauthenticatedRequestsBeforeAccessingDatabase()
+@@ -50,5 +50,16 @@
+         using var old=new MemoryStream();Assert.True(GoogleProtocolCodec.TrySerialize(legacy,old,out error),error);old.Position=0;
+         Assert.True(GoogleProtocolCodec.TryDeserialize(typeof(ResPullingMailMsg),old,out value,out error),error);
+         Assert.Equal(7,Assert.Single(Assert.IsType<ResPullingMailMsg>(value).mailMessages).msgId);
++
++        Assert.Equal(124,(int)Cmd.eMailChangedRes);
++        var changed=new ResMailChanged {mailboxVersion=9,serverTime=10,count=3,unreadCount=2,capacity=100,
++            addedIds=new(){11},changedIds=new(){12},deletedIds=new(){13}};
++        using var push=new MemoryStream();
++        Assert.True(GoogleProtocolCodec.TrySerialize(changed,push,out error),error);
++        // Preserve the existing 124 field numbers and unpacked repeated-int64 wire representation.
++        Assert.Equal(new byte[]{8,9,16,10,24,3,32,2,40,100,48,11,56,12,64,13},push.ToArray());
++        push.Position=0;
++        Assert.True(GoogleProtocolCodec.TryDeserialize(typeof(ResMailChanged),push,out value,out error),error);
++        Assert.Equal(13,Assert.Single(Assert.IsType<ResMailChanged>(value).deletedIds));
+     }
+ }
+--- a/server/GameServerTests/Mail/MailMySqlTests.cs
++++ b/server/GameServerTests/Mail/MailMySqlTests.cs
+@@ -153,7 +153,7 @@
+     [DatabaseFact, Trait("Category","Database")]
+     public async Task ExpiryAndCapacityCleanUnreadUnclaimedMailAndReadsStayIdempotent() => await Run(async e=>
+     {
+-        GM_MailMsgMgr.Instance.Configure(2,_=>new NotifyMailChanged());
++        GM_MailMsgMgr.Instance.Configure(2,_=>new ResMailChanged());
+         var a=e.Send("old",true);var b=e.Send("new");var c=e.Send("newest");
+         Assert.Equal(3,await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={a.MailId}"));
+         var list=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.List);
+@@ -205,7 +205,7 @@
+             var session=new IdSession{playerId=910001,accountId=910001,client=channel};entity.uPlayer.s=session;
+             var env=new Environment(db,entity,session);
+             configs[nameof(Item)]=env.ItemConfigs;
+-            GM_MailMsgMgr.Instance.Configure(20,r=>new NotifyMailChanged{mailboxVersion=r.MailboxVersion});
++            GM_MailMsgMgr.Instance.Configure(20,r=>new ResMailChanged{mailboxVersion=r.MailboxVersion});
+             await test(env);
+         }
+         finally
+--- a/client/Assets/Scripts/HotUpdate/Game/Protocol/Definitions/Cmd.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Definitions/Cmd.cs
+@@ -16,7 +16,7 @@
+     eMailDeleteRes = 121,
+     eMailDeleteReadReq = 122,
+     eMailDeleteReadRes = 123,
+-    eMailChanged = 124,
++    eMailChangedRes = 124,
+ 
+     eRedDotInitReq = 95,
+     eRedDotInitRes = 96,
+--- a/client/Assets/Scripts/HotUpdate/Game/Protocol/Messages/MailMessage.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Messages/MailMessage.cs
+@@ -181,16 +181,31 @@
+         [ProtoMember(13)] public int nextOffset;
+     }
+     [ProtoContract]
+-    [MessageMeta((short)Module.PLAYER, (short)Cmd.eMailChanged)]
+-    public sealed class NotifyMailChanged : Message
+-    {
+-        [ProtoMember(1)] public long mailboxVersion;
+-        [ProtoMember(2)] public long serverTime;
+-        [ProtoMember(3)] public int count;
+-        [ProtoMember(4)] public int unreadCount;
+-        [ProtoMember(5)] public int capacity;
+-        [ProtoMember(6)] public List<long> addedIds = new List<long>();
+-        [ProtoMember(7)] public List<long> changedIds = new List<long>();
+-        [ProtoMember(8)] public List<long> deletedIds = new List<long>();
++    [MessageMeta((short)Module.PLAYER, (short)Cmd.eMailChangedRes)]
++    public sealed class ResMailChanged : Message
++    {
++        [ProtoMember(1)]
++        public long mailboxVersion;
++
++        [ProtoMember(2)]
++        public long serverTime;
++
++        [ProtoMember(3)]
++        public int count;
++
++        [ProtoMember(4)]
++        public int unreadCount;
++
++        [ProtoMember(5)]
++        public int capacity;
++
++        [ProtoMember(6)]
++        public List<long> addedIds = new List<long>();
++
++        [ProtoMember(7)]
++        public List<long> changedIds = new List<long>();
++
++        [ProtoMember(8)]
++        public List<long> deletedIds = new List<long>();
+     }
+ }
+--- a/client/Assets/Scripts/HotUpdate/Game/Protocol/Network/GoogleProtocolCodecNetwork.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Protocol/Network/GoogleProtocolCodecNetwork.cs
+@@ -72,9 +72,9 @@
+                 {
+                     WriteResMailDeleteRead(output, value13);
+                 }
+-                else if (source is NotifyMailChanged value14)
+-                {
+-                    WriteNotifyMailChanged(output, value14);
++                else if (source is ResMailChanged value14)
++                {
++                    WriteResMailChanged(output, value14);
+                 }
+                 else if (source is ReqGetPlayerBasicInfo value15)
+                 {
+@@ -236,7 +236,7 @@
+                 else if (messageType == typeof(ResMailDelete)) message = ReadResMailDelete(input);
+                 else if (messageType == typeof(ReqMailDeleteRead)) message = ReadReqMailDeleteRead(input);
+                 else if (messageType == typeof(ResMailDeleteRead)) message = ReadResMailDeleteRead(input);
+-                else if (messageType == typeof(NotifyMailChanged)) message = ReadNotifyMailChanged(input);
++                else if (messageType == typeof(ResMailChanged)) message = ReadResMailChanged(input);
+                 else if (messageType == typeof(ReqGetPlayerBasicInfo)) message = ReadReqGetPlayerBasicInfo(input);
+                 else if (messageType == typeof(ResGetPlayerBasicInfo)) message = ReadResGetPlayerBasicInfo(input);
+                 else if (messageType == typeof(ResUpdatePlayerBasicInfo)) message = ReadResUpdatePlayerBasicInfo(input);
+@@ -1804,7 +1804,7 @@
+             return size;
+         }
+ 
+-        private static void WriteNotifyMailChanged(CodedOutputStream output, NotifyMailChanged message)
++        private static void WriteResMailChanged(CodedOutputStream output, ResMailChanged message)
+         {
+             output.WriteTag(1, WireFormat.WireType.Varint);
+             output.WriteInt64(message.mailboxVersion);
+@@ -1842,9 +1842,9 @@
+             }
+         }
+ 
+-        private static NotifyMailChanged ReadNotifyMailChanged(CodedInputStream input)
+-        {
+-            var message = new NotifyMailChanged();
++        private static ResMailChanged ReadResMailChanged(CodedInputStream input)
++        {
++            var message = new ResMailChanged();
+             uint tag;
+             while ((tag = input.ReadTag()) != 0)
+             {
+@@ -1909,7 +1909,7 @@
+             return message;
+         }
+ 
+-        private static int ComputeSizeNotifyMailChanged(NotifyMailChanged message)
++        private static int ComputeSizeResMailChanged(ResMailChanged message)
+         {
+             if (message == null) return 0;
+             int size = 0;
+--- a/client/Assets/Scripts/HotUpdate/Game/Mail/Manager/MailManager.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Mail/Manager/MailManager.cs
+@@ -24,7 +24,7 @@
+         protected override void OnInit()
+         {
+             gameObject.name = nameof(MailManager); DontDestroyOnLoad(gameObject);
+-            UniEvent.AddListener<NotifyMailChanged>(OnPush);
++            UniEvent.AddListener<ResMailChanged>(OnPush);
+             UniEvent.AddListener<UserLogoutStartedEvent>(OnLogout);
+             UniEvent.AddListener<NetworkDisconnectedEvent>(OnDisconnected);
+             UniEvent.AddListener<NetworkRecoveryStartedEvent>(OnDisconnected);
+@@ -95,7 +95,7 @@
+         private void OnPush(IEventMessage message)
+         {
+             if (!SessionNetwork.Singleton.IsGameAuthenticated) return;
+-            var notice=(NotifyMailChanged)message;
++            var notice=(ResMailChanged)message;
+             bool gap=State.Summary==null || notice.mailboxVersion>State.Summary.Version+1;
+             if (!mailbox.ApplyNotice(notice)) return;
+             serverOffset=notice.serverTime-DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+@@ -131,7 +131,7 @@
+         private static void Publish(MailOperationResultModel result) => UniEvent.SendMessage(new MailUpdatedEvent(result));
+         protected override void OnDestroy()
+         {
+-            UniEvent.RemoveListener<NotifyMailChanged>(OnPush); UniEvent.RemoveListener<UserLogoutStartedEvent>(OnLogout);
++            UniEvent.RemoveListener<ResMailChanged>(OnPush); UniEvent.RemoveListener<UserLogoutStartedEvent>(OnLogout);
+             UniEvent.RemoveListener<NetworkDisconnectedEvent>(OnDisconnected);UniEvent.RemoveListener<NetworkRecoveryStartedEvent>(OnDisconnected);
+             generation++;mailbox.Reset();base.OnDestroy();
+         }
+--- a/client/Assets/Scripts/HotUpdate/Game/Mail/Manager/MailboxStateManager.cs
++++ b/client/Assets/Scripts/HotUpdate/Game/Mail/Manager/MailboxStateManager.cs
+@@ -36,7 +36,7 @@
+             if (result.Detail != null) State.Detail = Copy(result.Detail);
+             return true;
+         }
+-        public bool ApplyNotice(NotifyMailChanged notice)
++        public bool ApplyNotice(ResMailChanged notice)
+         {
+             if (State.Summary != null && notice.mailboxVersion <= State.Summary.Version) return false;
+             State.Summary = new MailSummaryModel { Version = notice.mailboxVersion, ServerTime = notice.serverTime,
+--- a/client/Tools/MailTests/MailboxTests.cs
++++ b/client/Tools/MailTests/MailboxTests.cs
+@@ -23,9 +23,9 @@
+     public void OldResponseCannotOverrideNewPush()
+     {
+         var manager=new MailboxStateManager();manager.Apply(Snapshot(1,Mail(1)));
+-        manager.ApplyNotice(new NotifyMailChanged{mailboxVersion=3,count=0,unreadCount=0,serverTime=100,deletedIds=new(){1}});
++        manager.ApplyNotice(new ResMailChanged{mailboxVersion=3,count=0,unreadCount=0,serverTime=100,deletedIds=new(){1}});
+         Assert.False(manager.Apply(Snapshot(2,Mail(1))));Assert.Empty(manager.State.Rows);
+-        Assert.False(manager.ApplyNotice(new NotifyMailChanged{mailboxVersion=2,count=1}));
++        Assert.False(manager.ApplyNotice(new ResMailChanged{mailboxVersion=2,count=1}));
+     }
+     [Fact]
+     public void ClaimUpdatesIconsAndDetailsWithoutChangingFrozenGrey()

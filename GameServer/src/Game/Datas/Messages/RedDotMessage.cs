@@ -52,7 +52,7 @@ namespace Game.Datas.Messages
     }
     [ProtoContract]
     [MessageMeta((short)Module.PLAYER, (short)Cmd.eRedDotChanged)]
-    public sealed class NotifyRedDotChanged : Message
+    public sealed class ResRedDotChanged : Message
     {
         [ProtoMember(1)] public string configVersion;
         [ProtoMember(2)] public long stateVersion;

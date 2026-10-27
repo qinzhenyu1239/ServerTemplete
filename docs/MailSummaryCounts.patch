@@ -1,0 +1,69 @@
+--- a/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
++++ b/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+@@ -110,8 +110,15 @@
+         private MailResult ReadSummary(long playerId)
+         {
+             using var db = DBService.Instance.GetGameInstance();
+-            var result = new MailResult { Status = MailStatus.Success };
+-            FillSnapshot(db, playerId, result);
++            long now = Now();
++            var result = db.Ado.SqlQuery<MailResult>(
++                "SELECT COUNT(*) AS Count, " +
++                "COALESCE(SUM(CASE WHEN readTime=0 THEN 1 ELSE 0 END),0) AS UnreadCount " +
++                "FROM mailmessage WHERE " + ValidWhere,
++                new { pid = playerId, now }).Single();
++            result.Status = MailStatus.Success;
++            result.ServerTime = now;
++            result.Capacity = Capacity;
+             return result;
+         }
+         private MailResult RunTransaction(long playerId, MailAction action, long mailId)
+--- a/GameServerTests/Mail/MailMySqlTests.cs
++++ b/GameServerTests/Mail/MailMySqlTests.cs
+@@ -16,6 +16,46 @@
+ namespace GameServerTests.Mail;
+ public sealed class MailMySqlTests
+ {
++    [DatabaseFact, Trait("Category","Database")]
++    public async Task SummaryCountsOnlyValidMailWithoutLoadingAttachments() => await Run(async e=>
++    {
++        var empty=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.Summary);
++        Assert.Equal(MailStatus.Success,empty.Status);
++        Assert.Equal(0,empty.Count);
++        Assert.Equal(0,empty.UnreadCount);
++
++        var unread=e.Send("legacy-unread",true);
++        var read=e.Send("read-unclaimed",true);
++        var expired=e.Send("expired");
++        var deleted=e.Send("deleted");
++        var foreign=e.Send("other-player");
++        GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.Read,read.MailId);
++        await e.Sql($"UPDATE mailmessage SET expireTime=0 WHERE id={unread.MailId};"+
++            $"UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP() WHERE id={expired.MailId};"+
++            $"UPDATE mailmessage SET deleteTime=UNIX_TIMESTAMP(),deleteReason=1 WHERE id={deleted.MailId};"+
++            $"UPDATE mailmessage SET toPlayerId={e.PlayerId+1} WHERE id={foreign.MailId}");
++        // This fixture owns an isolated temporary database. Summary must not access the attachment table.
++        await e.Sql("DROP TABLE mailattachment");
++
++        var summary=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.Summary);
++        Assert.Equal(MailStatus.Success,summary.Status);
++        Assert.Equal(2,summary.Count);
++        Assert.Equal(1,summary.UnreadCount);
++        Assert.Equal(20,summary.Capacity);
++        Assert.True(summary.ServerTime>0);
++        Assert.Empty(summary.Items);
++        Assert.Equal(0,await e.Scalar($"SELECT readTime FROM mailmessage WHERE id={unread.MailId}"));
++        Assert.Equal(0,await e.Scalar($"SELECT deleteTime FROM mailmessage WHERE id={expired.MailId}"));
++        Assert.Equal(0,await e.Scalar($"SELECT claimTime FROM mailmessage WHERE id={read.MailId}"));
++
++        var response=MailModule.Instance.HandlerGetMailSummary(e.Session,new ReqMailSummary(),e.PlayerId);
++        Assert.Equal((int)Game.Respones.OK,response.status);
++        Assert.Equal(2,response.count);
++        Assert.Equal(1,response.unreadCount);
++        Assert.Empty(response.items);
++        Assert.Null(response.detail);
++    });
++
+     [DatabaseFact, Trait("Category","Database")]
+     public async Task ModuleValidationRejectsInvalidRequestsAndStaleSessions() => await Run(async e=>
+     {

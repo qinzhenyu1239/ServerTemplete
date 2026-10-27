@@ -204,6 +204,22 @@ namespace Game{
         eRedDotViewReq = 97,
         eRedDotViewRes = 98,
         eRedDotChanged = 99,
+        eMailSummaryReq = 110,
+        eMailSummaryRes = 111,
+        eMailListReq = 112,
+        eMailListRes = 113,
+        eMailReadReq = 114,
+        eMailReadRes = 115,
+        eMailClaimReq = 116,
+        eMailClaimRes = 117,
+        eMailClaimAllReq = 118,
+        eMailClaimAllRes = 119,
+        eMailDeleteReq = 120,
+        eMailDeleteRes = 121,
+        eMailDeleteReadReq = 122,
+        eMailDeleteReadRes = 123,
+        eMailChangedRes = 124,
+
     }
 
     public enum QuitReason { 
@@ -253,6 +269,11 @@ namespace Game{
         FormationVersionConflict = -131,
         FormationSaveFailed = -132,
         RequestRateLimited = -133,
+        MailNotFound = -140,
+        MailNotAllowed = -141,
+        MailNoRewards = -142,
+        MailInvalidReward = -143,
+        MailSourceConflict = -144,
         // ...
     }
 

@@ -22,6 +22,23 @@ namespace Game.Core.GM_CharacterStarUp
 
         private GM_CharacterStarUpMgr() { }
 
+        public void CleanupExpiredOperations()
+        {
+            try
+            {
+                using SqlSugarClient db = DBService.Instance.GetGameInstance();
+                long backlog = db.Ado.SqlQuery<long>(
+                    "SELECT COUNT(*) FROM player_character_starup_operation WHERE expires_at < UTC_TIMESTAMP(6)")
+                    .Single();
+                int deleted = CharacterStarUpOperationRepository.Instance.DeleteExpired(db);
+                logger.Info($"idempotency_cleanup operation=character_starup expiredBacklog={backlog} deleted={deleted}");
+            }
+            catch (Exception exception)
+            {
+                logger.Error(exception, "Character star-up operation cleanup failed.");
+            }
+        }
+
         public CharacterStarUpInfoResult GetCharacterInfo(long playerId, CharacterStarUpDefinition definition)
         {
             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);

@@ -1,0 +1,146 @@
+diff --git a/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs b/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+--- a/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
++++ b/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+@@ -1,6 +1,5 @@
+ using Framework.Core.Concurrency;
+ using Framework.Core.Serializer;
+-using Framework.Core.task;
+ using Framework.Core.Utils;
+ using Game.Core.Db;
+ using Game.Core.EntityMgr;
+@@ -21,15 +20,11 @@ namespace Game.Core.GM_MailMessage
+         public static GM_MailMsgMgr Instance { get; } = new();
+         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+         private Func<MailResult, Message> notificationFactory;
+-        private readonly TimerTaskWorker expiryWorker;
+         private int scanning;
+         public int Capacity { get; private set; }
+         private const string ValidWhere = "toPlayerId=@pid AND deleteTime=0 AND (expireTime=0 OR expireTime>@now)";
+ 
+-        private GM_MailMsgMgr()
+-        {
+-            expiryWorker = new TimerTaskWorker("MailExpiryWorker", ExpireDue, interval: 1f, delay: 1f);
+-        }
++        private GM_MailMsgMgr() { }
+ 
+         public void Configure(int capacity, Func<MailResult, Message> notifications)
+         {
+@@ -37,16 +32,6 @@ namespace Game.Core.GM_MailMessage
+             Capacity = capacity;
+             notificationFactory = notifications ?? throw new ArgumentNullException(nameof(notifications));
+         }
+-        public void Init()
+-        {
+-            if (Capacity <= 0) throw new InvalidOperationException("MailboxCapacity is required.");
+-            expiryWorker.Start();
+-        }
+-        public void Stop()
+-        {
+-            expiryWorker.Stop();
+-        }
+-
+         public MailResult Execute(long playerId, MailAction action, long mailId = 0)
+         {
+             using var lease = PlayerOperationLock.Acquire(playerId);
+diff --git a/GameServer/src/Game/GameServer.cs b/GameServer/src/Game/GameServer.cs
+--- a/GameServer/src/Game/GameServer.cs
++++ b/GameServer/src/Game/GameServer.cs
+@@ -8,7 +8,6 @@ using Game.Core.GM_Auth;
+ using Game.Core.Maintenance;
+ using Game.Core.GM_Backpack;
+ using Game.Core.GM_Bonues;
+-using Game.Core.GM_MailMessage;
+ using Game.Core.GM_Rank;
+ using Game.Core.GM_Task;
+ using Game.Core.GM_Trading;
+@@ -153,7 +152,7 @@ namespace Game
+             LogicServerFactory.Instance.Init();
+             if (role == ServerRole.Game)
+             {
+-                GM_MailMsgMgr.Instance.Init();
++                MailCleanupService.Instance.Start();
+                 EconomicOperationCleanupService.Instance.Start();
+             }
+         }
+@@ -177,7 +176,7 @@ namespace Game
+             if (role == ServerRole.ServerZone) return;
+ 
+             EconomicOperationCleanupService.Instance.Stop();
+-            GM_MailMsgMgr.Instance.Stop();
++            MailCleanupService.Instance.Stop();
+             RedisService.Instance.Shutdown();
+             if (role == ServerRole.Login) return;
+             LogicWorkerPool.Instance.Stop();
+diff --git a/GameServerTests/Mail/MailMySqlTests.cs b/GameServerTests/Mail/MailMySqlTests.cs
+--- a/GameServerTests/Mail/MailMySqlTests.cs
++++ b/GameServerTests/Mail/MailMySqlTests.cs
+@@ -6,6 +6,7 @@ using Framework.Core.Utils;
+ using Game.Core.Db;
+ using Game.Core.EntityMgr;
+ using Game.Core.GM_MailMessage;
++using Game.Core.Maintenance;
+ using Game.Datas.GMEntities;
+ using Game.Datas.Excels;
+ using Game.Datas.Messages;
+@@ -22,7 +23,7 @@ public sealed class MailMySqlTests
+         var expired = e.Send("worker-expired", true);
+         var valid = e.Send("worker-valid");
+         await e.Sql($"UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP()-1 WHERE id={expired.MailId}");
+-        GM_MailMsgMgr.Instance.Init();
++        MailCleanupService.Instance.Start();
+         try
+         {
+             var deadline = System.Diagnostics.Stopwatch.StartNew();
+@@ -30,7 +31,7 @@ public sealed class MailMySqlTests
+                 deadline.Elapsed < TimeSpan.FromSeconds(10))
+                 await Task.Delay(100);
+         }
+-        finally { GM_MailMsgMgr.Instance.Stop(); }
++        finally { MailCleanupService.Instance.Stop(); }
+         Assert.Equal(2, await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={expired.MailId}"));
+         Assert.Equal(0, await e.Scalar($"SELECT deleteTime FROM mailmessage WHERE id={valid.MailId}"));
+         Assert.Equal(0, await e.Scalar($"SELECT claimTime FROM mailmessage WHERE id={expired.MailId}"));
+@@ -230,7 +231,7 @@ public sealed class MailMySqlTests
+         }
+         finally
+         {
+-            GM_MailMsgMgr.Instance.Stop();GM_EntityMgr.Instance.RemovePlayer(910001);
++            MailCleanupService.Instance.Stop();GM_EntityMgr.Instance.RemovePlayer(910001);
+             field.SetValue(DBService.Instance,old);channel.FinishAndReleaseAll();
+             if(hadItems)configs[nameof(Item)]=previousItems;else configs.Remove(nameof(Item));
+             await Command(admin,$"DROP DATABASE `{name}`");
+diff --git a/GameServer/src/Game/Core/Maintenance/MailCleanupService.cs b/GameServer/src/Game/Core/Maintenance/MailCleanupService.cs
+new file mode 100644
+--- /dev/null
++++ b/GameServer/src/Game/Core/Maintenance/MailCleanupService.cs
+@@ -0,0 +1,30 @@
++using Framework.Core.task;
++using Game.Core.GM_MailMessage;
++using System;
++
++namespace Game.Core.Maintenance
++{
++    public sealed class MailCleanupService
++    {
++        public static readonly MailCleanupService Instance = new();
++        private readonly TimerTaskWorker cleanupWorker;
++
++        private MailCleanupService()
++        {
++            cleanupWorker = new TimerTaskWorker("MailExpiryWorker",
++                GM_MailMsgMgr.Instance.ExpireDue, interval: 1f, delay: 1f);
++        }
++
++        public void Start()
++        {
++            if (GM_MailMsgMgr.Instance.Capacity <= 0)
++                throw new InvalidOperationException("MailboxCapacity is required.");
++            cleanupWorker.Start();
++        }
++
++        public void Stop()
++        {
++            cleanupWorker.Stop();
++        }
++    }
++}

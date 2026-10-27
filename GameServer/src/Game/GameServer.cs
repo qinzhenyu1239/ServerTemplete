@@ -8,7 +8,6 @@ using Game.Core.GM_Auth;
 using Game.Core.Maintenance;
 using Game.Core.GM_Backpack;
 using Game.Core.GM_Bonues;
-using Game.Core.GM_MailMessage;
 using Game.Core.GM_Rank;
 using Game.Core.GM_Task;
 using Game.Core.GM_Trading;
@@ -133,6 +132,7 @@ namespace Game
 
             ConfigMgr.Instance.Init();
             RedDotModule.Instance.Init();
+            MailModule.Instance.Init();
             CharacterStarUpModule.Instance.Init();
             GachaModule.Instance.Init();
             ServerZoneModule.Instance.Init();
@@ -141,7 +141,6 @@ namespace Game
             GM_EntityMgr.Instance.Init();
             GM_SkillMgr.Instance.Init();
             GM_BuffMgr.Instance.Init();
-            GM_MailMsgMgr.Instance.Init();
             GM_BonuesMgr.Instance.Init();
             GM_TaskMgr.Instance.Init();
             GM_RankMgr.Instance.Init();
@@ -149,9 +148,13 @@ namespace Game
             GM_TradingMgr.Instance.Init();
             PlayerModule.Instance.Init();
             GM_AuthSessionMgr.Instance.Init();
-            EconomicOperationCleanupService.Instance.Start();
             LogicWorkerPool.Instance.Start();
             LogicServerFactory.Instance.Init();
+            if (role == ServerRole.Game)
+            {
+                MailCleanupService.Instance.Start();
+                EconomicOperationCleanupService.Instance.Start();
+            }
         }
 
         public void Start()
@@ -172,10 +175,10 @@ namespace Game
             if (server != null) await server.Shutdown();
             if (role == ServerRole.ServerZone) return;
 
+            EconomicOperationCleanupService.Instance.Stop();
+            MailCleanupService.Instance.Stop();
             RedisService.Instance.Shutdown();
             if (role == ServerRole.Login) return;
-
-            EconomicOperationCleanupService.Instance.Stop();
             LogicWorkerPool.Instance.Stop();
             TaskWorkerPool.Instance.Stop();
             bool isGateway = role == ServerRole.Gateway;

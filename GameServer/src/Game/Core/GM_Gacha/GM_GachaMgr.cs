@@ -26,6 +26,20 @@ namespace Game.Core.GM_Gacha
 
         private GM_GachaMgr() { }
 
+        public void CleanupExpiredOperations()
+        {
+            try
+            {
+                using SqlSugarClient db = DBService.Instance.GetGameInstance();
+                long backlog = db.Ado.SqlQuery<long>(
+                    "SELECT COUNT(*) FROM player_gacha_operation WHERE expires_at < UTC_TIMESTAMP(6)")
+                    .Single();
+                int deleted = GachaOperationRepository.Instance.DeleteExpired(db);
+                logger.Info($"idempotency_cleanup operation=gacha expiredBacklog={backlog} deleted={deleted}");
+            }
+            catch (Exception exception) { logger.Error(exception, "Gacha operation cleanup failed."); }
+        }
+
         public GachaPoolInfoResult GetPoolInfo(long playerId, GachaPoolDefinition pool)
         {
             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);

@@ -14,7 +14,7 @@ namespace Game.Entries.Modules
         public static RedDotModule Instance { get; } = new();
         public void Init() => GM_RedDotMgr.Instance.Configure(
             new RedDotCatalog(ExcelUtils.GetConfigDatas<RedDotConfig>(null)),
-            result => new NotifyRedDotChanged { configVersion = result.ConfigVersion,
+            result => new ResRedDotChanged { configVersion = result.ConfigVersion,
                 stateVersion = result.StateVersion, states = MapStates(result) });
 
         public ResRedDotInit Initialize(IdSession session, ReqRedDotInit request, long playerId)

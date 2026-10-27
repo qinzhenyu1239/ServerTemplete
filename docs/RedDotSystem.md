@@ -32,7 +32,7 @@
 |96|ResRedDotInit|status、configVersion、stateVersion、完整 nodes、有效叶子 states|
 |97|ReqRedDotView|nodeId、实际展示的 tipVersion|
 |98|ResRedDotView|status、configVersion、stateVersion、完整有效叶子 states|
-|99|NotifyRedDotChanged|configVersion、stateVersion、变化叶子 states；requestId=0|
+|99|ResRedDotChanged|configVersion、stateVersion、变化叶子 states；requestId=0|
 
 节点消息包含配置六个字段，状态消息包含 nodeId 和 isActive。初始化发送禁用节点，无须客户端维护本地 Excel。stateVersion 随当前连接的叶子亮灭变化递增，重连后以新快照为准。
 

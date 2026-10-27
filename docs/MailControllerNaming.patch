@@ -1,0 +1,48 @@
+--- a/GameServer/src/Game/Entries/Controllers/MailController.cs
++++ b/GameServer/src/Game/Entries/Controllers/MailController.cs
+@@ -2,24 +2,38 @@
+ using Framework.Core.Utils;
+ using Game.Datas.Messages;
+ using Game.Entries.Modules;
++
+ namespace Game.Entries.Controllers
+ {
+     [Controller]
+     public sealed class MailController
+     {
+         [RequestMapping]
+-        public object Summary(IdSession session,ReqMailSummary request,long playerId) => MailModule.Instance.Summary(session,request,playerId);
++        public object DoGetMailSummary(IdSession session, ReqMailSummary request, long playerId) =>
++            MailModule.Instance.Summary(session, request, playerId);
++
+         [RequestMapping]
+-        public object List(IdSession session,ReqMailList request,long playerId) => MailModule.Instance.List(session,request,playerId);
++        public object DoGetMailList(IdSession session, ReqMailList request, long playerId) =>
++            MailModule.Instance.List(session, request, playerId);
++
+         [RequestMapping]
+-        public object Read(IdSession session,ReqMailRead request,long playerId) => MailModule.Instance.Read(session,request,playerId);
++        public object DoReadMail(IdSession session, ReqMailRead request, long playerId) =>
++            MailModule.Instance.Read(session, request, playerId);
++
+         [RequestMapping]
+-        public object Claim(IdSession session,ReqMailClaim request,long playerId) => MailModule.Instance.Claim(session,request,playerId);
++        public object DoClaimMail(IdSession session, ReqMailClaim request, long playerId) =>
++            MailModule.Instance.Claim(session, request, playerId);
++
+         [RequestMapping]
+-        public object ClaimAll(IdSession session,ReqMailClaimAll request,long playerId) => MailModule.Instance.ClaimAll(session,request,playerId);
++        public object DoClaimAllMail(IdSession session, ReqMailClaimAll request, long playerId) =>
++            MailModule.Instance.ClaimAll(session, request, playerId);
++
+         [RequestMapping]
+-        public object Delete(IdSession session,ReqMailDelete request,long playerId) => MailModule.Instance.Delete(session,request,playerId);
++        public object DoDeleteMail(IdSession session, ReqMailDelete request, long playerId) =>
++            MailModule.Instance.Delete(session, request, playerId);
++
+         [RequestMapping]
+-        public object DeleteRead(IdSession session,ReqMailDeleteRead request,long playerId) => MailModule.Instance.DeleteRead(session,request,playerId);
++        public object DoDeleteReadMail(IdSession session, ReqMailDeleteRead request, long playerId) =>
++            MailModule.Instance.DeleteRead(session, request, playerId);
+     }
+ }

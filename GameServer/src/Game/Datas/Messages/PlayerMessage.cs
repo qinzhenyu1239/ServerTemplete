@@ -218,7 +218,7 @@ namespace Game.Datas.Messages {
 
 
         [ProtoMember(2)]
-        public MailMsgItem[] mailMessages = null;
+        public List<MailMsgItem> mailMessages = new List<MailMsgItem>();
     }
 
     [ProtoContract]

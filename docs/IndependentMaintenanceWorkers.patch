@@ -1,0 +1,392 @@
+diff --git a/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs b/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+--- a/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
++++ b/GameServer/src/Game/Core/GM_MailMessage/GM_MailMsgMgr.cs
+@@ -1,5 +1,6 @@
+ using Framework.Core.Concurrency;
+ using Framework.Core.Serializer;
++using Framework.Core.task;
+ using Framework.Core.Utils;
+ using Game.Core.Db;
+ using Game.Core.EntityMgr;
+@@ -20,11 +21,16 @@ namespace Game.Core.GM_MailMessage
+         public static GM_MailMsgMgr Instance { get; } = new();
+         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+         private Func<MailResult, Message> notificationFactory;
+-        private Timer timer;
++        private readonly TimerTaskWorker expiryWorker;
+         private int scanning;
+         public int Capacity { get; private set; }
+         private const string ValidWhere = "toPlayerId=@pid AND deleteTime=0 AND (expireTime=0 OR expireTime>@now)";
+ 
++        private GM_MailMsgMgr()
++        {
++            expiryWorker = new TimerTaskWorker("MailExpiryWorker", ExpireDue, interval: 1f, delay: 1f);
++        }
++
+         public void Configure(int capacity, Func<MailResult, Message> notifications)
+         {
+             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity), "MailboxCapacity must be explicitly configured.");
+@@ -34,14 +40,11 @@ namespace Game.Core.GM_MailMessage
+         public void Init()
+         {
+             if (Capacity <= 0) throw new InvalidOperationException("MailboxCapacity is required.");
+-            timer ??= new Timer(_ => ExpireDue(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
++            expiryWorker.Start();
+         }
+         public void Stop()
+         {
+-            var current = timer; timer = null;
+-            if (current == null) return;
+-            using var stopped = new ManualResetEvent(false);
+-            if (current.Dispose(stopped)) stopped.WaitOne(TimeSpan.FromSeconds(30));
++            expiryWorker.Stop();
+         }
+ 
+         public MailResult Execute(long playerId, MailAction action, long mailId = 0)
+diff --git a/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs b/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs
+--- a/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs
++++ b/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs
+@@ -1,3 +1,4 @@
++using Framework.Core.task;
+ using Game.Core.Db;
+ using Game.Core.GM_CharacterStarUp;
+ using Game.Core.GM_Gacha;
+@@ -12,21 +13,24 @@ namespace Game.Core.Maintenance
+     {
+         public static readonly EconomicOperationCleanupService Instance = new();
+         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+-        private Timer timer;
++        private readonly TimerTaskWorker cleanupWorker;
+         private int running;
+ 
+-        private EconomicOperationCleanupService() { }
++        private EconomicOperationCleanupService()
++        {
++            cleanupWorker = new TimerTaskWorker("EconomicCleanupWorker", Cleanup,
++                interval: (float)TimeSpan.FromHours(6).TotalSeconds,
++                delay: (float)TimeSpan.FromMinutes(5).TotalSeconds);
++        }
+ 
+         public void Start()
+         {
+-            timer ??= new Timer(
+-                _ => Cleanup(), null, TimeSpan.FromMinutes(5), TimeSpan.FromHours(6));
++            cleanupWorker.Start();
+         }
+ 
+         public void Stop()
+         {
+-            timer?.Dispose();
+-            timer = null;
++            cleanupWorker.Stop();
+         }
+ 
+         private void Cleanup()
+diff --git a/GameServer/src/Game/GameServer.cs b/GameServer/src/Game/GameServer.cs
+--- a/GameServer/src/Game/GameServer.cs
++++ b/GameServer/src/Game/GameServer.cs
+@@ -142,7 +142,6 @@ namespace Game
+             GM_EntityMgr.Instance.Init();
+             GM_SkillMgr.Instance.Init();
+             GM_BuffMgr.Instance.Init();
+-            GM_MailMsgMgr.Instance.Init();
+             GM_BonuesMgr.Instance.Init();
+             GM_TaskMgr.Instance.Init();
+             GM_RankMgr.Instance.Init();
+@@ -150,9 +149,13 @@ namespace Game
+             GM_TradingMgr.Instance.Init();
+             PlayerModule.Instance.Init();
+             GM_AuthSessionMgr.Instance.Init();
+-            EconomicOperationCleanupService.Instance.Start();
+             LogicWorkerPool.Instance.Start();
+             LogicServerFactory.Instance.Init();
++            if (role == ServerRole.Game)
++            {
++                GM_MailMsgMgr.Instance.Init();
++                EconomicOperationCleanupService.Instance.Start();
++            }
+         }
+ 
+         public void Start()
+@@ -173,11 +176,10 @@ namespace Game
+             if (server != null) await server.Shutdown();
+             if (role == ServerRole.ServerZone) return;
+ 
+-            RedisService.Instance.Shutdown();
+-            if (role == ServerRole.Login) return;
+-
+             EconomicOperationCleanupService.Instance.Stop();
+             GM_MailMsgMgr.Instance.Stop();
++            RedisService.Instance.Shutdown();
++            if (role == ServerRole.Login) return;
+             LogicWorkerPool.Instance.Stop();
+             TaskWorkerPool.Instance.Stop();
+             bool isGateway = role == ServerRole.Gateway;
+diff --git a/GameServerTests/Mail/MailMySqlTests.cs b/GameServerTests/Mail/MailMySqlTests.cs
+--- a/GameServerTests/Mail/MailMySqlTests.cs
++++ b/GameServerTests/Mail/MailMySqlTests.cs
+@@ -16,6 +16,26 @@ using MySqlConnector;
+ namespace GameServerTests.Mail;
+ public sealed class MailMySqlTests
+ {
++    [DatabaseFact, Trait("Category","Database")]
++    public async Task ExpiryWorkerCleansExpiredMailWithoutManualScan() => await Run(async e=>
++    {
++        var expired = e.Send("worker-expired", true);
++        var valid = e.Send("worker-valid");
++        await e.Sql($"UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP()-1 WHERE id={expired.MailId}");
++        GM_MailMsgMgr.Instance.Init();
++        try
++        {
++            var deadline = System.Diagnostics.Stopwatch.StartNew();
++            while (await e.Scalar($"SELECT deleteTime FROM mailmessage WHERE id={expired.MailId}") == 0 &&
++                deadline.Elapsed < TimeSpan.FromSeconds(10))
++                await Task.Delay(100);
++        }
++        finally { GM_MailMsgMgr.Instance.Stop(); }
++        Assert.Equal(2, await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={expired.MailId}"));
++        Assert.Equal(0, await e.Scalar($"SELECT deleteTime FROM mailmessage WHERE id={valid.MailId}"));
++        Assert.Equal(0, await e.Scalar($"SELECT claimTime FROM mailmessage WHERE id={expired.MailId}"));
++    });
++
+     [DatabaseFact, Trait("Category","Database")]
+     public async Task SummaryCountsOnlyValidMailWithoutLoadingAttachments() => await Run(async e=>
+     {
+diff --git a/GameServer/src/Framework/Core/task/TimerTaskWorker.cs b/GameServer/src/Framework/Core/task/TimerTaskWorker.cs
+new file mode 100644
+--- /dev/null
++++ b/GameServer/src/Framework/Core/task/TimerTaskWorker.cs
+@@ -0,0 +1,106 @@
++using System;
++using System.Diagnostics;
++using System.Threading;
++
++namespace Framework.Core.task
++{
++    /// <summary>Runs one recurring task on its own thread using a thread-confined TimerTaskMgr.</summary>
++    public sealed class TimerTaskWorker
++    {
++        private readonly object lifecycleGate = new();
++        private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
++        private readonly string name;
++        private readonly Action action;
++        private readonly float interval;
++        private readonly float delay;
++        private Thread thread;
++        private ManualResetEventSlim stopSignal;
++
++        public TimerTaskWorker(string name, Action action, float interval, float delay)
++        {
++            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Worker name is required.", nameof(name));
++            if (!float.IsFinite(interval) || interval <= 0) throw new ArgumentOutOfRangeException(nameof(interval));
++            if (!float.IsFinite(delay) || delay < 0) throw new ArgumentOutOfRangeException(nameof(delay));
++            this.name = name;
++            this.action = action ?? throw new ArgumentNullException(nameof(action));
++            this.interval = interval;
++            this.delay = delay;
++        }
++
++        public void Start()
++        {
++            lock (lifecycleGate)
++            {
++                if (thread != null)
++                {
++                    if (stopSignal.IsSet) throw new InvalidOperationException($"Worker {name} is stopping.");
++                    return;
++                }
++                var signal = new ManualResetEventSlim(false);
++                var worker = new Thread(() => Run(signal)) { IsBackground = true, Name = name };
++                stopSignal = signal;
++                thread = worker;
++                try { worker.Start(); }
++                catch
++                {
++                    thread = null;
++                    stopSignal = null;
++                    signal.Dispose();
++                    throw;
++                }
++            }
++        }
++
++        public void Stop()
++        {
++            Thread worker;
++            ManualResetEventSlim signal;
++            lock (lifecycleGate)
++            {
++                worker = thread;
++                if (worker == null) return;
++                if (Thread.CurrentThread == worker)
++                    throw new InvalidOperationException("A timer worker cannot join itself.");
++                signal = stopSignal;
++                signal.Set();
++            }
++
++            // Keep dependencies alive if a callback is still running after the shutdown deadline.
++            if (!worker.Join(TimeSpan.FromSeconds(30)))
++                throw new TimeoutException($"Timed out waiting for worker {name} to stop.");
++
++            lock (lifecycleGate)
++            {
++                if (thread != worker) return;
++                thread = null;
++                stopSignal = null;
++                signal.Dispose();
++            }
++        }
++
++        private void Run(ManualResetEventSlim signal)
++        {
++            try
++            {
++                var timers = new TimerTaskMgr();
++                timers.Init();
++                timers.Schedule(_ =>
++                {
++                    if (signal.IsSet) return;
++                    try { action(); }
++                    catch (Exception exception) { logger.Error(exception, $"Timer worker {name} task failed."); }
++                }, repeat: -1, interval: interval, delay: delay);
++
++                var clock = Stopwatch.StartNew();
++                while (!signal.Wait(100))
++                {
++                    float elapsed = (float)clock.Elapsed.TotalSeconds;
++                    clock.Restart();
++                    // TimerTaskMgr fires at most once per update, so missed ticks do not build a queue.
++                    timers.Update(elapsed);
++                }
++            }
++            catch (Exception exception) { logger.Error(exception, $"Timer worker {name} stopped unexpectedly."); }
++        }
++    }
++}
+diff --git a/GameServerTests/Concurrency/TimerTaskWorkerTests.cs b/GameServerTests/Concurrency/TimerTaskWorkerTests.cs
+new file mode 100644
+--- /dev/null
++++ b/GameServerTests/Concurrency/TimerTaskWorkerTests.cs
+@@ -0,0 +1,122 @@
++using Framework.Core.task;
++
++namespace GameServerTests.Concurrency;
++
++public sealed class TimerTaskWorkerTests
++{
++    [Fact]
++    public void SeparateWorkersUseDedicatedThreadsAndDoNotBlockEachOther()
++    {
++        using var started = new ManualResetEventSlim();
++        using var release = new ManualResetEventSlim();
++        using var completed = new ManualResetEventSlim();
++        Thread firstThread = null;
++        Thread secondThread = null;
++        var first = new TimerTaskWorker("BlockedCleanup", () =>
++        {
++            firstThread = Thread.CurrentThread;
++            started.Set();
++            release.Wait();
++        }, 1f, 0f);
++        var second = new TimerTaskWorker("IndependentCleanup", () =>
++        {
++            secondThread = Thread.CurrentThread;
++            completed.Set();
++        }, 1f, 0f);
++        try
++        {
++            first.Start();
++            first.Start();
++            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
++            second.Start();
++            Assert.True(completed.Wait(TimeSpan.FromSeconds(5)));
++            Assert.NotSame(firstThread, secondThread);
++            Assert.False(firstThread.IsThreadPoolThread);
++            Assert.False(secondThread.IsThreadPoolThread);
++            Assert.True(firstThread.IsBackground);
++            Assert.Equal("BlockedCleanup", firstThread.Name);
++            Assert.Equal("IndependentCleanup", secondThread.Name);
++        }
++        finally
++        {
++            release.Set();
++            first.Stop();
++            second.Stop();
++        }
++    }
++
++    [Fact]
++    public void CallbackExceptionDoesNotStopFollowingTicks()
++    {
++        using var completed = new ManualResetEventSlim();
++        int calls = 0;
++        var worker = new TimerTaskWorker("FaultingCleanup", () =>
++        {
++            if (Interlocked.Increment(ref calls) == 1) throw new InvalidOperationException("forced");
++            completed.Set();
++        }, 0.1f, 0f);
++        try
++        {
++            worker.Start();
++            Assert.True(completed.Wait(TimeSpan.FromSeconds(5)));
++            Assert.True(Volatile.Read(ref calls) >= 2);
++        }
++        finally { worker.Stop(); }
++    }
++
++    [Fact]
++    public async Task StopWaitsForRunningCallbackAndWorkerCanRestart()
++    {
++        using var started = new ManualResetEventSlim();
++        using var release = new ManualResetEventSlim();
++        using var stopping = new ManualResetEventSlim();
++        int calls = 0;
++        var worker = new TimerTaskWorker("StoppingCleanup", () =>
++        {
++            Interlocked.Increment(ref calls);
++            started.Set();
++            release.Wait();
++        }, 0.1f, 0f);
++        Task stop = null;
++        try
++        {
++            worker.Start();
++            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
++            stop = Task.Run(() => { stopping.Set(); worker.Stop(); });
++            Assert.True(stopping.Wait(TimeSpan.FromSeconds(5)));
++            await Task.Delay(150);
++            Assert.False(stop.IsCompleted);
++            Assert.Equal(1, Volatile.Read(ref calls));
++            release.Set();
++            await stop.WaitAsync(TimeSpan.FromSeconds(5));
++            int stoppedCalls = Volatile.Read(ref calls);
++            await Task.Delay(200);
++            Assert.Equal(stoppedCalls, Volatile.Read(ref calls));
++            worker.Stop();
++
++            started.Reset();
++            worker.Start();
++            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
++            Assert.True(Volatile.Read(ref calls) > stoppedCalls);
++        }
++        finally
++        {
++            release.Set();
++            if (stop != null) await stop.WaitAsync(TimeSpan.FromSeconds(5));
++            worker.Stop();
++        }
++    }
++
++    [Fact]
++    public void StopWakesWorkerDuringLongInitialDelay()
++    {
++        using var called = new ManualResetEventSlim();
++        var worker = new TimerTaskWorker("DelayedCleanup", called.Set, 21600f, 300f);
++        worker.Stop();
++        worker.Start();
++        var clock = System.Diagnostics.Stopwatch.StartNew();
++        worker.Stop();
++        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2));
++        Assert.False(called.IsSet);
++    }
++}

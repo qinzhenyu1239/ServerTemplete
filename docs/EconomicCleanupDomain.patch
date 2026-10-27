@@ -1,0 +1,122 @@
+diff --git a/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs b/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs
+--- a/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs
++++ b/GameServer/src/Game/Core/Maintenance/EconomicOperationCleanupService.cs
+@@ -1,20 +1,14 @@
+ using Framework.Core.task;
+-using Game.Core.Db;
+ using Game.Core.GM_CharacterStarUp;
+ using Game.Core.GM_Gacha;
+-using SqlSugar;
+ using System;
+-using System.Linq;
+-using System.Threading;
+ 
+ namespace Game.Core.Maintenance
+ {
+     public sealed class EconomicOperationCleanupService
+     {
+         public static readonly EconomicOperationCleanupService Instance = new();
+-        private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+         private readonly TimerTaskWorker cleanupWorker;
+-        private int running;
+ 
+         private EconomicOperationCleanupService()
+         {
+@@ -35,44 +29,8 @@ namespace Game.Core.Maintenance
+ 
+         private void Cleanup()
+         {
+-            if (Interlocked.Exchange(ref running, 1) != 0) return;
+-            try
+-            {
+-                CleanupGacha();
+-                CleanupCharacterStarUp();
+-            }
+-            finally { Volatile.Write(ref running, 0); }
+-        }
+-
+-        private void CleanupGacha()
+-        {
+-            try
+-            {
+-                using SqlSugarClient db = DBService.Instance.GetGameInstance();
+-                long backlog = db.Ado.SqlQuery<long>(
+-                    "SELECT COUNT(*) FROM player_gacha_operation WHERE expires_at < UTC_TIMESTAMP(6)")
+-                    .Single();
+-                int deleted = GachaOperationRepository.Instance.DeleteExpired(db);
+-                logger.Info($"idempotency_cleanup operation=gacha expiredBacklog={backlog} deleted={deleted}");
+-            }
+-            catch (Exception exception) { logger.Error(exception, "Gacha operation cleanup failed."); }
+-        }
+-
+-        private void CleanupCharacterStarUp()
+-        {
+-            try
+-            {
+-                using SqlSugarClient db = DBService.Instance.GetGameInstance();
+-                long backlog = db.Ado.SqlQuery<long>(
+-                    "SELECT COUNT(*) FROM player_character_starup_operation WHERE expires_at < UTC_TIMESTAMP(6)")
+-                    .Single();
+-                int deleted = CharacterStarUpOperationRepository.Instance.DeleteExpired(db);
+-                logger.Info($"idempotency_cleanup operation=character_starup expiredBacklog={backlog} deleted={deleted}");
+-            }
+-            catch (Exception exception)
+-            {
+-                logger.Error(exception, "Character star-up operation cleanup failed.");
+-            }
++            GM_GachaMgr.Instance.CleanupExpiredOperations();
++            GM_CharacterStarUpMgr.Instance.CleanupExpiredOperations();
+         }
+     }
+ }
+diff --git a/GameServer/src/Game/Core/GM_Gacha/GM_GachaMgr.cs b/GameServer/src/Game/Core/GM_Gacha/GM_GachaMgr.cs
+--- a/GameServer/src/Game/Core/GM_Gacha/GM_GachaMgr.cs
++++ b/GameServer/src/Game/Core/GM_Gacha/GM_GachaMgr.cs
+@@ -26,6 +26,20 @@ namespace Game.Core.GM_Gacha
+ 
+         private GM_GachaMgr() { }
+ 
++        public void CleanupExpiredOperations()
++        {
++            try
++            {
++                using SqlSugarClient db = DBService.Instance.GetGameInstance();
++                long backlog = db.Ado.SqlQuery<long>(
++                    "SELECT COUNT(*) FROM player_gacha_operation WHERE expires_at < UTC_TIMESTAMP(6)")
++                    .Single();
++                int deleted = GachaOperationRepository.Instance.DeleteExpired(db);
++                logger.Info($"idempotency_cleanup operation=gacha expiredBacklog={backlog} deleted={deleted}");
++            }
++            catch (Exception exception) { logger.Error(exception, "Gacha operation cleanup failed."); }
++        }
++
+         public GachaPoolInfoResult GetPoolInfo(long playerId, GachaPoolDefinition pool)
+         {
+             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
+diff --git a/GameServer/src/Game/Core/GM_CharacterStarUp/GM_CharacterStarUpMgr.cs b/GameServer/src/Game/Core/GM_CharacterStarUp/GM_CharacterStarUpMgr.cs
+--- a/GameServer/src/Game/Core/GM_CharacterStarUp/GM_CharacterStarUpMgr.cs
++++ b/GameServer/src/Game/Core/GM_CharacterStarUp/GM_CharacterStarUpMgr.cs
+@@ -22,6 +22,23 @@ namespace Game.Core.GM_CharacterStarUp
+ 
+         private GM_CharacterStarUpMgr() { }
+ 
++        public void CleanupExpiredOperations()
++        {
++            try
++            {
++                using SqlSugarClient db = DBService.Instance.GetGameInstance();
++                long backlog = db.Ado.SqlQuery<long>(
++                    "SELECT COUNT(*) FROM player_character_starup_operation WHERE expires_at < UTC_TIMESTAMP(6)")
++                    .Single();
++                int deleted = CharacterStarUpOperationRepository.Instance.DeleteExpired(db);
++                logger.Info($"idempotency_cleanup operation=character_starup expiredBacklog={backlog} deleted={deleted}");
++            }
++            catch (Exception exception)
++            {
++                logger.Error(exception, "Character star-up operation cleanup failed.");
++            }
++        }
++
+         public CharacterStarUpInfoResult GetCharacterInfo(long playerId, CharacterStarUpDefinition definition)
+         {
+             using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);

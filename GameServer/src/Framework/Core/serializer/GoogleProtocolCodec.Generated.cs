@@ -159,241 +159,305 @@ namespace Framework.Core.Serializer
                 {
                     WriteResGetPlayerItems(output, value35);
                 }
-                else if (source is ReqGetPlayerBasicInfo value36)
+                else if (source is ReqMailSummary value36)
                 {
-                    WriteReqGetPlayerBasicInfo(output, value36);
+                    WriteReqMailSummary(output, value36);
                 }
-                else if (source is ResGetPlayerBasicInfo value37)
+                else if (source is ResMailSummary value37)
                 {
-                    WriteResGetPlayerBasicInfo(output, value37);
+                    WriteResMailSummary(output, value37);
                 }
-                else if (source is ResUpdatePlayerBasicInfo value38)
+                else if (source is ReqMailList value38)
                 {
-                    WriteResUpdatePlayerBasicInfo(output, value38);
+                    WriteReqMailList(output, value38);
                 }
-                else if (source is ReqEnterLogicServer value39)
+                else if (source is ResMailList value39)
                 {
-                    WriteReqEnterLogicServer(output, value39);
+                    WriteResMailList(output, value39);
                 }
-                else if (source is ReqExchangeProduct value40)
+                else if (source is ReqMailRead value40)
                 {
-                    WriteReqExchangeProduct(output, value40);
+                    WriteReqMailRead(output, value40);
                 }
-                else if (source is ReqPullingBonuesList value41)
+                else if (source is ResMailRead value41)
                 {
-                    WriteReqPullingBonuesList(output, value41);
+                    WriteResMailRead(output, value41);
                 }
-                else if (source is ReqPullingMailMsg value42)
+                else if (source is ReqMailClaim value42)
                 {
-                    WriteReqPullingMailMsg(output, value42);
+                    WriteReqMailClaim(output, value42);
                 }
-                else if (source is ReqPullingPackData value43)
+                else if (source is ResMailClaim value43)
                 {
-                    WriteReqPullingPackData(output, value43);
+                    WriteResMailClaim(output, value43);
                 }
-                else if (source is ReqPullingPlayerData value44)
+                else if (source is ReqMailClaimAll value44)
                 {
-                    WriteReqPullingPlayerData(output, value44);
+                    WriteReqMailClaimAll(output, value44);
                 }
-                else if (source is ReqPullingRank value45)
+                else if (source is ResMailClaimAll value45)
                 {
-                    WriteReqPullingRank(output, value45);
+                    WriteResMailClaimAll(output, value45);
                 }
-                else if (source is ReqPullingTaskList value46)
+                else if (source is ReqMailDelete value46)
                 {
-                    WriteReqPullingTaskList(output, value46);
+                    WriteReqMailDelete(output, value46);
                 }
-                else if (source is ReqRecvBonues value47)
+                else if (source is ResMailDelete value47)
                 {
-                    WriteReqRecvBonues(output, value47);
+                    WriteResMailDelete(output, value47);
                 }
-                else if (source is ReqRecvLoginBonues value48)
+                else if (source is ReqMailDeleteRead value48)
                 {
-                    WriteReqRecvLoginBonues(output, value48);
+                    WriteReqMailDeleteRead(output, value48);
                 }
-                else if (source is ReqSelectPlayer value49)
+                else if (source is ResMailDeleteRead value49)
                 {
-                    WriteReqSelectPlayer(output, value49);
+                    WriteResMailDeleteRead(output, value49);
                 }
-                else if (source is ReqUpdateMailMsg value50)
+                else if (source is ResMailChanged value50)
                 {
-                    WriteReqUpdateMailMsg(output, value50);
+                    WriteResMailChanged(output, value50);
                 }
-                else if (source is ResEnterLogicServer value51)
+                else if (source is ReqGetPlayerBasicInfo value51)
                 {
-                    WriteResEnterLogicServer(output, value51);
+                    WriteReqGetPlayerBasicInfo(output, value51);
                 }
-                else if (source is ResExchangeProduct value52)
+                else if (source is ResGetPlayerBasicInfo value52)
                 {
-                    WriteResExchangeProduct(output, value52);
+                    WriteResGetPlayerBasicInfo(output, value52);
                 }
-                else if (source is ResPullingPlayerData value53)
+                else if (source is ResUpdatePlayerBasicInfo value53)
                 {
-                    WriteResPullingPlayerData(output, value53);
+                    WriteResUpdatePlayerBasicInfo(output, value53);
                 }
-                else if (source is ResRecvBonues value54)
+                else if (source is ReqEnterLogicServer value54)
                 {
-                    WriteResRecvBonues(output, value54);
+                    WriteReqEnterLogicServer(output, value54);
                 }
-                else if (source is ResRecvLoginBonues value55)
+                else if (source is ReqExchangeProduct value55)
                 {
-                    WriteResRecvLoginBonues(output, value55);
+                    WriteReqExchangeProduct(output, value55);
                 }
-                else if (source is ResSelectPlayer value56)
+                else if (source is ReqPullingBonuesList value56)
                 {
-                    WriteResSelectPlayer(output, value56);
+                    WriteReqPullingBonuesList(output, value56);
                 }
-                else if (source is ResUpdateMailMsg value57)
+                else if (source is ReqPullingMailMsg value57)
                 {
-                    WriteResUpdateMailMsg(output, value57);
+                    WriteReqPullingMailMsg(output, value57);
                 }
-                else if (source is ReqRedDotInit value58)
+                else if (source is ReqPullingPackData value58)
                 {
-                    WriteReqRedDotInit(output, value58);
+                    WriteReqPullingPackData(output, value58);
                 }
-                else if (source is ResRedDotInit value59)
+                else if (source is ReqPullingPlayerData value59)
                 {
-                    WriteResRedDotInit(output, value59);
+                    WriteReqPullingPlayerData(output, value59);
                 }
-                else if (source is ReqRedDotView value60)
+                else if (source is ReqPullingRank value60)
                 {
-                    WriteReqRedDotView(output, value60);
+                    WriteReqPullingRank(output, value60);
                 }
-                else if (source is ResRedDotView value61)
+                else if (source is ReqPullingTaskList value61)
                 {
-                    WriteResRedDotView(output, value61);
+                    WriteReqPullingTaskList(output, value61);
                 }
-                else if (source is NotifyRedDotChanged value62)
+                else if (source is ReqRecvBonues value62)
                 {
-                    WriteNotifyRedDotChanged(output, value62);
+                    WriteReqRecvBonues(output, value62);
                 }
-                else if (source is ReqSitdown value63)
+                else if (source is ReqRecvLoginBonues value63)
                 {
-                    WriteReqSitdown(output, value63);
+                    WriteReqRecvLoginBonues(output, value63);
                 }
-                else if (source is ResSitdown value64)
+                else if (source is ReqSelectPlayer value64)
                 {
-                    WriteResSitdown(output, value64);
+                    WriteReqSelectPlayer(output, value64);
                 }
-                else if (source is ReqStandup value65)
+                else if (source is ReqUpdateMailMsg value65)
                 {
-                    WriteReqStandup(output, value65);
+                    WriteReqUpdateMailMsg(output, value65);
                 }
-                else if (source is ResStandup value66)
+                else if (source is ResEnterLogicServer value66)
                 {
-                    WriteResStandup(output, value66);
+                    WriteResEnterLogicServer(output, value66);
                 }
-                else if (source is ReqTalkMsg value67)
+                else if (source is ResExchangeProduct value67)
                 {
-                    WriteReqTalkMsg(output, value67);
+                    WriteResExchangeProduct(output, value67);
                 }
-                else if (source is ResTalkMsg value68)
+                else if (source is ResPullingMailMsg value68)
                 {
-                    WriteResTalkMsg(output, value68);
+                    WriteResPullingMailMsg(output, value68);
                 }
-                else if (source is ReqPlayerIsReady value69)
+                else if (source is ResPullingPlayerData value69)
                 {
-                    WriteReqPlayerIsReady(output, value69);
+                    WriteResPullingPlayerData(output, value69);
                 }
-                else if (source is ResPlayerIsReady value70)
+                else if (source is ResRecvBonues value70)
                 {
-                    WriteResPlayerIsReady(output, value70);
+                    WriteResRecvBonues(output, value70);
                 }
-                else if (source is ResEnterRoom value71)
+                else if (source is ResRecvLoginBonues value71)
                 {
-                    WriteResEnterRoom(output, value71);
+                    WriteResRecvLoginBonues(output, value71);
                 }
-                else if (source is ResUserArrivedSeat value72)
+                else if (source is ResSelectPlayer value72)
                 {
-                    WriteResUserArrivedSeat(output, value72);
+                    WriteResSelectPlayer(output, value72);
                 }
-                else if (source is ResUserExitSeat value73)
+                else if (source is ResUpdateMailMsg value73)
                 {
-                    WriteResUserExitSeat(output, value73);
+                    WriteResUpdateMailMsg(output, value73);
                 }
-                else if (source is ResRoundReady value74)
+                else if (source is ReqRedDotInit value74)
                 {
-                    WriteResRoundReady(output, value74);
+                    WriteReqRedDotInit(output, value74);
                 }
-                else if (source is ResRoundStarted value75)
+                else if (source is ResRedDotInit value75)
                 {
-                    WriteResRoundStarted(output, value75);
+                    WriteResRedDotInit(output, value75);
                 }
-                else if (source is ResRoundCheckOut value76)
+                else if (source is ReqRedDotView value76)
                 {
-                    WriteResRoundCheckOut(output, value76);
+                    WriteReqRedDotView(output, value76);
                 }
-                else if (source is ResRoundClear value77)
+                else if (source is ResRedDotView value77)
                 {
-                    WriteResRoundClear(output, value77);
+                    WriteResRedDotView(output, value77);
                 }
-                else if (source is ResPlayerEscape value78)
+                else if (source is ResRedDotChanged value78)
                 {
-                    WriteResPlayerEscape(output, value78);
+                    WriteResRedDotChanged(output, value78);
                 }
-                else if (source is ReqPlayerOpt value79)
+                else if (source is ReqSitdown value79)
                 {
-                    WriteReqPlayerOpt(output, value79);
+                    WriteReqSitdown(output, value79);
                 }
-                else if (source is ResPlayerOpt value80)
+                else if (source is ResSitdown value80)
                 {
-                    WriteResPlayerOpt(output, value80);
+                    WriteResSitdown(output, value80);
                 }
-                else if (source is ReqExitLogicServer value81)
+                else if (source is ReqStandup value81)
                 {
-                    WriteReqExitLogicServer(output, value81);
+                    WriteReqStandup(output, value81);
                 }
-                else if (source is ResExitLogicServer value82)
+                else if (source is ResStandup value82)
                 {
-                    WriteResExitLogicServer(output, value82);
+                    WriteResStandup(output, value82);
                 }
-                else if (source is ReqTestGetGoods value83)
+                else if (source is ReqTalkMsg value83)
                 {
-                    WriteReqTestGetGoods(output, value83);
+                    WriteReqTalkMsg(output, value83);
                 }
-                else if (source is ReqTestUpdateGooods value84)
+                else if (source is ResTalkMsg value84)
                 {
-                    WriteReqTestUpdateGooods(output, value84);
+                    WriteResTalkMsg(output, value84);
                 }
-                else if (source is ReqTestLogicCmdEcho value85)
+                else if (source is ReqPlayerIsReady value85)
                 {
-                    WriteReqTestLogicCmdEcho(output, value85);
+                    WriteReqPlayerIsReady(output, value85);
                 }
-                else if (source is ResTestGetGoods value86)
+                else if (source is ResPlayerIsReady value86)
                 {
-                    WriteResTestGetGoods(output, value86);
+                    WriteResPlayerIsReady(output, value86);
                 }
-                else if (source is ResTestUpdateGoods value87)
+                else if (source is ResEnterRoom value87)
                 {
-                    WriteResTestUpdateGoods(output, value87);
+                    WriteResEnterRoom(output, value87);
                 }
-                else if (source is ResTestLogicCmdEcho value88)
+                else if (source is ResUserArrivedSeat value88)
                 {
-                    WriteResTestLogicCmdEcho(output, value88);
+                    WriteResUserArrivedSeat(output, value88);
                 }
-                else if (source is ReqPlayerSpawn value89)
+                else if (source is ResUserExitSeat value89)
                 {
-                    WriteReqPlayerSpawn(output, value89);
+                    WriteResUserExitSeat(output, value89);
                 }
-                else if (source is ResPlayerSpawn value90)
+                else if (source is ResRoundReady value90)
                 {
-                    WriteResPlayerSpawn(output, value90);
+                    WriteResRoundReady(output, value90);
                 }
-                else if (source is ReqNavToDst value91)
+                else if (source is ResRoundStarted value91)
                 {
-                    WriteReqNavToDst(output, value91);
+                    WriteResRoundStarted(output, value91);
                 }
-                else if (source is ResNavToDst value92)
+                else if (source is ResRoundCheckOut value92)
                 {
-                    WriteResNavToDst(output, value92);
+                    WriteResRoundCheckOut(output, value92);
                 }
-                else if (source is ReqNavInDir value93)
+                else if (source is ResRoundClear value93)
                 {
-                    WriteReqNavInDir(output, value93);
+                    WriteResRoundClear(output, value93);
                 }
-                else if (source is ResNavInDir value94)
+                else if (source is ResPlayerEscape value94)
                 {
-                    WriteResNavInDir(output, value94);
+                    WriteResPlayerEscape(output, value94);
+                }
+                else if (source is ReqPlayerOpt value95)
+                {
+                    WriteReqPlayerOpt(output, value95);
+                }
+                else if (source is ResPlayerOpt value96)
+                {
+                    WriteResPlayerOpt(output, value96);
+                }
+                else if (source is ReqExitLogicServer value97)
+                {
+                    WriteReqExitLogicServer(output, value97);
+                }
+                else if (source is ResExitLogicServer value98)
+                {
+                    WriteResExitLogicServer(output, value98);
+                }
+                else if (source is ReqTestGetGoods value99)
+                {
+                    WriteReqTestGetGoods(output, value99);
+                }
+                else if (source is ReqTestUpdateGooods value100)
+                {
+                    WriteReqTestUpdateGooods(output, value100);
+                }
+                else if (source is ReqTestLogicCmdEcho value101)
+                {
+                    WriteReqTestLogicCmdEcho(output, value101);
+                }
+                else if (source is ResTestGetGoods value102)
+                {
+                    WriteResTestGetGoods(output, value102);
+                }
+                else if (source is ResTestUpdateGoods value103)
+                {
+                    WriteResTestUpdateGoods(output, value103);
+                }
+                else if (source is ResTestLogicCmdEcho value104)
+                {
+                    WriteResTestLogicCmdEcho(output, value104);
+                }
+                else if (source is ReqPlayerSpawn value105)
+                {
+                    WriteReqPlayerSpawn(output, value105);
+                }
+                else if (source is ResPlayerSpawn value106)
+                {
+                    WriteResPlayerSpawn(output, value106);
+                }
+                else if (source is ReqNavToDst value107)
+                {
+                    WriteReqNavToDst(output, value107);
+                }
+                else if (source is ResNavToDst value108)
+                {
+                    WriteResNavToDst(output, value108);
+                }
+                else if (source is ReqNavInDir value109)
+                {
+                    WriteReqNavInDir(output, value109);
+                }
+                else if (source is ResNavInDir value110)
+                {
+                    WriteResNavInDir(output, value110);
                 }
                 else return false;
                 output.Flush();
@@ -449,6 +513,21 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ResHeartbeat)) message = ReadResHeartbeat(input);
                 else if (messageType == typeof(ReqGetPlayerItems)) message = ReadReqGetPlayerItems(input);
                 else if (messageType == typeof(ResGetPlayerItems)) message = ReadResGetPlayerItems(input);
+                else if (messageType == typeof(ReqMailSummary)) message = ReadReqMailSummary(input);
+                else if (messageType == typeof(ResMailSummary)) message = ReadResMailSummary(input);
+                else if (messageType == typeof(ReqMailList)) message = ReadReqMailList(input);
+                else if (messageType == typeof(ResMailList)) message = ReadResMailList(input);
+                else if (messageType == typeof(ReqMailRead)) message = ReadReqMailRead(input);
+                else if (messageType == typeof(ResMailRead)) message = ReadResMailRead(input);
+                else if (messageType == typeof(ReqMailClaim)) message = ReadReqMailClaim(input);
+                else if (messageType == typeof(ResMailClaim)) message = ReadResMailClaim(input);
+                else if (messageType == typeof(ReqMailClaimAll)) message = ReadReqMailClaimAll(input);
+                else if (messageType == typeof(ResMailClaimAll)) message = ReadResMailClaimAll(input);
+                else if (messageType == typeof(ReqMailDelete)) message = ReadReqMailDelete(input);
+                else if (messageType == typeof(ResMailDelete)) message = ReadResMailDelete(input);
+                else if (messageType == typeof(ReqMailDeleteRead)) message = ReadReqMailDeleteRead(input);
+                else if (messageType == typeof(ResMailDeleteRead)) message = ReadResMailDeleteRead(input);
+                else if (messageType == typeof(ResMailChanged)) message = ReadResMailChanged(input);
                 else if (messageType == typeof(ReqGetPlayerBasicInfo)) message = ReadReqGetPlayerBasicInfo(input);
                 else if (messageType == typeof(ResGetPlayerBasicInfo)) message = ReadResGetPlayerBasicInfo(input);
                 else if (messageType == typeof(ResUpdatePlayerBasicInfo)) message = ReadResUpdatePlayerBasicInfo(input);
@@ -466,6 +545,7 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ReqUpdateMailMsg)) message = ReadReqUpdateMailMsg(input);
                 else if (messageType == typeof(ResEnterLogicServer)) message = ReadResEnterLogicServer(input);
                 else if (messageType == typeof(ResExchangeProduct)) message = ReadResExchangeProduct(input);
+                else if (messageType == typeof(ResPullingMailMsg)) message = ReadResPullingMailMsg(input);
                 else if (messageType == typeof(ResPullingPlayerData)) message = ReadResPullingPlayerData(input);
                 else if (messageType == typeof(ResRecvBonues)) message = ReadResRecvBonues(input);
                 else if (messageType == typeof(ResRecvLoginBonues)) message = ReadResRecvLoginBonues(input);
@@ -475,7 +555,7 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ResRedDotInit)) message = ReadResRedDotInit(input);
                 else if (messageType == typeof(ReqRedDotView)) message = ReadReqRedDotView(input);
                 else if (messageType == typeof(ResRedDotView)) message = ReadResRedDotView(input);
-                else if (messageType == typeof(NotifyRedDotChanged)) message = ReadNotifyRedDotChanged(input);
+                else if (messageType == typeof(ResRedDotChanged)) message = ReadResRedDotChanged(input);
                 else if (messageType == typeof(ReqSitdown)) message = ReadReqSitdown(input);
                 else if (messageType == typeof(ResSitdown)) message = ReadResSitdown(input);
                 else if (messageType == typeof(ReqStandup)) message = ReadReqStandup(input);
@@ -2929,6 +3009,1461 @@ namespace Framework.Core.Serializer
             return size;
         }
 
+        private static void WriteMailAttachmentMessage(CodedOutputStream output, MailAttachmentMessage message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.sortOrder);
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteInt32(message.itemId);
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.quantity);
+        }
+
+        private static MailAttachmentMessage ReadMailAttachmentMessage(CodedInputStream input)
+        {
+            var message = new MailAttachmentMessage();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.sortOrder = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.itemId = input.ReadInt32();
+                        break;
+                    case 3:
+                        message.quantity = input.ReadInt64();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeMailAttachmentMessage(MailAttachmentMessage message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.sortOrder);
+            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt32Size(message.itemId);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.quantity);
+            return size;
+        }
+
+        private static void WriteMailEntryMessage(CodedOutputStream output, MailEntryMessage message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt64(message.id);
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteInt32(message.mailType);
+            if (message.title != null)
+            {
+                output.WriteTag(3, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.title);
+            }
+            if (message.body != null)
+            {
+                output.WriteTag(4, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.body);
+            }
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt64(message.sendTime);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt64(message.expireTime);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt64(message.readTime);
+            output.WriteTag(8, WireFormat.WireType.Varint);
+            output.WriteInt64(message.claimTime);
+            if (message.attachments != null)
+            {
+                for (int index = 0; index < message.attachments.Count; index++)
+                {
+                    WriteMessage(output, 9, message.attachments[index], WriteMailAttachmentMessage, ComputeSizeMailAttachmentMessage);
+                }
+            }
+        }
+
+        private static MailEntryMessage ReadMailEntryMessage(CodedInputStream input)
+        {
+            var message = new MailEntryMessage();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.id = input.ReadInt64();
+                        break;
+                    case 2:
+                        message.mailType = input.ReadInt32();
+                        break;
+                    case 3:
+                        message.title = input.ReadString();
+                        break;
+                    case 4:
+                        message.body = input.ReadString();
+                        break;
+                    case 5:
+                        message.sendTime = input.ReadInt64();
+                        break;
+                    case 6:
+                        message.expireTime = input.ReadInt64();
+                        break;
+                    case 7:
+                        message.readTime = input.ReadInt64();
+                        break;
+                    case 8:
+                        message.claimTime = input.ReadInt64();
+                        break;
+                    case 9:
+                        message.attachments.Add(ReadMessage(input, ReadMailAttachmentMessage));
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeMailEntryMessage(MailEntryMessage message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt64Size(message.id);
+            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt32Size(message.mailType);
+            if (message.title != null)
+                size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeStringSize(message.title);
+            if (message.body != null)
+                size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeStringSize(message.body);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt64Size(message.sendTime);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.expireTime);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt64Size(message.readTime);
+            size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeInt64Size(message.claimTime);
+            if (message.attachments != null)
+            {
+                for (int index = 0; index < message.attachments.Count; index++)
+                {
+                    int childSize = ComputeSizeMailAttachmentMessage(message.attachments[index]);
+                    size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            return size;
+        }
+
+        private static void WriteReqMailSummary(CodedOutputStream output, ReqMailSummary message)
+        {
+        }
+
+        private static ReqMailSummary ReadReqMailSummary(CodedInputStream input)
+        {
+            var message = new ReqMailSummary();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailSummary(ReqMailSummary message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            return size;
+        }
+
+        private static void WriteResMailSummary(CodedOutputStream output, ResMailSummary message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailSummary ReadResMailSummary(CodedInputStream input)
+        {
+            var message = new ResMailSummary();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailSummary(ResMailSummary message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteReqMailList(CodedOutputStream output, ReqMailList message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.offset);
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteInt32(message.pageSize);
+        }
+
+        private static ReqMailList ReadReqMailList(CodedInputStream input)
+        {
+            var message = new ReqMailList();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.offset = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.pageSize = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailList(ReqMailList message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.offset);
+            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt32Size(message.pageSize);
+            return size;
+        }
+
+        private static void WriteResMailList(CodedOutputStream output, ResMailList message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailList ReadResMailList(CodedInputStream input)
+        {
+            var message = new ResMailList();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailList(ResMailList message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteReqMailRead(CodedOutputStream output, ReqMailRead message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+        }
+
+        private static ReqMailRead ReadReqMailRead(CodedInputStream input)
+        {
+            var message = new ReqMailRead();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailRead(ReqMailRead message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            return size;
+        }
+
+        private static void WriteResMailRead(CodedOutputStream output, ResMailRead message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailRead ReadResMailRead(CodedInputStream input)
+        {
+            var message = new ResMailRead();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailRead(ResMailRead message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteReqMailClaim(CodedOutputStream output, ReqMailClaim message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+        }
+
+        private static ReqMailClaim ReadReqMailClaim(CodedInputStream input)
+        {
+            var message = new ReqMailClaim();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailClaim(ReqMailClaim message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            return size;
+        }
+
+        private static void WriteResMailClaim(CodedOutputStream output, ResMailClaim message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailClaim ReadResMailClaim(CodedInputStream input)
+        {
+            var message = new ResMailClaim();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailClaim(ResMailClaim message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteReqMailClaimAll(CodedOutputStream output, ReqMailClaimAll message)
+        {
+        }
+
+        private static ReqMailClaimAll ReadReqMailClaimAll(CodedInputStream input)
+        {
+            var message = new ReqMailClaimAll();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailClaimAll(ReqMailClaimAll message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            return size;
+        }
+
+        private static void WriteResMailClaimAll(CodedOutputStream output, ResMailClaimAll message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailClaimAll ReadResMailClaimAll(CodedInputStream input)
+        {
+            var message = new ResMailClaimAll();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailClaimAll(ResMailClaimAll message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteReqMailDelete(CodedOutputStream output, ReqMailDelete message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+        }
+
+        private static ReqMailDelete ReadReqMailDelete(CodedInputStream input)
+        {
+            var message = new ReqMailDelete();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailDelete(ReqMailDelete message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            return size;
+        }
+
+        private static void WriteResMailDelete(CodedOutputStream output, ResMailDelete message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailDelete ReadResMailDelete(CodedInputStream input)
+        {
+            var message = new ResMailDelete();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailDelete(ResMailDelete message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteReqMailDeleteRead(CodedOutputStream output, ReqMailDeleteRead message)
+        {
+        }
+
+        private static ReqMailDeleteRead ReadReqMailDeleteRead(CodedInputStream input)
+        {
+            var message = new ReqMailDeleteRead();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeReqMailDeleteRead(ReqMailDeleteRead message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            return size;
+        }
+
+        private static void WriteResMailDeleteRead(CodedOutputStream output, ResMailDeleteRead message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.errorMessage != null)
+            {
+                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteString(message.errorMessage);
+            }
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    WriteMessage(output, 8, message.items[index], WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+                }
+            }
+            WriteMessage(output, 9, message.detail, WriteMailEntryMessage, ComputeSizeMailEntryMessage);
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    WriteMessage(output, 10, message.itemQuantities[index], WritePlayerItemMessage, ComputeSizePlayerItemMessage);
+                }
+            }
+            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailId);
+            output.WriteTag(12, WireFormat.WireType.Varint);
+            output.WriteBool(message.hasMore);
+            output.WriteTag(13, WireFormat.WireType.Varint);
+            output.WriteInt32(message.nextOffset);
+        }
+
+        private static ResMailDeleteRead ReadResMailDeleteRead(CodedInputStream input)
+        {
+            var message = new ResMailDeleteRead();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.errorMessage = input.ReadString();
+                        break;
+                    case 3:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 4:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 5:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 6:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 7:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 8:
+                        message.items.Add(ReadMessage(input, ReadMailEntryMessage));
+                        break;
+                    case 9:
+                        message.detail = ReadMessage(input, ReadMailEntryMessage);
+                        break;
+                    case 10:
+                        message.itemQuantities.Add(ReadMessage(input, ReadPlayerItemMessage));
+                        break;
+                    case 11:
+                        message.mailId = input.ReadInt64();
+                        break;
+                    case 12:
+                        message.hasMore = input.ReadBool();
+                        break;
+                    case 13:
+                        message.nextOffset = input.ReadInt32();
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailDeleteRead(ResMailDeleteRead message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.errorMessage != null)
+                size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeStringSize(message.errorMessage);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.items != null)
+            {
+                for (int index = 0; index < message.items.Count; index++)
+                {
+                    int childSize = ComputeSizeMailEntryMessage(message.items[index]);
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            if (message.detail != null)
+            {
+                int childSize = ComputeSizeMailEntryMessage(message.detail);
+                size += CodedOutputStream.ComputeTagSize(9) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+            }
+            if (message.itemQuantities != null)
+            {
+                for (int index = 0; index < message.itemQuantities.Count; index++)
+                {
+                    int childSize = ComputeSizePlayerItemMessage(message.itemQuantities[index]);
+                    size += CodedOutputStream.ComputeTagSize(10) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            size += CodedOutputStream.ComputeTagSize(11) + CodedOutputStream.ComputeInt64Size(message.mailId);
+            size += CodedOutputStream.ComputeTagSize(12) + 1;
+            size += CodedOutputStream.ComputeTagSize(13) + CodedOutputStream.ComputeInt32Size(message.nextOffset);
+            return size;
+        }
+
+        private static void WriteResMailChanged(CodedOutputStream output, ResMailChanged message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt64(message.mailboxVersion);
+            output.WriteTag(2, WireFormat.WireType.Varint);
+            output.WriteInt64(message.serverTime);
+            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteInt32(message.count);
+            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteInt32(message.unreadCount);
+            output.WriteTag(5, WireFormat.WireType.Varint);
+            output.WriteInt32(message.capacity);
+            if (message.addedIds != null)
+            {
+                for (int index = 0; index < message.addedIds.Count; index++)
+                {
+                    output.WriteTag(6, WireFormat.WireType.Varint);
+                    output.WriteInt64(message.addedIds[index]);
+                }
+            }
+            if (message.changedIds != null)
+            {
+                for (int index = 0; index < message.changedIds.Count; index++)
+                {
+                    output.WriteTag(7, WireFormat.WireType.Varint);
+                    output.WriteInt64(message.changedIds[index]);
+                }
+            }
+            if (message.deletedIds != null)
+            {
+                for (int index = 0; index < message.deletedIds.Count; index++)
+                {
+                    output.WriteTag(8, WireFormat.WireType.Varint);
+                    output.WriteInt64(message.deletedIds[index]);
+                }
+            }
+        }
+
+        private static ResMailChanged ReadResMailChanged(CodedInputStream input)
+        {
+            var message = new ResMailChanged();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.mailboxVersion = input.ReadInt64();
+                        break;
+                    case 2:
+                        message.serverTime = input.ReadInt64();
+                        break;
+                    case 3:
+                        message.count = input.ReadInt32();
+                        break;
+                    case 4:
+                        message.unreadCount = input.ReadInt32();
+                        break;
+                    case 5:
+                        message.capacity = input.ReadInt32();
+                        break;
+                    case 6:
+                        if (WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited)
+                        {
+                            var packedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
+                            while (!packedInput.IsAtEnd)
+                                message.addedIds.Add(packedInput.ReadInt64());
+                        }
+                        else
+                        {
+                            message.addedIds.Add(input.ReadInt64());
+                        }
+                        break;
+                    case 7:
+                        if (WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited)
+                        {
+                            var packedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
+                            while (!packedInput.IsAtEnd)
+                                message.changedIds.Add(packedInput.ReadInt64());
+                        }
+                        else
+                        {
+                            message.changedIds.Add(input.ReadInt64());
+                        }
+                        break;
+                    case 8:
+                        if (WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited)
+                        {
+                            var packedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
+                            while (!packedInput.IsAtEnd)
+                                message.deletedIds.Add(packedInput.ReadInt64());
+                        }
+                        else
+                        {
+                            message.deletedIds.Add(input.ReadInt64());
+                        }
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResMailChanged(ResMailChanged message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
+            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.serverTime);
+            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt32Size(message.count);
+            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
+            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.capacity);
+            if (message.addedIds != null)
+            {
+                for (int index = 0; index < message.addedIds.Count; index++)
+                {
+                    size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.addedIds[index]);
+                }
+            }
+            if (message.changedIds != null)
+            {
+                for (int index = 0; index < message.changedIds.Count; index++)
+                {
+                    size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt64Size(message.changedIds[index]);
+                }
+            }
+            if (message.deletedIds != null)
+            {
+                for (int index = 0; index < message.deletedIds.Count; index++)
+                {
+                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeInt64Size(message.deletedIds[index]);
+                }
+            }
+            return size;
+        }
+
         private static void WriteReqGetPlayerBasicInfo(CodedOutputStream output, ReqGetPlayerBasicInfo message)
         {
         }
@@ -3836,6 +5371,57 @@ namespace Framework.Core.Serializer
             return size;
         }
 
+        private static void WriteResPullingMailMsg(CodedOutputStream output, ResPullingMailMsg message)
+        {
+            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteInt32(message.status);
+            if (message.mailMessages != null)
+            {
+                for (int index = 0; index < message.mailMessages.Count; index++)
+                {
+                    WriteMessage(output, 2, message.mailMessages[index], WriteMailMsgItem, ComputeSizeMailMsgItem);
+                }
+            }
+        }
+
+        private static ResPullingMailMsg ReadResPullingMailMsg(CodedInputStream input)
+        {
+            var message = new ResPullingMailMsg();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (WireFormat.GetTagFieldNumber(tag))
+                {
+                    case 1:
+                        message.status = input.ReadInt32();
+                        break;
+                    case 2:
+                        message.mailMessages.Add(ReadMessage(input, ReadMailMsgItem));
+                        break;
+                    default:
+                        input.SkipLastField();
+                        break;
+                }
+            }
+            return message;
+        }
+
+        private static int ComputeSizeResPullingMailMsg(ResPullingMailMsg message)
+        {
+            if (message == null) return 0;
+            int size = 0;
+            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt32Size(message.status);
+            if (message.mailMessages != null)
+            {
+                for (int index = 0; index < message.mailMessages.Count; index++)
+                {
+                    int childSize = ComputeSizeMailMsgItem(message.mailMessages[index]);
+                    size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeLengthSize(childSize) + childSize;
+                }
+            }
+            return size;
+        }
+
         private static void WriteResPullingPlayerData(CodedOutputStream output, ResPullingPlayerData message)
         {
             output.WriteTag(1, WireFormat.WireType.Varint);
@@ -4507,7 +6093,7 @@ namespace Framework.Core.Serializer
             return size;
         }
 
-        private static void WriteNotifyRedDotChanged(CodedOutputStream output, NotifyRedDotChanged message)
+        private static void WriteResRedDotChanged(CodedOutputStream output, ResRedDotChanged message)
         {
             if (message.configVersion != null)
             {
@@ -4525,9 +6111,9 @@ namespace Framework.Core.Serializer
             }
         }
 
-        private static NotifyRedDotChanged ReadNotifyRedDotChanged(CodedInputStream input)
+        private static ResRedDotChanged ReadResRedDotChanged(CodedInputStream input)
         {
-            var message = new NotifyRedDotChanged();
+            var message = new ResRedDotChanged();
             uint tag;
             while ((tag = input.ReadTag()) != 0)
             {
@@ -4550,7 +6136,7 @@ namespace Framework.Core.Serializer
             return message;
         }
 
-        private static int ComputeSizeNotifyRedDotChanged(NotifyRedDotChanged message)
+        private static int ComputeSizeResRedDotChanged(ResRedDotChanged message)
         {
             if (message == null) return 0;
             int size = 0;

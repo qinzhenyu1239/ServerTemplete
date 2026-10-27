@@ -131,7 +131,7 @@ public sealed class RedDotMySqlTests
         }
     }
     private static void Configure(RedDotCatalog catalog) => GM_RedDotMgr.Instance.Configure(catalog, snapshot =>
-        new NotifyRedDotChanged { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
+        new ResRedDotChanged { configVersion = snapshot.ConfigVersion, stateVersion = snapshot.StateVersion,
             states = snapshot.States.Select(s => new RedDotStateMessage { nodeId = s.NodeId, isActive = s.IsActive }).ToList() });
     private static void SetBusiness(long playerId, bool active)
     {

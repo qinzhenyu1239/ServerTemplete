@@ -1,0 +1,193 @@
+--- a/GameServer/src/Game/Entries/Modules/MailModule.cs
++++ b/GameServer/src/Game/Entries/Modules/MailModule.cs
+@@ -36,7 +36,7 @@
+                 return new MailResult { Status=MailStatus.Invalid };
+             return GM_MailMsgMgr.Instance.Execute(playerId,action,id);
+         }
+-        public MailResult Send(MailSendCommand command) => !MailRules.ValidSend(command)
++        public MailResult SendMail(MailSendCommand command) => !MailRules.ValidSend(command)
+             ? new MailResult { Status=MailStatus.Invalid } : GM_MailMsgMgr.Instance.Send(command);
+         private static int Code(MailResult r) => r.Error=="Not authenticated." ? (int)Respones.AccountIsNotLogin : r.Status switch
+         {
+@@ -50,7 +50,7 @@
+             sendTime=d.Mail.sendTime,expireTime=d.Mail.expireTime,readTime=d.Mail.readTime,claimTime=d.Mail.claimTime,
+             attachments=detail?d.Attachments.Select(a=>new MailAttachmentMessage {sortOrder=a.sortOrder,itemId=a.itemId,quantity=a.quantity}).ToList()
+                 :new System.Collections.Generic.List<MailAttachmentMessage>() };
+-        public ResMailSummary Summary(IdSession session,ReqMailSummary request,long playerId)
++        public ResMailSummary HandlerGetMailSummary(IdSession session, ReqMailSummary request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.Summary,0,request!=null);
+             return new ResMailSummary {status=Code(r),errorMessage=r.Error ?? r.Status.ToString(),mailboxVersion=r.MailboxVersion,
+@@ -59,7 +59,7 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResMailList List(IdSession session,ReqMailList request,long playerId)
++        public ResMailList HandlerGetMailList(IdSession session, ReqMailList request, long playerId)
+         {
+             int offset=request?.offset ?? 0, size=request?.pageSize ?? 50;
+             var r=Run(session,playerId,MailAction.List,0,request!=null && offset>=0 && size>0 && size<=50 && offset<=int.MaxValue-size);
+@@ -69,7 +69,7 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResMailRead Read(IdSession session,ReqMailRead request,long playerId)
++        public ResMailRead HandlerReadMail(IdSession session, ReqMailRead request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.Read,request?.mailId ?? 0,request!=null);
+             return new ResMailRead {status=Code(r),errorMessage=r.Error ?? r.Status.ToString(),mailboxVersion=r.MailboxVersion,
+@@ -78,7 +78,7 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResMailClaim Claim(IdSession session,ReqMailClaim request,long playerId)
++        public ResMailClaim HandlerClaimMail(IdSession session, ReqMailClaim request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.Claim,request?.mailId ?? 0,request!=null);
+             return new ResMailClaim {status=Code(r),errorMessage=r.Error ?? r.Status.ToString(),mailboxVersion=r.MailboxVersion,
+@@ -87,7 +87,7 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResMailClaimAll ClaimAll(IdSession session,ReqMailClaimAll request,long playerId)
++        public ResMailClaimAll HandlerClaimAllMail(IdSession session, ReqMailClaimAll request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.ClaimAll,0,request!=null);
+             return new ResMailClaimAll {status=Code(r),errorMessage=r.Error ?? r.Status.ToString(),mailboxVersion=r.MailboxVersion,
+@@ -96,7 +96,7 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResMailDelete Delete(IdSession session,ReqMailDelete request,long playerId)
++        public ResMailDelete HandlerDeleteMail(IdSession session, ReqMailDelete request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.Delete,request?.mailId ?? 0,request!=null);
+             return new ResMailDelete {status=Code(r),errorMessage=r.Error ?? r.Status.ToString(),mailboxVersion=r.MailboxVersion,
+@@ -105,7 +105,7 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResMailDeleteRead DeleteRead(IdSession session,ReqMailDeleteRead request,long playerId)
++        public ResMailDeleteRead HandlerDeleteReadMail(IdSession session, ReqMailDeleteRead request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.DeleteRead,0,request!=null);
+             return new ResMailDeleteRead {status=Code(r),errorMessage=r.Error ?? r.Status.ToString(),mailboxVersion=r.MailboxVersion,
+@@ -114,13 +114,13 @@
+                 detail=r.Items.Where(d=>d.Mail.id==r.MailId).Select(d=>Entry(d,true)).FirstOrDefault(),
+                 itemQuantities=r.ItemQuantities.Select(p=>new PlayerItemMessage {itemId=p.Key,quantity=p.Value}).ToList() };
+         }
+-        public ResPullingMailMsg LegacyList(IdSession session,ReqPullingMailMsg request,long playerId)
++        public ResPullingMailMsg HandlerReqPullingMailMsg(IdSession session, ReqPullingMailMsg request, long playerId)
+         {
+             var r=Run(session,playerId,MailAction.List,0,request!=null);
+             return new ResPullingMailMsg { status=Code(r),mailMessages=r.Items.Select(d=>new MailMsgItem
+                 {msgId=d.Mail.id,msgBody=d.Mail.msgBody,sendTime=checked((int)d.Mail.sendTime),status=d.Mail.readTime>0?1:0}).ToList() };
+         }
+-        public ResUpdateMailMsg LegacyUpdate(IdSession session,ReqUpdateMailMsg request,long playerId)
++        public ResUpdateMailMsg HandlerReqUpdateMailMsg(IdSession session, ReqUpdateMailMsg request, long playerId)
+         {
+             var r=request==null || request.status is not (1 or 2) ? new MailResult {Status=MailStatus.Invalid}
+                 : Run(session,playerId,request.status==1?MailAction.Read:MailAction.Delete,request.mailMsgId,true);
+--- a/GameServer/src/Game/Entries/Controllers/MailController.cs
++++ b/GameServer/src/Game/Entries/Controllers/MailController.cs
+@@ -10,30 +10,30 @@
+     {
+         [RequestMapping]
+         public object DoGetMailSummary(IdSession session, ReqMailSummary request, long playerId) =>
+-            MailModule.Instance.Summary(session, request, playerId);
++            MailModule.Instance.HandlerGetMailSummary(session, request, playerId);
+ 
+         [RequestMapping]
+         public object DoGetMailList(IdSession session, ReqMailList request, long playerId) =>
+-            MailModule.Instance.List(session, request, playerId);
++            MailModule.Instance.HandlerGetMailList(session, request, playerId);
+ 
+         [RequestMapping]
+         public object DoReadMail(IdSession session, ReqMailRead request, long playerId) =>
+-            MailModule.Instance.Read(session, request, playerId);
++            MailModule.Instance.HandlerReadMail(session, request, playerId);
+ 
+         [RequestMapping]
+         public object DoClaimMail(IdSession session, ReqMailClaim request, long playerId) =>
+-            MailModule.Instance.Claim(session, request, playerId);
++            MailModule.Instance.HandlerClaimMail(session, request, playerId);
+ 
+         [RequestMapping]
+         public object DoClaimAllMail(IdSession session, ReqMailClaimAll request, long playerId) =>
+-            MailModule.Instance.ClaimAll(session, request, playerId);
++            MailModule.Instance.HandlerClaimAllMail(session, request, playerId);
+ 
+         [RequestMapping]
+         public object DoDeleteMail(IdSession session, ReqMailDelete request, long playerId) =>
+-            MailModule.Instance.Delete(session, request, playerId);
++            MailModule.Instance.HandlerDeleteMail(session, request, playerId);
+ 
+         [RequestMapping]
+         public object DoDeleteReadMail(IdSession session, ReqMailDeleteRead request, long playerId) =>
+-            MailModule.Instance.DeleteRead(session, request, playerId);
++            MailModule.Instance.HandlerDeleteReadMail(session, request, playerId);
+     }
+ }
+--- a/GameServer/src/Game/Entries/Modules/PlayerModule.cs
++++ b/GameServer/src/Game/Entries/Modules/PlayerModule.cs
+@@ -545,11 +545,11 @@
+         }
+ 
+         public ResUpdateMailMsg HandlerReqUpdateMailMsg(IdSession s, ReqUpdateMailMsg req, long playerId) {
+-            return MailModule.Instance.LegacyUpdate(s, req, playerId);
++            return MailModule.Instance.HandlerReqUpdateMailMsg(s, req, playerId);
+         }
+ 
+         public ResPullingMailMsg HandlerReqPullingMailMsg(IdSession s, ReqPullingMailMsg req, long playerId) {
+-            return MailModule.Instance.LegacyList(s, req, playerId);
++            return MailModule.Instance.HandlerReqPullingMailMsg(s, req, playerId);
+         }
+ 
+         public ResPullingRank HandlerReqPullingRank(IdSession s, ReqPullingRank req, long playerId) {
+--- a/GameServerTests/Mail/MailRulesTests.cs
++++ b/GameServerTests/Mail/MailRulesTests.cs
+@@ -32,8 +32,8 @@
+     [Fact]
+     public void ModuleRejectsUnauthenticatedRequestsBeforeAccessingDatabase()
+     {
+-        Assert.Equal((int)Respones.AccountIsNotLogin,MailModule.Instance.List(null,new ReqMailList(),0).status);
+-        Assert.Equal((int)Respones.AccountIsNotLogin,MailModule.Instance.ClaimAll(null,new ReqMailClaimAll(),0).status);
++        Assert.Equal((int)Respones.AccountIsNotLogin,MailModule.Instance.HandlerGetMailList(null,new ReqMailList(),0).status);
++        Assert.Equal((int)Respones.AccountIsNotLogin,MailModule.Instance.HandlerClaimAllMail(null,new ReqMailClaimAll(),0).status);
+     }
+     [Fact]
+     public void NewAndLegacyMailContractsUseGoogleCodecAndPreserveLongValues()
+--- a/GameServerTests/Mail/MailMySqlTests.cs
++++ b/GameServerTests/Mail/MailMySqlTests.cs
+@@ -36,7 +36,7 @@
+         Assert.Equal(MailStatus.SourceConflict,e.Send("different",true,"event-1").Status);
+         Assert.Equal(MailStatus.NotFound,GM_MailMsgMgr.Instance.Execute(e.PlayerId+1,MailAction.Read,first.MailId).Status);
+         Assert.Equal(MailStatus.NotAllowed,GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.Delete,first.MailId).Status);
+-        var detail=MailModule.Instance.Read(e.Session,new ReqMailRead{mailId=first.MailId},e.PlayerId);
++        var detail=MailModule.Instance.HandlerReadMail(e.Session,new ReqMailRead{mailId=first.MailId},e.PlayerId);
+         Assert.Equal(1,detail.status);Assert.Equal(new[]{1,1,2},detail.detail.attachments.Select(a=>a.itemId));
+         Assert.Equal(0,detail.unreadCount);
+         var claims=await Task.WhenAll(Enumerable.Range(0,8).Select(_=>Task.Run(()=>GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.Claim,first.MailId))));
+@@ -103,9 +103,9 @@
+         GM_MailMsgMgr.Instance.ExpireDue();
+         Assert.Equal(2,await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={c.MailId}"));
+         Assert.Equal(MailStatus.NotFound,GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.Claim,a.MailId).Status);
+-        var legacy=MailModule.Instance.LegacyList(e.Session,new ReqPullingMailMsg(),e.PlayerId);
++        var legacy=MailModule.Instance.HandlerReqPullingMailMsg(e.Session,new ReqPullingMailMsg(),e.PlayerId);
+         Assert.Equal(1,legacy.status);Assert.Equal(b.MailId,Assert.Single(legacy.mailMessages).msgId);
+-        Assert.Equal(-103,MailModule.Instance.LegacyUpdate(e.Session,new ReqUpdateMailMsg{mailMsgId=b.MailId,status=0},e.PlayerId).status);
++        Assert.Equal(-103,MailModule.Instance.HandlerReqUpdateMailMsg(e.Session,new ReqUpdateMailMsg{mailMsgId=b.MailId,status=0},e.PlayerId).status);
+     });
+ 
+     private static async Task Run(Func<Environment,Task> test,bool legacy=false)
+--- a/docs/MailSystem.md
++++ b/docs/MailSystem.md
+@@ -18,7 +18,7 @@
+ ## 服务端发送示例
+ 
+ ```csharp
+-var result = MailModule.Instance.Send(new MailSendCommand
++var result = MailModule.Instance.SendMail(new MailSendCommand
+ {
+     PlayerId = playerId,
+     SenderId = -1,
