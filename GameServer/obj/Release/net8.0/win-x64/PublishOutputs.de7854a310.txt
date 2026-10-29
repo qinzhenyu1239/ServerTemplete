@@ -17,6 +17,7 @@ D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\MapCo
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\MapItemBase.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\MedicineGoods.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\OrderTrading.csv
+D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\RedDotConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\ServerDirectConnConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\SkillAConfig.csv
 D:\BaiduNetdiskDownload\CSharpGame\Publish\GameServer-win-x64\Configs\Csvs\SkillBConfig.csv

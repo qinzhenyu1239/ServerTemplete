@@ -418,3 +418,5 @@ D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\BaseInventory.csv
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\StarLevel.csv
 D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Google.Protobuf.dll
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\bin\Release\net8.0\win-x64\Configs\Csvs\RedDotConfig.csv
+D:\BaiduNetdiskDownload\CSharpGame\CSharpGameServer\GameServer\obj\Release\net8.0\win-x64\GameServer.sourcelink.json
