@@ -1,4 +1,6 @@
-# 邮件变化通知命名统一
+# 邮件变化通知命名统一（历史记录）
+
+2026-10-28：124 号邮件变化推送及两端 ResMailChanged 已移除。当前邮件使用请求响应与手动刷新；以下保留当时的命名变更记录。
 
 按项目主动下发消息的 `Res…` / `e…Res` 命名，将 NotifyMailChanged / eMailChanged 统一为 ResMailChanged / eMailChangedRes。编号 124、字段 1～8、类型、推送时机和业务行为保持不变。红点协议不在此次范围。
 

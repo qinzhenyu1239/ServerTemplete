@@ -1,6 +1,7 @@
 using Framework.Core.Utils;
 using Game.Core.Db;
 using Game.Core.GM_Auth;
+using Game.Debug;
 using Game.Datas.DBEntities;
 using Game.Datas.Excels;
 using Game.Datas.GMEntities;
@@ -342,8 +343,12 @@ namespace Game.Core.EntityMgr
                     logger.Error(exception, $"Create player failed: accountId[{accountId}]");
                     return null;
                 }
-                return AttachPlayer(player);
+                player = AttachPlayer(player);
             }
+
+            // Only this branch created and committed a new character.
+            MailDebugTool.SendNewPlayerMails(player.id);
+            return player;
         }
 
         public bool UpdatePlayer(Player player)

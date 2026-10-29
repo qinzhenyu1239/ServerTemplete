@@ -218,8 +218,7 @@ namespace Game{
         eMailDeleteRes = 121,
         eMailDeleteReadReq = 122,
         eMailDeleteReadRes = 123,
-        eMailChangedRes = 124,
-
+        
     }
 
     public enum QuitReason { 

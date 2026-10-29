@@ -180,32 +180,4 @@ namespace Game.Datas.Messages
         [ProtoMember(12)] public bool hasMore;
         [ProtoMember(13)] public int nextOffset;
     }
-    [ProtoContract]
-    [MessageMeta((short)Module.PLAYER, (short)Cmd.eMailChangedRes)]
-    public sealed class ResMailChanged : Message
-    {
-        [ProtoMember(1)]
-        public long mailboxVersion;
-
-        [ProtoMember(2)]
-        public long serverTime;
-
-        [ProtoMember(3)]
-        public int count;
-
-        [ProtoMember(4)]
-        public int unreadCount;
-
-        [ProtoMember(5)]
-        public int capacity;
-
-        [ProtoMember(6)]
-        public List<long> addedIds = new List<long>();
-
-        [ProtoMember(7)]
-        public List<long> changedIds = new List<long>();
-
-        [ProtoMember(8)]
-        public List<long> deletedIds = new List<long>();
-    }
 }

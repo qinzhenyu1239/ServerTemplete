@@ -1,0 +1,6 @@
+[2026-10-28 10:28:12.5675] New player test mails: playerId[108753657184395264], succeeded[10/10] 
+[2026-10-28 10:30:02.2460] New player test mails: playerId[108754117651865600], succeeded[10/10] 
+[2026-10-28 10:31:59.0374] New player test mails: playerId[108754607500435456], succeeded[10/10] 
+[2026-10-28 10:36:35.5239] New player test mails: playerId[108755767166771200], succeeded[10/10] 
+[2026-10-28 11:11:33.5399] New player test mails: playerId[108764566833340416], succeeded[10/10] 
+[2026-10-28 11:12:07.9232] New player test mails: playerId[108764710991568896], succeeded[10/10] 

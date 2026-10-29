@@ -27,7 +27,7 @@ public sealed class MailRulesTests
         Assert.False(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b"}));
         Assert.False(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b",LifetimeSeconds=1,MailType=1}));
         Assert.True(MailRules.ValidSend(new MailSendCommand {PlayerId=1,Title="t",Body="b",LifetimeSeconds=1}));
-        Assert.Throws<ArgumentOutOfRangeException>(()=>GM_MailMsgMgr.Instance.Configure(0,_=>new ResMailChanged()));
+        Assert.Throws<ArgumentOutOfRangeException>(()=>GM_MailMsgMgr.Instance.Configure(0));
     }
     [Fact]
     public void ModuleRejectsUnauthenticatedRequestsBeforeAccessingDatabase()
@@ -51,15 +51,11 @@ public sealed class MailRulesTests
         Assert.True(GoogleProtocolCodec.TryDeserialize(typeof(ResPullingMailMsg),old,out value,out error),error);
         Assert.Equal(7,Assert.Single(Assert.IsType<ResPullingMailMsg>(value).mailMessages).msgId);
 
-        Assert.Equal(124,(int)Cmd.eMailChangedRes);
-        var changed=new ResMailChanged {mailboxVersion=9,serverTime=10,count=3,unreadCount=2,capacity=100,
-            addedIds=new(){11},changedIds=new(){12},deletedIds=new(){13}};
-        using var push=new MemoryStream();
-        Assert.True(GoogleProtocolCodec.TrySerialize(changed,push,out error),error);
-        // Preserve the existing 124 field numbers and unpacked repeated-int64 wire representation.
-        Assert.Equal(new byte[]{8,9,16,10,24,3,32,2,40,100,48,11,56,12,64,13},push.ToArray());
-        push.Position=0;
-        Assert.True(GoogleProtocolCodec.TryDeserialize(typeof(ResMailChanged),push,out value,out error),error);
-        Assert.Equal(13,Assert.Single(Assert.IsType<ResMailChanged>(value).deletedIds));
+        Assert.Equal(110, (int)Cmd.eMailSummaryReq);
+        Assert.Equal(111, (int)Cmd.eMailSummaryRes);
+        Assert.Equal(122, (int)Cmd.eMailDeleteReadReq);
+        Assert.Equal(123, (int)Cmd.eMailDeleteReadRes);
+        Assert.DoesNotContain(Enum.GetValues<Cmd>(), command => (int)command == 124);
+        Assert.Null(typeof(MailEntryMessage).Assembly.GetType("Game.Datas.Messages.ResMailChanged"));
     }
 }

@@ -215,10 +215,6 @@ namespace Framework.Core.Serializer
                 {
                     WriteResMailDeleteRead(output, value49);
                 }
-                else if (source is ResMailChanged value50)
-                {
-                    WriteResMailChanged(output, value50);
-                }
                 else if (source is ReqGetPlayerBasicInfo value51)
                 {
                     WriteReqGetPlayerBasicInfo(output, value51);
@@ -527,7 +523,6 @@ namespace Framework.Core.Serializer
                 else if (messageType == typeof(ResMailDelete)) message = ReadResMailDelete(input);
                 else if (messageType == typeof(ReqMailDeleteRead)) message = ReadReqMailDeleteRead(input);
                 else if (messageType == typeof(ResMailDeleteRead)) message = ReadResMailDeleteRead(input);
-                else if (messageType == typeof(ResMailChanged)) message = ReadResMailChanged(input);
                 else if (messageType == typeof(ReqGetPlayerBasicInfo)) message = ReadReqGetPlayerBasicInfo(input);
                 else if (messageType == typeof(ResGetPlayerBasicInfo)) message = ReadResGetPlayerBasicInfo(input);
                 else if (messageType == typeof(ResUpdatePlayerBasicInfo)) message = ReadResUpdatePlayerBasicInfo(input);
@@ -4326,143 +4321,8 @@ namespace Framework.Core.Serializer
             return size;
         }
 
-        private static void WriteResMailChanged(CodedOutputStream output, ResMailChanged message)
-        {
-            output.WriteTag(1, WireFormat.WireType.Varint);
-            output.WriteInt64(message.mailboxVersion);
-            output.WriteTag(2, WireFormat.WireType.Varint);
-            output.WriteInt64(message.serverTime);
-            output.WriteTag(3, WireFormat.WireType.Varint);
-            output.WriteInt32(message.count);
-            output.WriteTag(4, WireFormat.WireType.Varint);
-            output.WriteInt32(message.unreadCount);
-            output.WriteTag(5, WireFormat.WireType.Varint);
-            output.WriteInt32(message.capacity);
-            if (message.addedIds != null)
-            {
-                for (int index = 0; index < message.addedIds.Count; index++)
-                {
-                    output.WriteTag(6, WireFormat.WireType.Varint);
-                    output.WriteInt64(message.addedIds[index]);
-                }
-            }
-            if (message.changedIds != null)
-            {
-                for (int index = 0; index < message.changedIds.Count; index++)
-                {
-                    output.WriteTag(7, WireFormat.WireType.Varint);
-                    output.WriteInt64(message.changedIds[index]);
-                }
-            }
-            if (message.deletedIds != null)
-            {
-                for (int index = 0; index < message.deletedIds.Count; index++)
-                {
-                    output.WriteTag(8, WireFormat.WireType.Varint);
-                    output.WriteInt64(message.deletedIds[index]);
-                }
-            }
-        }
 
-        private static ResMailChanged ReadResMailChanged(CodedInputStream input)
-        {
-            var message = new ResMailChanged();
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
-            {
-                switch (WireFormat.GetTagFieldNumber(tag))
-                {
-                    case 1:
-                        message.mailboxVersion = input.ReadInt64();
-                        break;
-                    case 2:
-                        message.serverTime = input.ReadInt64();
-                        break;
-                    case 3:
-                        message.count = input.ReadInt32();
-                        break;
-                    case 4:
-                        message.unreadCount = input.ReadInt32();
-                        break;
-                    case 5:
-                        message.capacity = input.ReadInt32();
-                        break;
-                    case 6:
-                        if (WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited)
-                        {
-                            var packedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
-                            while (!packedInput.IsAtEnd)
-                                message.addedIds.Add(packedInput.ReadInt64());
-                        }
-                        else
-                        {
-                            message.addedIds.Add(input.ReadInt64());
-                        }
-                        break;
-                    case 7:
-                        if (WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited)
-                        {
-                            var packedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
-                            while (!packedInput.IsAtEnd)
-                                message.changedIds.Add(packedInput.ReadInt64());
-                        }
-                        else
-                        {
-                            message.changedIds.Add(input.ReadInt64());
-                        }
-                        break;
-                    case 8:
-                        if (WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited)
-                        {
-                            var packedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
-                            while (!packedInput.IsAtEnd)
-                                message.deletedIds.Add(packedInput.ReadInt64());
-                        }
-                        else
-                        {
-                            message.deletedIds.Add(input.ReadInt64());
-                        }
-                        break;
-                    default:
-                        input.SkipLastField();
-                        break;
-                }
-            }
-            return message;
-        }
 
-        private static int ComputeSizeResMailChanged(ResMailChanged message)
-        {
-            if (message == null) return 0;
-            int size = 0;
-            size += CodedOutputStream.ComputeTagSize(1) + CodedOutputStream.ComputeInt64Size(message.mailboxVersion);
-            size += CodedOutputStream.ComputeTagSize(2) + CodedOutputStream.ComputeInt64Size(message.serverTime);
-            size += CodedOutputStream.ComputeTagSize(3) + CodedOutputStream.ComputeInt32Size(message.count);
-            size += CodedOutputStream.ComputeTagSize(4) + CodedOutputStream.ComputeInt32Size(message.unreadCount);
-            size += CodedOutputStream.ComputeTagSize(5) + CodedOutputStream.ComputeInt32Size(message.capacity);
-            if (message.addedIds != null)
-            {
-                for (int index = 0; index < message.addedIds.Count; index++)
-                {
-                    size += CodedOutputStream.ComputeTagSize(6) + CodedOutputStream.ComputeInt64Size(message.addedIds[index]);
-                }
-            }
-            if (message.changedIds != null)
-            {
-                for (int index = 0; index < message.changedIds.Count; index++)
-                {
-                    size += CodedOutputStream.ComputeTagSize(7) + CodedOutputStream.ComputeInt64Size(message.changedIds[index]);
-                }
-            }
-            if (message.deletedIds != null)
-            {
-                for (int index = 0; index < message.deletedIds.Count; index++)
-                {
-                    size += CodedOutputStream.ComputeTagSize(8) + CodedOutputStream.ComputeInt64Size(message.deletedIds[index]);
-                }
-            }
-            return size;
-        }
 
         private static void WriteReqGetPlayerBasicInfo(CodedOutputStream output, ReqGetPlayerBasicInfo message)
         {

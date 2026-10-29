@@ -1,5 +1,4 @@
 using Framework.Core.Concurrency;
-using Framework.Core.Serializer;
 using Framework.Core.Utils;
 using Game.Core.Db;
 using Game.Core.EntityMgr;
@@ -19,18 +18,16 @@ namespace Game.Core.GM_MailMessage
     {
         public static GM_MailMsgMgr Instance { get; } = new();
         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        private Func<MailResult, Message> notificationFactory;
         private int scanning;
         public int Capacity { get; private set; }
         private const string ValidWhere = "toPlayerId=@pid AND deleteTime=0 AND (expireTime=0 OR expireTime>@now)";
 
         private GM_MailMsgMgr() { }
 
-        public void Configure(int capacity, Func<MailResult, Message> notifications)
+        public void Configure(int capacity)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity), "MailboxCapacity must be explicitly configured.");
             Capacity = capacity;
-            notificationFactory = notifications ?? throw new ArgumentNullException(nameof(notifications));
         }
         public MailResult Execute(long playerId, MailAction action, long mailId = 0)
         {
@@ -44,7 +41,7 @@ namespace Game.Core.GM_MailMessage
                 if (playerId <= 0 || Capacity <= 0 || !Enum.IsDefined(typeof(MailAction), action))
                     return new MailResult { Status = MailStatus.Invalid };
                 var result = action == MailAction.Summary ? ReadSummary(playerId) : RunTransaction(playerId, action, mailId);
-                Synchronize(playerId, result, action is MailAction.Summary or MailAction.List);
+                Synchronize(playerId, result);
                 return result;
             }
             catch (Exception ex) { logger.Error(ex, "Mail operation failed."); return new MailResult { Status = MailStatus.Failed }; }
@@ -88,7 +85,7 @@ namespace Game.Core.GM_MailMessage
                     }
                     FillSnapshot(db, command.PlayerId, result);
                     db.Ado.CommitTran();
-                    Synchronize(command.PlayerId, result, false);
+                    Synchronize(command.PlayerId, result);
                     return result;
                 }
                 catch (Exception ex) { db.Ado.RollbackTran(); logger.Error(ex, "Mail send failed."); return new MailResult { Status = MailStatus.Failed }; }
@@ -136,6 +133,8 @@ namespace Game.Core.GM_MailMessage
                 else if (action is MailAction.Claim or MailAction.ClaimAll)
                 {
                     if (action == MailAction.ClaimAll)
+                        // Mark every valid mail read, including ordinary mail and previously claimed rewards.
+                        // This is independent of pagination and of whether there are rewards to grant.
                         foreach (var mail in mails) MarkRead(db, mail, now, result);
                     var selected = action == MailAction.ClaimAll ? mails.Where(m => m.mailType == 1 && m.claimTime == 0).ToArray()
                         : target.mailType == 1 && target.claimTime == 0 ? new[] { target } : Array.Empty<Mailmessage>();
@@ -235,9 +234,9 @@ namespace Game.Core.GM_MailMessage
                 m.expireTime - m.sendTime == c.LifetimeSeconds && rewards.Count == c.Rewards.Count &&
                 rewards.Select((a, i) => a.itemId == c.Rewards[i].ItemId && a.quantity == c.Rewards[i].Quantity).All(v => v);
         }
-        private void Synchronize(long playerId, MailResult result, bool initialize)
+        private void Synchronize(long playerId, MailResult result)
         {
-            // A notification or cache failure cannot undo a committed transaction.
+            // Cache synchronization cannot undo a committed transaction.
             try
             {
                 GM_ItemMgr.Instance.SyncCommittedQuantities(playerId, result.ItemQuantities);
@@ -250,11 +249,8 @@ namespace Game.Core.GM_MailMessage
                     c.Count != result.Count || c.UnreadCount != result.UnreadCount;
                 if (changed) c.Version++;
                 c.Count = result.Count; c.UnreadCount = result.UnreadCount; result.MailboxVersion = c.Version;
-                if (changed && c.Initialized && c.Session != null)
-                    MessagePusher.PushMessage(c.Session, notificationFactory(result), playerId);
-                if (initialize) c.Initialized = true;
             }
-            catch (Exception ex) { logger.Error(ex, "Mail committed; notification/cache synchronization failed."); }
+            catch (Exception ex) { logger.Error(ex, "Mail committed; cache synchronization failed."); }
         }
         public void ExpireDue()
         {

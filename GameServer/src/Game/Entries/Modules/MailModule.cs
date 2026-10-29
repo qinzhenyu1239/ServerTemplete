@@ -15,19 +15,8 @@ namespace Game.Entries.Modules
         {
             if (!int.TryParse(ConfigurationManager.AppSettings["MailboxCapacity"], out int capacity) || capacity <= 0)
                 throw new ConfigurationErrorsException("Explicit positive MailboxCapacity is required for the game server.");
-            GM_MailMsgMgr.Instance.Configure(capacity, CreateNotification);
+            GM_MailMsgMgr.Instance.Configure(capacity);
         }
-        private static ResMailChanged CreateNotification(MailResult result) => new ResMailChanged
-        {
-            mailboxVersion = result.MailboxVersion,
-            serverTime = result.ServerTime,
-            count = result.Count,
-            unreadCount = result.UnreadCount,
-            capacity = result.Capacity,
-            addedIds = result.AddedIds.Distinct().ToList(),
-            changedIds = result.ChangedIds.Distinct().ToList(),
-            deletedIds = result.DeletedIds.Distinct().ToList()
-        };
         private static (Respones Status, string ErrorMessage) ValidateRequest(
             IdSession session,
             long playerId,

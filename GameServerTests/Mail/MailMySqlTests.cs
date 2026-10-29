@@ -18,6 +18,150 @@ namespace GameServerTests.Mail;
 public sealed class MailMySqlTests
 {
     [DatabaseFact, Trait("Category","Database")]
+    public async Task ClaimAllMarksOrdinaryUnreadMailAcrossPagesEvenWithoutRewards() => await Run(async e=>
+    {
+        for (int i = 0; i < 13; i++) e.Send("ordinary-page-" + i);
+        var expired = e.Send("excluded-expired");
+        var deleted = e.Send("excluded-deleted");
+        var foreign = e.Send("excluded-other-player");
+        await e.Sql($"UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP()-1 WHERE id={expired.MailId};" +
+            $"UPDATE mailmessage SET deleteTime=UNIX_TIMESTAMP(),deleteReason=1 WHERE id={deleted.MailId};" +
+            $"UPDATE mailmessage SET toPlayerId={e.PlayerId+1} WHERE id={foreign.MailId}");
+
+        var response = MailModule.Instance.HandlerClaimAllMail(e.Session, new ReqMailClaimAll(), e.PlayerId);
+
+        Assert.Equal((int)Game.Respones.MailNoRewards, response.status);
+        Assert.Equal(13, response.count);
+        Assert.Equal(0, response.unreadCount);
+        Assert.Equal(10, response.items.Count);
+        Assert.True(response.hasMore);
+        Assert.All(response.items, mail => Assert.True(mail.readTime > 0));
+        Assert.Empty(response.itemQuantities);
+        Assert.Equal(13, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId} " +
+            "AND title LIKE 'ordinary-page-%' AND readTime>0"));
+        Assert.Equal(0, await e.Scalar($"SELECT readTime FROM mailmessage WHERE id={expired.MailId}"));
+        Assert.Equal(0, await e.Scalar($"SELECT readTime FROM mailmessage WHERE id={deleted.MailId}"));
+        Assert.Equal(0, await e.Scalar($"SELECT readTime FROM mailmessage WHERE id={foreign.MailId}"));
+
+        var page = MailModule.Instance.HandlerGetMailList(e.Session, new ReqMailList { offset = 10, pageSize = 50 }, e.PlayerId);
+        Assert.Equal(3, page.items.Count);
+        Assert.All(page.items, mail => Assert.True(mail.readTime > 0));
+        Assert.Equal(0, page.unreadCount);
+        Assert.Equal(0, await e.Scalar($"SELECT COUNT(*) FROM player_item WHERE player_id={e.PlayerId}"));
+    });
+
+    [DatabaseFact, Trait("Category","Database")]
+    public async Task ClaimAllMarksOrdinaryAndPreviouslyClaimedUnreadMailWithoutRegranting() => await Run(async e=>
+    {
+        var ordinary = e.Send("ordinary-unread");
+        var reward = e.Send("reward-unread", true);
+        var claimed = e.Send("previously-claimed", true);
+        Assert.Equal(MailStatus.Success, GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.Claim, claimed.MailId).Status);
+        // Legacy data can contain claimed rewards whose read flag was not populated.
+        await e.Sql($"UPDATE mailmessage SET readTime=0 WHERE id={claimed.MailId}");
+
+        var response = MailModule.Instance.HandlerClaimAllMail(e.Session, new ReqMailClaimAll(), e.PlayerId);
+
+        Assert.Equal((int)Game.Respones.OK, response.status);
+        Assert.Equal(0, response.unreadCount);
+        Assert.Equal(3, response.items.Count);
+        Assert.All(response.items, mail => Assert.True(mail.readTime > 0));
+        Assert.Equal(0, await e.Scalar($"SELECT claimTime FROM mailmessage WHERE id={ordinary.MailId}"));
+        Assert.True(await e.Scalar($"SELECT claimTime FROM mailmessage WHERE id={reward.MailId}") > 0);
+        Assert.Equal(10, await e.Scalar($"SELECT quantity FROM player_item WHERE player_id={e.PlayerId} AND item_id=1"));
+    });
+
+    [DatabaseFact, Trait("Category","Database")]
+    public async Task MailChangesReturnStateThroughResponsesWithoutPushing() => await Run(async e=>
+    {
+        var channel = Assert.IsType<EmbeddedChannel>(e.Session.client);
+        void NoPush()
+        {
+            channel.RunPendingTasks();
+            Assert.Null(channel.ReadOutbound<object>());
+        }
+
+        var initial = MailModule.Instance.HandlerGetMailSummary(e.Session, new ReqMailSummary(), e.PlayerId);
+        var sent = e.Send("manual-refresh-reward", true);
+        Assert.Equal(MailStatus.Success, sent.Status);
+        NoPush();
+
+        var summary = MailModule.Instance.HandlerGetMailSummary(e.Session, new ReqMailSummary(), e.PlayerId);
+        Assert.Equal(1, summary.count);
+        Assert.Equal(1, summary.unreadCount);
+        Assert.True(summary.mailboxVersion > initial.mailboxVersion);
+        NoPush();
+
+        var read = MailModule.Instance.HandlerReadMail(e.Session, new ReqMailRead { mailId = sent.MailId }, e.PlayerId);
+        Assert.Equal(0, read.unreadCount);
+        Assert.True(read.mailboxVersion > summary.mailboxVersion);
+        Assert.Equal(5, Assert.Single(read.detail.attachments).quantity);
+        NoPush();
+
+        var claim = MailModule.Instance.HandlerClaimMail(e.Session, new ReqMailClaim { mailId = sent.MailId }, e.PlayerId);
+        Assert.Equal((int)Game.Respones.OK, claim.status);
+        Assert.True(claim.mailboxVersion > read.mailboxVersion);
+        Assert.Equal(5, Assert.Single(claim.itemQuantities).quantity);
+        NoPush();
+
+        var repeated = MailModule.Instance.HandlerClaimMail(e.Session, new ReqMailClaim { mailId = sent.MailId }, e.PlayerId);
+        Assert.Equal(claim.mailboxVersion, repeated.mailboxVersion);
+        Assert.Equal(5, await e.Scalar($"SELECT quantity FROM player_item WHERE player_id={e.PlayerId} AND item_id=1"));
+        NoPush();
+
+        var deleted = MailModule.Instance.HandlerDeleteMail(e.Session, new ReqMailDelete { mailId = sent.MailId }, e.PlayerId);
+        Assert.Equal(0, deleted.count);
+        Assert.True(deleted.mailboxVersion > claim.mailboxVersion);
+        NoPush();
+
+        var expired = e.Send("manual-refresh-expired", true);
+        await e.Sql($"UPDATE mailmessage SET expireTime=UNIX_TIMESTAMP()-1 WHERE id={expired.MailId}");
+        GM_MailMsgMgr.Instance.ExpireDue();
+        Assert.Equal(2, await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={expired.MailId}"));
+        Assert.Equal(0, MailModule.Instance.HandlerGetMailSummary(e.Session, new ReqMailSummary(), e.PlayerId).count);
+        NoPush();
+    });
+
+    [DatabaseFact, Trait("Category","Database")]
+    public async Task NewPlayerTestMailsIncludeClaimableRewardsAndDoNotDuplicateOnRetry() => await Run(async e=>
+    {
+        e.ItemConfigs["10001"] = new Item { id = 10001 };
+        e.ItemConfigs["10002"] = new Item { id = 10002 };
+        Assert.Equal(10, Game.Debug.MailDebugTool.SendNewPlayerMails(e.PlayerId));
+        Assert.Equal(10, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId}"));
+        Assert.Equal(10, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId} " +
+            "AND readTime=0 AND claimTime=0 AND deleteTime=0 AND expireTime-sendTime=86400"));
+        Assert.Equal(7, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId} AND mailType=0"));
+        Assert.Equal(3, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId} AND mailType=1"));
+        Assert.Equal(4, await e.Scalar("SELECT COUNT(*) FROM mailattachment"));
+        Assert.Equal(16, await e.Scalar("SELECT SUM(quantity) FROM mailattachment WHERE itemId=10001"));
+        Assert.Equal(20, await e.Scalar("SELECT SUM(quantity) FROM mailattachment WHERE itemId=10002"));
+        Assert.Equal(0, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId+1}"));
+        Assert.Equal(0, await e.Scalar($"SELECT COUNT(*) FROM player_item WHERE player_id={e.PlayerId}"));
+
+        Assert.Equal(10, Game.Debug.MailDebugTool.SendNewPlayerMails(e.PlayerId));
+        Assert.Equal(10, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId}"));
+        Assert.Equal(4, await e.Scalar("SELECT COUNT(*) FROM mailattachment"));
+        Assert.Equal(10, GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.Summary).UnreadCount);
+
+        long singleMailId = await e.Scalar($"SELECT id FROM mailmessage WHERE toPlayerId={e.PlayerId} " +
+            "AND sourceKey='debug:new-player-reward-mail:v1:8'");
+        var detail = GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.Read, singleMailId);
+        var attachment = Assert.Single(detail.Items.Single(item => item.Mail.id == singleMailId).Attachments);
+        Assert.Equal(10001, attachment.itemId);
+        Assert.Equal(1, attachment.quantity);
+        Assert.Equal(MailStatus.Success, GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.Claim, singleMailId).Status);
+        Assert.Equal(MailStatus.Success, GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.Claim, singleMailId).Status);
+        Assert.Equal(1, await e.Scalar($"SELECT quantity FROM player_item WHERE player_id={e.PlayerId} AND item_id=10001"));
+
+        Assert.Equal(MailStatus.Success, GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.ClaimAll).Status);
+        Assert.Equal(MailStatus.NoRewards, GM_MailMsgMgr.Instance.Execute(e.PlayerId, MailAction.ClaimAll).Status);
+        Assert.Equal(16, await e.Scalar($"SELECT quantity FROM player_item WHERE player_id={e.PlayerId} AND item_id=10001"));
+        Assert.Equal(20, await e.Scalar($"SELECT quantity FROM player_item WHERE player_id={e.PlayerId} AND item_id=10002"));
+        Assert.Equal(3, await e.Scalar($"SELECT COUNT(*) FROM mailmessage WHERE toPlayerId={e.PlayerId} AND claimTime>0"));
+    });
+
+    [DatabaseFact, Trait("Category","Database")]
     public async Task ExpiryWorkerCleansExpiredMailWithoutManualScan() => await Run(async e=>
     {
         var expired = e.Send("worker-expired", true);
@@ -174,7 +318,7 @@ public sealed class MailMySqlTests
     [DatabaseFact, Trait("Category","Database")]
     public async Task ExpiryAndCapacityCleanUnreadUnclaimedMailAndReadsStayIdempotent() => await Run(async e=>
     {
-        GM_MailMsgMgr.Instance.Configure(2,_=>new ResMailChanged());
+        GM_MailMsgMgr.Instance.Configure(2);
         var a=e.Send("old",true);var b=e.Send("new");var c=e.Send("newest");
         Assert.Equal(3,await e.Scalar($"SELECT deleteReason FROM mailmessage WHERE id={a.MailId}"));
         var list=GM_MailMsgMgr.Instance.Execute(e.PlayerId,MailAction.List);
@@ -226,7 +370,7 @@ public sealed class MailMySqlTests
             var session=new IdSession{playerId=910001,accountId=910001,client=channel};entity.uPlayer.s=session;
             var env=new Environment(db,entity,session);
             configs[nameof(Item)]=env.ItemConfigs;
-            GM_MailMsgMgr.Instance.Configure(20,r=>new ResMailChanged{mailboxVersion=r.MailboxVersion});
+            GM_MailMsgMgr.Instance.Configure(20);
             await test(env);
         }
         finally

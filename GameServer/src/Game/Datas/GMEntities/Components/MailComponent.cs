@@ -5,7 +5,6 @@ namespace Game.Datas.GMEntities
     {
         public IdSession Session;
         public long Version;
-        public bool Initialized;
         public int Count;
         public int UnreadCount;
         public static void Init(GM_PlayerEntity entity) => Reset(entity);
