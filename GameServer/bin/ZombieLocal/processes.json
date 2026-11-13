@@ -1,0 +1,17 @@
+[
+  {
+    "Id": 37808,
+    "Executable": "C:\\Program Files\\dotnet\\dotnet.exe",
+    "Assembly": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\bin\\ZombieLocal\\ServerZone\\GameServer.dll"
+  },
+  {
+    "Id": 14568,
+    "Executable": "C:\\Program Files\\dotnet\\dotnet.exe",
+    "Assembly": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\bin\\ZombieLocal\\Login\\GameServer.dll"
+  },
+  {
+    "Id": 10284,
+    "Executable": "C:\\Program Files\\dotnet\\dotnet.exe",
+    "Assembly": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\bin\\ZombieLocal\\Game\\GameServer.dll"
+  }
+]

@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///玩家各卡池的抽奖保底状态
     ///</summary>
+    [SqlSugar.SugarTable("player_gacha_state")]
     public partial class Player_gacha_state
     {
            public Player_gacha_state(){

@@ -3692,11 +3692,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenDbClass\\GenDbClass.csproj",
+      "projectUniqueName": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenDbClass\\GenDbClass.csproj",
       "projectName": "GenDbClass",
-      "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenDbClass\\GenDbClass.csproj",
+      "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenDbClass\\GenDbClass.csproj",
       "packagesPath": "C:\\Users\\Windows\\.nuget\\packages\\",
-      "outputPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenDbClass\\obj\\",
+      "outputPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenDbClass\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Windows\\AppData\\Roaming\\NuGet\\NuGet.Config"

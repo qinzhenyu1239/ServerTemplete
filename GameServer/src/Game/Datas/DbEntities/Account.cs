@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///存放我们的玩家信息
     ///</summary>
+    [SqlSugar.SugarTable("account")]
     public partial class Account
     {
            public Account(){

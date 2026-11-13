@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///登陆奖励管理
     ///</summary>
+    [SqlSugar.SugarTable("loginbonues")]
     public partial class Loginbonues
     {
            public Loginbonues(){

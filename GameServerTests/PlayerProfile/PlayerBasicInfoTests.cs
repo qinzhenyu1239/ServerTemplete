@@ -20,8 +20,8 @@ public sealed class PlayerBasicInfoTests
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     private static Player Player(long id) => new()
     {
-        id = id, accountId = id + 1, avatarId = 4, name = "测试玩家", guildId = 8_000_000_001,
-        titleId = 7, signature = "你好，世界 🌟", createTime = 1_792_000_000
+        id = id, accountId = id + 1, avatarId = 4, name = "测试玩家", createTime = 1_792_000_000,
+        baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45
     };
 
     private static GM_PlayerEntity Online(Player player)
@@ -65,11 +65,17 @@ public sealed class PlayerBasicInfoTests
             var session = new IdSession { accountId = player.accountId, playerId = player.id };
             var response = PlayerModule.Instance.HandlerGetPlayerBasicInfo(session, new ReqGetPlayerBasicInfo(), player.id);
             Assert.Equal((int)Respones.OK, response.status);
-            Assert.Equal(player.guildId, response.guildId);
+            Assert.Equal(0, response.guildId);
             Assert.Equal(player.avatarId, response.avatarId);
-            Assert.Equal(player.titleId, response.titleId);
+            Assert.Equal(player.baseLevel, response.baseLevel);
+            Assert.Equal(player.mainStage, response.mainStage);
+            Assert.Equal(player.resonanceLevel, response.resonanceLevel);
+            Assert.Equal(player.towerStage, response.towerStage);
+            Assert.Equal(0, response.titleId);
             Assert.Equal(player.createTime, response.createTime);
-            Assert.Equal(player.signature, response.signature);
+            Assert.Equal("", response.signature);
+            Assert.Equal("[0,0,0,0,0,0,0]", response.displayAchievementIds);
+            Assert.Equal("[0,0,0,0,0,0]", response.displayCharacterIds);
             player.name = "changed";
             Assert.Equal("测试玩家", result.Info.Name);
         }
@@ -118,7 +124,7 @@ public sealed class PlayerBasicInfoTests
         var response = new ResGetPlayerBasicInfo
         {
             status = 1, playerId = 9_000_000_001, avatarId = 4, name = "测试玩家",
-            guildId = 8_000_000_001, createTime = 3_000_000_000, titleId = 7, signature = "你好 🌟"
+            guildId = 8_000_000_001, createTime = 3_000_000_000, titleId = 7, signature = "你好 🌟", baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45
         };
         byte[] packet = MessagePusher.PackMessage(response, 0, requestId: 9_000_000_002);
         Assert.Equal(9_000_000_002, UtilsHelper.ReadLongLE(packet, ProtocolPacketLayout.RequestIdOffset));
@@ -136,6 +142,10 @@ public sealed class PlayerBasicInfoTests
         Assert.Equal(response.playerId, actual.playerId);
         Assert.Equal(response.createTime, actual.createTime);
         Assert.Equal(response.name, actual.name);
+        Assert.Equal(response.baseLevel, actual.baseLevel);
+        Assert.Equal(response.mainStage, actual.mainStage);
+        Assert.Equal(response.resonanceLevel, actual.resonanceLevel);
+        Assert.Equal(response.towerStage, actual.towerStage);
         Assert.Equal(response.signature, actual.signature);
         using var empty = new MemoryStream();
         Assert.True(GoogleProtocolCodec.TrySerialize(new ReqGetPlayerBasicInfo(), empty, out error), error);
@@ -147,7 +157,7 @@ public sealed class PlayerBasicInfoTests
     [Trait("Category", "Database")]
     public async Task DatabaseFallbackFillsCacheAndMissingPlayerReturnsNotFound()
     {
-        long playerId = -GachaMySqlTestEnvironment.PlayerId(903);
+        long playerId = Math.Abs(GachaMySqlTestEnvironment.PlayerId(903));
         string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
         await using var connection = await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
         GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
@@ -155,12 +165,14 @@ public sealed class PlayerBasicInfoTests
         try
         {
             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
-                $"INSERT INTO player(id,accountId,name,avatarId,guildId,titleId,signature,createTime) " +
-                $"VALUES ({playerId},{playerId},'profile-test',4,8000000001,7,'signature',1792000000)");
+                $"INSERT INTO player(id,accountId,name,avatarId,createTime) " +
+                $"VALUES ({playerId},{playerId},'profile-test',4,1792000000)");
             var result = GM_PlayerProfileMgr.Instance.GetBasicInfo(playerId);
             Assert.Equal(PlayerProfileStatus.Success, result.Status);
-            Assert.Equal(8_000_000_001, result.Info.GuildId);
-            Assert.Equal("signature", result.Info.Signature);
+            Assert.Equal(0, result.Info.GuildId);
+            Assert.Equal("", result.Info.Signature);
+            Assert.Equal(1, result.Info.BaseLevel); Assert.Equal(1, result.Info.MainStage);
+            Assert.Equal(0, result.Info.ResonanceLevel); Assert.Equal(0, result.Info.TowerStage);
             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection, $"DELETE FROM player WHERE id={playerId}");
             Assert.Equal(PlayerProfileStatus.Success, GM_PlayerProfileMgr.Instance.GetBasicInfo(playerId).Status);
             GM_AccountEntityMgr.Instance.Init();

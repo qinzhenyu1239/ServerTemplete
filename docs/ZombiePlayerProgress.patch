@@ -1,0 +1,2062 @@
+--- a/server/sql/zombie_init.sql
++++ b/server/sql/zombie_init.sql
+@@ -143,12 +143,17 @@
+   `name` varchar(128) DEFAULT NULL COMMENT '用户名字',
+   `avatarId` int(11) NOT NULL DEFAULT '0' COMMENT '头像ID，0表示未设置',
+   `createTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '创建角色Unix秒时间戳，0表示未知',
+-  `status` int(11) NOT NULL DEFAULT '0' COMMENT '账号的状态',
++  `status` int(11) NOT NULL DEFAULT '0' COMMENT '账号的状态',
++  `baseLevel` int(11) NOT NULL DEFAULT '1' COMMENT '基地等级',
++  `mainStage` int(11) NOT NULL DEFAULT '1' COMMENT '主线关卡章节编号',
++  `resonanceLevel` int(11) NOT NULL DEFAULT '0' COMMENT '共鸣等级',
++  `towerStage` int(11) NOT NULL DEFAULT '0' COMMENT '爬塔关卡',
+   PRIMARY KEY (`id`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+ 
+ 
+--- Existing installations: run migrations/20261112_001_zombie_player_minimal.sql after backing up player.
++-- Existing installations: back up player, then run migrations/20261112_001_zombie_player_minimal.sql
++-- followed by migrations/20261112_002_zombie_player_progress.sql.
+ 
+ CREATE TABLE IF NOT EXISTS `player_item` (
+   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+--- a/server/GameServer/src/Game/Datas/DbEntities/Player.cs
++++ b/server/GameServer/src/Game/Datas/DbEntities/Player.cs
+@@ -55,6 +55,18 @@
+            /// Nullable:False
+            /// </summary>           
+            public int status {get;set;}
+-
+-    }
++
++           /// <summary>基地等级。</summary>
++           public int baseLevel {get;set;} = 1;
++
++           /// <summary>主线关卡章节编号。</summary>
++           public int mainStage {get;set;} = 1;
++
++           /// <summary>共鸣等级。</summary>
++           public int resonanceLevel {get;set;} = 0;
++
++           /// <summary>爬塔关卡。</summary>
++           public int towerStage {get;set;} = 0;
++
++    }
+ }
+--- a/server/GameServer/src/Game/Datas/Messages/PlayerBasicInfoMessage.cs
++++ b/server/GameServer/src/Game/Datas/Messages/PlayerBasicInfoMessage.cs
+@@ -27,6 +27,10 @@
+         [ProtoMember(11)] public int backgroundId;
+         [ProtoMember(12)] public string displayAchievementIds;
+         [ProtoMember(13)] public string displayCharacterIds;
++        [ProtoMember(14)] public int baseLevel; // 基地等级
++        [ProtoMember(15)] public int mainStage; // 主线关卡章节编号
++        [ProtoMember(16)] public int resonanceLevel; // 共鸣等级
++        [ProtoMember(17)] public int towerStage; // 爬塔关卡
+     }
+ 
+     [ProtoContract]
+@@ -60,5 +64,9 @@
+         [ProtoMember(11)] public int backgroundId;
+         [ProtoMember(12)] public string displayAchievementIds;
+         [ProtoMember(13)] public string displayCharacterIds;
++        [ProtoMember(14)] public int baseLevel; // 基地等级
++        [ProtoMember(15)] public int mainStage; // 主线关卡章节编号
++        [ProtoMember(16)] public int resonanceLevel; // 共鸣等级
++        [ProtoMember(17)] public int towerStage; // 爬塔关卡
+     }
+ }
+--- a/server/GameServer/src/Game/Core/GM_PlayerProfile/PlayerProfileDefinitions.cs
++++ b/server/GameServer/src/Game/Core/GM_PlayerProfile/PlayerProfileDefinitions.cs
+@@ -8,6 +8,10 @@
+ 
+     public sealed class PlayerBasicInfoSnapshot
+     {
++        public int BaseLevel { get; init; }
++        public int MainStage { get; init; }
++        public int ResonanceLevel { get; init; }
++        public int TowerStage { get; init; }
+         public long PlayerId { get; init; }
+         public int AvatarId { get; init; }
+         public string Name { get; init; }
+--- a/server/GameServer/src/Game/Core/GM_PlayerProfile/GM_PlayerProfileMgr.cs
++++ b/server/GameServer/src/Game/Core/GM_PlayerProfile/GM_PlayerProfileMgr.cs
+@@ -58,6 +58,7 @@
+             Info = new PlayerBasicInfoSnapshot
+             {
+                 PlayerId = player.id, Name = player.name ?? string.Empty, AvatarId = player.avatarId, CreateTime = player.createTime,
++                BaseLevel = player.baseLevel, MainStage = player.mainStage, ResonanceLevel = player.resonanceLevel, TowerStage = player.towerStage,
+                 Signature = string.Empty, DisplayAchievementIds = new int[7], DisplayCharacterIds = new long[6]
+             }
+         };
+--- a/server/GameServer/src/Game/Core/EntityMgr/GM_AccountEntityMgr.cs
++++ b/server/GameServer/src/Game/Core/EntityMgr/GM_AccountEntityMgr.cs
+@@ -491,7 +491,8 @@
+         private static Player BuildPlayer(long accountId, PlayerCreationCommand command) => new Player
+         {
+             id = IdGenerator.GetNextId(), accountId = accountId, name = command.Name,
+-            avatarId = 0, createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), status = 0
++            avatarId = 0, createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), status = 0,
++            baseLevel = 1, mainStage = 1, resonanceLevel = 0, towerStage = 0
+         };
+ 
+         private static IReadOnlyList<InitialPlayerItem> LoadInitialPlayerItems()
+--- a/server/GameServer/src/Game/Entries/Modules/PlayerModule.cs
++++ b/server/GameServer/src/Game/Entries/Modules/PlayerModule.cs
+@@ -53,7 +53,8 @@
+                 name = info.Name, guildId = info.GuildId, createTime = info.CreateTime,
+                 titleId = info.TitleId, signature = info.Signature,
+                 avatarFrameId = info.AvatarFrameId, backgroundId = info.BackgroundId,
+-                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds)
++                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds),
++                baseLevel = info.BaseLevel, mainStage = info.MainStage, resonanceLevel = info.ResonanceLevel, towerStage = info.TowerStage
+             };
+         }
+ 
+@@ -96,7 +97,8 @@
+                 status = (int)Respones.OK, playerId = info.PlayerId, avatarId = info.AvatarId, name = info.Name,
+                 guildId = info.GuildId, createTime = info.CreateTime, titleId = info.TitleId, signature = info.Signature,
+                 avatarFrameId = info.AvatarFrameId, backgroundId = info.BackgroundId,
+-                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds)
++                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds),
++                baseLevel = info.BaseLevel, mainStage = info.MainStage, resonanceLevel = info.ResonanceLevel, towerStage = info.TowerStage
+             };
+         }
+ 
+--- a/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
++++ b/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
+@@ -4354,104 +4354,122 @@
+             return size;
+         }
+ 
+-        private static void WriteResGetPlayerBasicInfo(CodedOutputStream output, ResGetPlayerBasicInfo message)
+-        {
+-            output.WriteTag(1, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.status);
+-            if (message.errorMessage != null)
+-            {
+-                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.errorMessage);
+-            }
+-            output.WriteTag(3, WireFormat.WireType.Varint);
+-            output.WriteInt64(message.playerId);
+-            output.WriteTag(4, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.avatarId);
+-            if (message.name != null)
+-            {
+-                output.WriteTag(5, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.name);
+-            }
+-            output.WriteTag(6, WireFormat.WireType.Varint);
+-            output.WriteInt64(message.guildId);
+-            output.WriteTag(7, WireFormat.WireType.Varint);
+-            output.WriteInt64(message.createTime);
+-            output.WriteTag(8, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.titleId);
+-            if (message.signature != null)
+-            {
+-                output.WriteTag(9, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.signature);
+-            }
+-            output.WriteTag(10, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.avatarFrameId);
+-            output.WriteTag(11, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.backgroundId);
+-            if (message.displayAchievementIds != null)
+-            {
+-                output.WriteTag(12, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.displayAchievementIds);
+-            }
+-            if (message.displayCharacterIds != null)
+-            {
+-                output.WriteTag(13, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.displayCharacterIds);
+-            }
+-        }
+-
+-        private static ResGetPlayerBasicInfo ReadResGetPlayerBasicInfo(CodedInputStream input)
+-        {
+-            var message = new ResGetPlayerBasicInfo();
+-            uint tag;
+-            while ((tag = input.ReadTag()) != 0)
+-            {
+-                switch (WireFormat.GetTagFieldNumber(tag))
+-                {
+-                    case 1:
+-                        message.status = input.ReadInt32();
+-                        break;
+-                    case 2:
+-                        message.errorMessage = input.ReadString();
+-                        break;
+-                    case 3:
+-                        message.playerId = input.ReadInt64();
+-                        break;
+-                    case 4:
+-                        message.avatarId = input.ReadInt32();
+-                        break;
+-                    case 5:
+-                        message.name = input.ReadString();
+-                        break;
+-                    case 6:
+-                        message.guildId = input.ReadInt64();
+-                        break;
+-                    case 7:
+-                        message.createTime = input.ReadInt64();
+-                        break;
+-                    case 8:
+-                        message.titleId = input.ReadInt32();
+-                        break;
+-                    case 9:
+-                        message.signature = input.ReadString();
+-                        break;
+-                    case 10:
+-                        message.avatarFrameId = input.ReadInt32();
+-                        break;
+-                    case 11:
+-                        message.backgroundId = input.ReadInt32();
+-                        break;
+-                    case 12:
+-                        message.displayAchievementIds = input.ReadString();
+-                        break;
+-                    case 13:
+-                        message.displayCharacterIds = input.ReadString();
+-                        break;
+-                    default:
+-                        input.SkipLastField();
+-                        break;
+-                }
+-            }
+-            return message;
++        private static void WriteResGetPlayerBasicInfo(CodedOutputStream output, ResGetPlayerBasicInfo message)
++        {
++            output.WriteTag(1, (WireFormat.WireType)0);
++            output.WriteInt32(message.status);
++            if (message.errorMessage != null)
++            {
++                output.WriteTag(2, (WireFormat.WireType)2);
++                output.WriteString(message.errorMessage);
++            }
++            output.WriteTag(3, (WireFormat.WireType)0);
++            output.WriteInt64(message.playerId);
++            output.WriteTag(4, (WireFormat.WireType)0);
++            output.WriteInt32(message.avatarId);
++            if (message.name != null)
++            {
++                output.WriteTag(5, (WireFormat.WireType)2);
++                output.WriteString(message.name);
++            }
++            output.WriteTag(6, (WireFormat.WireType)0);
++            output.WriteInt64(message.guildId);
++            output.WriteTag(7, (WireFormat.WireType)0);
++            output.WriteInt64(message.createTime);
++            output.WriteTag(8, (WireFormat.WireType)0);
++            output.WriteInt32(message.titleId);
++            if (message.signature != null)
++            {
++                output.WriteTag(9, (WireFormat.WireType)2);
++                output.WriteString(message.signature);
++            }
++            output.WriteTag(10, (WireFormat.WireType)0);
++            output.WriteInt32(message.avatarFrameId);
++            output.WriteTag(11, (WireFormat.WireType)0);
++            output.WriteInt32(message.backgroundId);
++            if (message.displayAchievementIds != null)
++            {
++                output.WriteTag(12, (WireFormat.WireType)2);
++                output.WriteString(message.displayAchievementIds);
++            }
++            if (message.displayCharacterIds != null)
++            {
++                output.WriteTag(13, (WireFormat.WireType)2);
++                output.WriteString(message.displayCharacterIds);
++            }
++            output.WriteTag(14, (WireFormat.WireType)0);
++            output.WriteInt32(message.baseLevel);
++            output.WriteTag(15, (WireFormat.WireType)0);
++            output.WriteInt32(message.mainStage);
++            output.WriteTag(16, (WireFormat.WireType)0);
++            output.WriteInt32(message.resonanceLevel);
++            output.WriteTag(17, (WireFormat.WireType)0);
++            output.WriteInt32(message.towerStage);
++        }
++
++        private static ResGetPlayerBasicInfo ReadResGetPlayerBasicInfo(CodedInputStream input)
++        {
++            var message = new ResGetPlayerBasicInfo();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (tag)
++                {
++                    case 8:
++                        message.status = input.ReadInt32();
++                        break;
++                    case 18:
++                        message.errorMessage = input.ReadString();
++                        break;
++                    case 24:
++                        message.playerId = input.ReadInt64();
++                        break;
++                    case 32:
++                        message.avatarId = input.ReadInt32();
++                        break;
++                    case 42:
++                        message.name = input.ReadString();
++                        break;
++                    case 48:
++                        message.guildId = input.ReadInt64();
++                        break;
++                    case 56:
++                        message.createTime = input.ReadInt64();
++                        break;
++                    case 64:
++                        message.titleId = input.ReadInt32();
++                        break;
++                    case 74:
++                        message.signature = input.ReadString();
++                        break;
++                    case 80:
++                        message.avatarFrameId = input.ReadInt32();
++                        break;
++                    case 88:
++                        message.backgroundId = input.ReadInt32();
++                        break;
++                    case 98:
++                        message.displayAchievementIds = input.ReadString();
++                        break;
++                    case 106:
++                        message.displayCharacterIds = input.ReadString();
++                        break;
++                    case 112:
++                        message.baseLevel = input.ReadInt32();
++                        break;
++                    case 120:
++                        message.mainStage = input.ReadInt32();
++                        break;
++                    case 128:
++                        message.resonanceLevel = input.ReadInt32();
++                        break;
++                    case 136:
++                        message.towerStage = input.ReadInt32();
++                        break;
++                    default: input.SkipLastField(); break;
++                }
++            }
++            return message;
+         }
+ 
+         private static int ComputeSizeResGetPlayerBasicInfo(ResGetPlayerBasicInfo message)
+@@ -4479,104 +4497,122 @@
+             return size;
+         }
+ 
+-        private static void WriteResUpdatePlayerBasicInfo(CodedOutputStream output, ResUpdatePlayerBasicInfo message)
+-        {
+-            output.WriteTag(1, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.status);
+-            if (message.errorMessage != null)
+-            {
+-                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.errorMessage);
+-            }
+-            output.WriteTag(3, WireFormat.WireType.Varint);
+-            output.WriteInt64(message.playerId);
+-            output.WriteTag(4, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.avatarId);
+-            if (message.name != null)
+-            {
+-                output.WriteTag(5, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.name);
+-            }
+-            output.WriteTag(6, WireFormat.WireType.Varint);
+-            output.WriteInt64(message.guildId);
+-            output.WriteTag(7, WireFormat.WireType.Varint);
+-            output.WriteInt64(message.createTime);
+-            output.WriteTag(8, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.titleId);
+-            if (message.signature != null)
+-            {
+-                output.WriteTag(9, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.signature);
+-            }
+-            output.WriteTag(10, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.avatarFrameId);
+-            output.WriteTag(11, WireFormat.WireType.Varint);
+-            output.WriteInt32(message.backgroundId);
+-            if (message.displayAchievementIds != null)
+-            {
+-                output.WriteTag(12, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.displayAchievementIds);
+-            }
+-            if (message.displayCharacterIds != null)
+-            {
+-                output.WriteTag(13, WireFormat.WireType.LengthDelimited);
+-                output.WriteString(message.displayCharacterIds);
+-            }
+-        }
+-
+-        private static ResUpdatePlayerBasicInfo ReadResUpdatePlayerBasicInfo(CodedInputStream input)
+-        {
+-            var message = new ResUpdatePlayerBasicInfo();
+-            uint tag;
+-            while ((tag = input.ReadTag()) != 0)
+-            {
+-                switch (WireFormat.GetTagFieldNumber(tag))
+-                {
+-                    case 1:
+-                        message.status = input.ReadInt32();
+-                        break;
+-                    case 2:
+-                        message.errorMessage = input.ReadString();
+-                        break;
+-                    case 3:
+-                        message.playerId = input.ReadInt64();
+-                        break;
+-                    case 4:
+-                        message.avatarId = input.ReadInt32();
+-                        break;
+-                    case 5:
+-                        message.name = input.ReadString();
+-                        break;
+-                    case 6:
+-                        message.guildId = input.ReadInt64();
+-                        break;
+-                    case 7:
+-                        message.createTime = input.ReadInt64();
+-                        break;
+-                    case 8:
+-                        message.titleId = input.ReadInt32();
+-                        break;
+-                    case 9:
+-                        message.signature = input.ReadString();
+-                        break;
+-                    case 10:
+-                        message.avatarFrameId = input.ReadInt32();
+-                        break;
+-                    case 11:
+-                        message.backgroundId = input.ReadInt32();
+-                        break;
+-                    case 12:
+-                        message.displayAchievementIds = input.ReadString();
+-                        break;
+-                    case 13:
+-                        message.displayCharacterIds = input.ReadString();
+-                        break;
+-                    default:
+-                        input.SkipLastField();
+-                        break;
+-                }
+-            }
+-            return message;
++        private static void WriteResUpdatePlayerBasicInfo(CodedOutputStream output, ResUpdatePlayerBasicInfo message)
++        {
++            output.WriteTag(1, (WireFormat.WireType)0);
++            output.WriteInt32(message.status);
++            if (message.errorMessage != null)
++            {
++                output.WriteTag(2, (WireFormat.WireType)2);
++                output.WriteString(message.errorMessage);
++            }
++            output.WriteTag(3, (WireFormat.WireType)0);
++            output.WriteInt64(message.playerId);
++            output.WriteTag(4, (WireFormat.WireType)0);
++            output.WriteInt32(message.avatarId);
++            if (message.name != null)
++            {
++                output.WriteTag(5, (WireFormat.WireType)2);
++                output.WriteString(message.name);
++            }
++            output.WriteTag(6, (WireFormat.WireType)0);
++            output.WriteInt64(message.guildId);
++            output.WriteTag(7, (WireFormat.WireType)0);
++            output.WriteInt64(message.createTime);
++            output.WriteTag(8, (WireFormat.WireType)0);
++            output.WriteInt32(message.titleId);
++            if (message.signature != null)
++            {
++                output.WriteTag(9, (WireFormat.WireType)2);
++                output.WriteString(message.signature);
++            }
++            output.WriteTag(10, (WireFormat.WireType)0);
++            output.WriteInt32(message.avatarFrameId);
++            output.WriteTag(11, (WireFormat.WireType)0);
++            output.WriteInt32(message.backgroundId);
++            if (message.displayAchievementIds != null)
++            {
++                output.WriteTag(12, (WireFormat.WireType)2);
++                output.WriteString(message.displayAchievementIds);
++            }
++            if (message.displayCharacterIds != null)
++            {
++                output.WriteTag(13, (WireFormat.WireType)2);
++                output.WriteString(message.displayCharacterIds);
++            }
++            output.WriteTag(14, (WireFormat.WireType)0);
++            output.WriteInt32(message.baseLevel);
++            output.WriteTag(15, (WireFormat.WireType)0);
++            output.WriteInt32(message.mainStage);
++            output.WriteTag(16, (WireFormat.WireType)0);
++            output.WriteInt32(message.resonanceLevel);
++            output.WriteTag(17, (WireFormat.WireType)0);
++            output.WriteInt32(message.towerStage);
++        }
++
++        private static ResUpdatePlayerBasicInfo ReadResUpdatePlayerBasicInfo(CodedInputStream input)
++        {
++            var message = new ResUpdatePlayerBasicInfo();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (tag)
++                {
++                    case 8:
++                        message.status = input.ReadInt32();
++                        break;
++                    case 18:
++                        message.errorMessage = input.ReadString();
++                        break;
++                    case 24:
++                        message.playerId = input.ReadInt64();
++                        break;
++                    case 32:
++                        message.avatarId = input.ReadInt32();
++                        break;
++                    case 42:
++                        message.name = input.ReadString();
++                        break;
++                    case 48:
++                        message.guildId = input.ReadInt64();
++                        break;
++                    case 56:
++                        message.createTime = input.ReadInt64();
++                        break;
++                    case 64:
++                        message.titleId = input.ReadInt32();
++                        break;
++                    case 74:
++                        message.signature = input.ReadString();
++                        break;
++                    case 80:
++                        message.avatarFrameId = input.ReadInt32();
++                        break;
++                    case 88:
++                        message.backgroundId = input.ReadInt32();
++                        break;
++                    case 98:
++                        message.displayAchievementIds = input.ReadString();
++                        break;
++                    case 106:
++                        message.displayCharacterIds = input.ReadString();
++                        break;
++                    case 112:
++                        message.baseLevel = input.ReadInt32();
++                        break;
++                    case 120:
++                        message.mainStage = input.ReadInt32();
++                        break;
++                    case 128:
++                        message.resonanceLevel = input.ReadInt32();
++                        break;
++                    case 136:
++                        message.towerStage = input.ReadInt32();
++                        break;
++                    default: input.SkipLastField(); break;
++                }
++            }
++            return message;
+         }
+ 
+         private static int ComputeSizeResUpdatePlayerBasicInfo(ResUpdatePlayerBasicInfo message)
+--- a/server/GameServerTests/PlayerProfile/PlayerMinimalSchemaTests.cs
++++ b/server/GameServerTests/PlayerProfile/PlayerMinimalSchemaTests.cs
+@@ -12,9 +12,9 @@
+ public sealed class PlayerMinimalSchemaTests
+ {
+     [Fact]
+-    public void PlayerEntityHasOnlyTheSixRetainedColumns()
++    public void PlayerEntityHasTheTenProfileAndProgressColumns()
+     {
+-        Assert.Equal(new[] { "accountId", "avatarId", "createTime", "id", "name", "status" },
++        Assert.Equal(new[] { "accountId", "avatarId", "baseLevel", "createTime", "id", "mainStage", "name", "resonanceLevel", "status", "towerStage" },
+             typeof(Player).GetProperties().Select(p => p.Name).OrderBy(x => x, StringComparer.Ordinal));
+     }
+ 
+--- a/server/GameServerTests/PlayerProfile/PlayerBasicInfoTests.cs
++++ b/server/GameServerTests/PlayerProfile/PlayerBasicInfoTests.cs
+@@ -20,7 +20,8 @@
+     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+     private static Player Player(long id) => new()
+     {
+-        id = id, accountId = id + 1, avatarId = 4, name = "测试玩家", createTime = 1_792_000_000
++        id = id, accountId = id + 1, avatarId = 4, name = "测试玩家", createTime = 1_792_000_000,
++        baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45
+     };
+ 
+     private static GM_PlayerEntity Online(Player player)
+@@ -66,6 +67,10 @@
+             Assert.Equal((int)Respones.OK, response.status);
+             Assert.Equal(0, response.guildId);
+             Assert.Equal(player.avatarId, response.avatarId);
++            Assert.Equal(player.baseLevel, response.baseLevel);
++            Assert.Equal(player.mainStage, response.mainStage);
++            Assert.Equal(player.resonanceLevel, response.resonanceLevel);
++            Assert.Equal(player.towerStage, response.towerStage);
+             Assert.Equal(0, response.titleId);
+             Assert.Equal(player.createTime, response.createTime);
+             Assert.Equal("", response.signature);
+@@ -119,7 +124,7 @@
+         var response = new ResGetPlayerBasicInfo
+         {
+             status = 1, playerId = 9_000_000_001, avatarId = 4, name = "测试玩家",
+-            guildId = 8_000_000_001, createTime = 3_000_000_000, titleId = 7, signature = "你好 🌟"
++            guildId = 8_000_000_001, createTime = 3_000_000_000, titleId = 7, signature = "你好 🌟", baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45
+         };
+         byte[] packet = MessagePusher.PackMessage(response, 0, requestId: 9_000_000_002);
+         Assert.Equal(9_000_000_002, UtilsHelper.ReadLongLE(packet, ProtocolPacketLayout.RequestIdOffset));
+@@ -137,6 +142,10 @@
+         Assert.Equal(response.playerId, actual.playerId);
+         Assert.Equal(response.createTime, actual.createTime);
+         Assert.Equal(response.name, actual.name);
++        Assert.Equal(response.baseLevel, actual.baseLevel);
++        Assert.Equal(response.mainStage, actual.mainStage);
++        Assert.Equal(response.resonanceLevel, actual.resonanceLevel);
++        Assert.Equal(response.towerStage, actual.towerStage);
+         Assert.Equal(response.signature, actual.signature);
+         using var empty = new MemoryStream();
+         Assert.True(GoogleProtocolCodec.TrySerialize(new ReqGetPlayerBasicInfo(), empty, out error), error);
+@@ -162,6 +171,8 @@
+             Assert.Equal(PlayerProfileStatus.Success, result.Status);
+             Assert.Equal(0, result.Info.GuildId);
+             Assert.Equal("", result.Info.Signature);
++            Assert.Equal(1, result.Info.BaseLevel); Assert.Equal(1, result.Info.MainStage);
++            Assert.Equal(0, result.Info.ResonanceLevel); Assert.Equal(0, result.Info.TowerStage);
+             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection, $"DELETE FROM player WHERE id={playerId}");
+             Assert.Equal(PlayerProfileStatus.Success, GM_PlayerProfileMgr.Instance.GetBasicInfo(playerId).Status);
+             GM_AccountEntityMgr.Instance.Init();
+--- a/server/GameServerTests/PlayerProfile/PlayerProfileUpdateTests.cs
++++ b/server/GameServerTests/PlayerProfile/PlayerProfileUpdateTests.cs
+@@ -122,7 +122,7 @@
+         try
+         {
+             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
+-                $"INSERT INTO player(id,accountId,name,avatarId,createTime,status) VALUES({id},{id},'profile-write-test',3,1792000000,0)");
++                $"INSERT INTO player(id,accountId,name,avatarId,createTime,status,baseLevel,mainStage,resonanceLevel,towerStage) VALUES({id},{id},'profile-write-test',3,1792000000,0,12,23,34,45)");
+             Player cached = GM_AccountEntityMgr.Instance.GetPlayerById(id);
+             var command = new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar }, AvatarId = 0 };
+             Assert.Equal(PlayerProfileStatus.NotFound, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id + 1, command).Status);
+@@ -133,6 +133,10 @@
+             Assert.Equal(0, cached.avatarId);
+             Assert.Equal("profile-write-test", cached.name);
+             Assert.Equal(1792000000, cached.createTime);
++            Assert.Equal(12, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.BaseLevel);
++            Assert.Equal(23, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.MainStage);
++            Assert.Equal(34, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.ResonanceLevel);
++            Assert.Equal(45, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.TowerStage);
+             Assert.Equal(PlayerProfileStatus.InvalidInput, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id,
+                 new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Signature }, AvatarId = 99, Signature = "x" }).Status);
+             Assert.Equal(0, await GachaMySqlTestEnvironment.ReadScalarAsync(connection, $"SELECT avatarId FROM player WHERE id={id}"));
+--- a/server/docs/PlayerBasicInfo.md
++++ b/server/docs/PlayerBasicInfo.md
+@@ -2,9 +2,11 @@
+ 
+ ## 数据与协议
+ 
+-服务端为本仓库，客户端为 D:/apk/TowerDefence。player 表仅保留 id、accountId、name、avatarId、createTime、status。
++服务端为本仓库，客户端为 D:/apk/TowerDefence。player 表保留 id、accountId、name、avatarId、createTime、status，新增四项进度：baseLevel（基地等级，默认1）、mainStage（主线章节编号，默认1）、resonanceLevel（共鸣等级，默认0）、towerStage（爬塔关卡，默认0），共10列。
+ 查询保持 PLAYER=102、请求91／响应92，空请求查询当前已鉴权会话角色。响应 status 表示接口结果，不是 player.status。
+ 原响应字段1～13及类型、编号不变；playerId/name/avatarId/createTime 为真实值，guildId/titleId/avatarFrameId/backgroundId 为0，signature 为空字符串，displayAchievementIds 为 [0,0,0,0,0,0,0]，displayCharacterIds 为 [0,0,0,0,0,0]。
++查询92与修改94响应末尾追加 int 字段：14 baseLevel、15 mainStage、16 resonanceLevel、17 towerStage；请求和消息号不变，旧客户端可跳过新字段。
++四项数据本次仅服务端存储和资料展示，不上传或覆盖客户端本地存档，资料修改请求不开放修改这些进度。
+ 修改仍为93／94，仅接受 updateFields=[Avatar] 且 avatarId>=0，混入已移除字段整体拒绝，响应布局与查询一致。
+ 
+ 读取仍为 PlayerController → PlayerModule → GM_PlayerProfileMgr → 在线组件 → 账号角色缓存 → MySQL。
+@@ -20,13 +22,13 @@
+ 请求及单次结果携带 Guid 请求标识，请求还携带取消令牌。Guid.Empty 的清空事件表示会话整体失效。
+ Manager 保存只读资料快照并拒绝重复查询；UI 仅保存当前请求标识、取消源和加载状态。Network 超时10秒。
+ UI 打开自动查询，支持刷新和关闭。隐藏取消本次请求；注销、断线和连接代次变化清空缓存。过期结果不会更新新会话。
+-显示玩家ID、当前会话账号ID、名称、头像ID和本地创建时间；无效时间显示“未知”。本次不提供头像编辑界面。
++显示玩家ID、当前会话账号ID、名称、头像ID、本地创建时间、基地等级、主线关卡、共鸣等级和爬塔关卡；无效时间显示“未知”。本次不提供头像编辑界面。
+ 
+ 项目技能见 ../.codex/skills/zombie-ui-network-template/SKILL.md，固定 UI → Manager → Network 与 UI／Manager 双向事件交互两项规范。
+ 
+ ## 数据库更新与导表
+ 
+-新环境使用 sql/zombie_init.sql。现有本机环境执行 tools/Update-ZombiePlayer.ps1：仅停止本项目服务，备份 player 后应用精简迁移两次，核对保留字段与最终列清单。备份默认保存在本机临时目录。
++新环境使用 sql/zombie_init.sql。现有本机环境执行 tools/Update-ZombiePlayer.ps1：仅停止本项目服务，备份 player 后依次应用精简迁移和新增进度迁移（20261112_002_zombie_player_progress.sql），整组重复执行两次，核对保留字段与最终列清单。备份默认保存在本机临时目录。
+ 迁移包含删列，MySQL DDL 自动提交。失败时停止后续操作，使用输出的完整备份恢复，不重建账号或其他业务表。
+ 导表继续使用 tools/GenDbClass 原有的统一生成流程。Program.cs 保持本次任务开始前的内容，不增加单表生成参数或针对 Player 的特殊处理。本次已生成的精简 Player 实体保留。
+ 
+@@ -34,6 +36,6 @@
+ 
+ ## 验证
+ 
+-服务端 PlayerProfile 测试覆盖协议、缓存顺序、兼容值、精简实体、停用入口、头像更新归属及重复更新；数据库测试沿用 GACHA_RUN_DATABASE_TESTS / GACHA_DB_CONFIGURATION_PATH / GACHA_TEST_PLAYER_ID。
++服务端 PlayerProfile 测试覆盖协议、缓存顺序、兼容值、十字段实体、停用入口、头像更新归属及重复更新；数据库测试沿用 GACHA_RUN_DATABASE_TESTS / GACHA_DB_CONFIGURATION_PATH / GACHA_TEST_PLAYER_ID。
+ 客户端 Tools/PlayerBasicInfoVerification/Run-Verification.ps1 在隔离 Unity 工程生成预制体，-Smoke 使用真实本机服务与受控协议端点验证事件链、取消、超时、断线及重新登录。它不会改变主客户端服务器地址；游戏主场景仍使用用户自己的配置。
+-完整本次差异与验证清单见 ZombiePlayerBasicInfoChanges.md 和 ZombiePlayerBasicInfo.patch。
++精简资料的历史差异见 ZombiePlayerBasicInfoChanges.md；本次新增四项进度的差异与清单见 ZombiePlayerProgressChanges.md 和 ZombiePlayerProgress.patch。
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/Protocol/Messages/GeneratedProtocol.Generated.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/Protocol/Messages/GeneratedProtocol.Generated.cs
+@@ -2882,6 +2882,14 @@
+                 output.WriteTag(13, (WireFormat.WireType)2);
+                 output.WriteString(message.displayCharacterIds);
+             }
++            output.WriteTag(14, (WireFormat.WireType)0);
++            output.WriteInt32(message.baseLevel);
++            output.WriteTag(15, (WireFormat.WireType)0);
++            output.WriteInt32(message.mainStage);
++            output.WriteTag(16, (WireFormat.WireType)0);
++            output.WriteInt32(message.resonanceLevel);
++            output.WriteTag(17, (WireFormat.WireType)0);
++            output.WriteInt32(message.towerStage);
+         }
+ 
+         private static ResGetPlayerBasicInfo ReadResGetPlayerBasicInfo(CodedInputStream input)
+@@ -2930,6 +2938,18 @@
+                         break;
+                     case 106:
+                         message.displayCharacterIds = input.ReadString();
++                        break;
++                    case 112:
++                        message.baseLevel = input.ReadInt32();
++                        break;
++                    case 120:
++                        message.mainStage = input.ReadInt32();
++                        break;
++                    case 128:
++                        message.resonanceLevel = input.ReadInt32();
++                        break;
++                    case 136:
++                        message.towerStage = input.ReadInt32();
+                         break;
+                     default: input.SkipLastField(); break;
+                 }
+@@ -3070,6 +3090,14 @@
+                 output.WriteTag(13, (WireFormat.WireType)2);
+                 output.WriteString(message.displayCharacterIds);
+             }
++            output.WriteTag(14, (WireFormat.WireType)0);
++            output.WriteInt32(message.baseLevel);
++            output.WriteTag(15, (WireFormat.WireType)0);
++            output.WriteInt32(message.mainStage);
++            output.WriteTag(16, (WireFormat.WireType)0);
++            output.WriteInt32(message.resonanceLevel);
++            output.WriteTag(17, (WireFormat.WireType)0);
++            output.WriteInt32(message.towerStage);
+         }
+ 
+         private static ResUpdatePlayerBasicInfo ReadResUpdatePlayerBasicInfo(CodedInputStream input)
+@@ -3118,6 +3146,18 @@
+                         break;
+                     case 106:
+                         message.displayCharacterIds = input.ReadString();
++                        break;
++                    case 112:
++                        message.baseLevel = input.ReadInt32();
++                        break;
++                    case 120:
++                        message.mainStage = input.ReadInt32();
++                        break;
++                    case 128:
++                        message.resonanceLevel = input.ReadInt32();
++                        break;
++                    case 136:
++                        message.towerStage = input.ReadInt32();
+                         break;
+                     default: input.SkipLastField(); break;
+                 }
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/Protocol/Messages/PlayerBasicInfoMessage.Generated.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/Protocol/Messages/PlayerBasicInfoMessage.Generated.cs
+@@ -37,6 +37,14 @@
+         public string displayAchievementIds;
+         // ProtoMember(13)
+         public string displayCharacterIds;
++        // ProtoMember(14)
++        public int baseLevel;
++        // ProtoMember(15)
++        public int mainStage;
++        // ProtoMember(16)
++        public int resonanceLevel;
++        // ProtoMember(17)
++        public int towerStage;
+     }
+ 
+     // Source: PlayerBasicInfoMessage.cs; Module.PLAYER / Cmd.eUpdatePlayerBasicInfoReq
+@@ -89,6 +97,14 @@
+         public string displayAchievementIds;
+         // ProtoMember(13)
+         public string displayCharacterIds;
++        // ProtoMember(14)
++        public int baseLevel;
++        // ProtoMember(15)
++        public int mainStage;
++        // ProtoMember(16)
++        public int resonanceLevel;
++        // ProtoMember(17)
++        public int towerStage;
+     }
+ 
+ }
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/Protocol/Messages/protocol-manifest.json
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/Protocol/Messages/protocol-manifest.json
+@@ -13,7 +13,7 @@
+     "GameServer/src/Game/Datas/Messages/HeartbeatMessage.cs": "2e4f0705404a0e23bfc12d82d4c77aed141124cd48adb0ef733e37f46d5d0a18",
+     "GameServer/src/Game/Datas/Messages/ItemMessage.cs": "ef6eab7a676a0f2e7a845984424b9e6539c1c39b0121587fd24a074a2f2aee90",
+     "GameServer/src/Game/Datas/Messages/MailMessage.cs": "4f85294afc8ad403802c2beceb20ea260dc4d2f4131fe0e7fbca56772d6c52ef",
+-    "GameServer/src/Game/Datas/Messages/PlayerBasicInfoMessage.cs": "165df6906a950cb23c2c26b85c0073c70cf2752b037838799f9adb4357fab969",
++    "GameServer/src/Game/Datas/Messages/PlayerBasicInfoMessage.cs": "ca4b5cde65cd5802c872bfc287009d8f39ad77561734a5059b4f172664fdeb35",
+     "GameServer/src/Game/Datas/Messages/PlayerMessage.cs": "86c1247e5058f24df7117ed81d12da6123ff0237e8655414d754ae35469c59d5",
+     "GameServer/src/Game/Datas/Messages/RedDotMessage.cs": "6af42fcc90065b37b73c614a9dc2438837e72083b98ad01c08b1318d4bf626e9",
+     "GameServer/src/Game/Datas/Messages/RoomMessage.cs": "9756dad800dc64c57dea7ba43c2144bd2e3b8337b540afd60a461702235ed850",
+@@ -2483,6 +2483,34 @@
+           "name": "displayCharacterIds",
+           "default": null,
+           "required": false
++        },
++        {
++          "number": 14,
++          "type": "int",
++          "name": "baseLevel",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 15,
++          "type": "int",
++          "name": "mainStage",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 16,
++          "type": "int",
++          "name": "resonanceLevel",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 17,
++          "type": "int",
++          "name": "towerStage",
++          "default": null,
++          "required": false
+         }
+       ]
+     },
+@@ -2644,6 +2672,34 @@
+           "number": 13,
+           "type": "string",
+           "name": "displayCharacterIds",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 14,
++          "type": "int",
++          "name": "baseLevel",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 15,
++          "type": "int",
++          "name": "mainStage",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 16,
++          "type": "int",
++          "name": "resonanceLevel",
++          "default": null,
++          "required": false
++        },
++        {
++          "number": 17,
++          "type": "int",
++          "name": "towerStage",
+           "default": null,
+           "required": false
+         }
+--- /dev/null
++++ b/server/sql/migrations/20261112_002_zombie_player_progress.sql
+@@ -0,0 +1,22 @@
++-- Target zombie_game only; additive migration compatible with MySQL 5.7.
++USE `zombie_game`;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='baseLevel'), 'SELECT 1', 'ALTER TABLE zombie_game.player ADD COLUMN `baseLevel` int(11) NOT NULL DEFAULT 1 COMMENT ''基地等级''');
++PREPARE player_progress_statement FROM @sql;
++EXECUTE player_progress_statement;
++DEALLOCATE PREPARE player_progress_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='mainStage'), 'SELECT 1', 'ALTER TABLE zombie_game.player ADD COLUMN `mainStage` int(11) NOT NULL DEFAULT 1 COMMENT ''主线关卡章节编号''');
++PREPARE player_progress_statement FROM @sql;
++EXECUTE player_progress_statement;
++DEALLOCATE PREPARE player_progress_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='resonanceLevel'), 'SELECT 1', 'ALTER TABLE zombie_game.player ADD COLUMN `resonanceLevel` int(11) NOT NULL DEFAULT 0 COMMENT ''共鸣等级''');
++PREPARE player_progress_statement FROM @sql;
++EXECUTE player_progress_statement;
++DEALLOCATE PREPARE player_progress_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='towerStage'), 'SELECT 1', 'ALTER TABLE zombie_game.player ADD COLUMN `towerStage` int(11) NOT NULL DEFAULT 0 COMMENT ''爬塔关卡''');
++PREPARE player_progress_statement FROM @sql;
++EXECUTE player_progress_statement;
++DEALLOCATE PREPARE player_progress_statement;
+--- a/server/tools/Update-ZombiePlayer.ps1
++++ b/server/tools/Update-ZombiePlayer.ps1
+@@ -42,11 +42,12 @@
+ $queryArguments = @('--batch', '--raw', '--skip-column-names', 'zombie_game')
+ $readKept = 'SELECT id,accountId,HEX(name),avatarId,createTime,status FROM player ORDER BY id;'
+ $before = Invoke-Database 'mysql.exe' $queryArguments $readKept
+-$migration = Get-Content -LiteralPath (Join-Path $serverRoot 'sql/migrations/20261112_001_zombie_player_minimal.sql') -Raw
++$migration = (Get-Content -LiteralPath (Join-Path $serverRoot 'sql/migrations/20261112_001_zombie_player_minimal.sql') -Raw) + "`n" +
++    (Get-Content -LiteralPath (Join-Path $serverRoot 'sql/migrations/20261112_002_zombie_player_progress.sql') -Raw)
+ Invoke-Database 'mysql.exe' $queryArguments $migration | Out-Null
+ Invoke-Database 'mysql.exe' $queryArguments $migration | Out-Null
+ $after = Invoke-Database 'mysql.exe' $queryArguments $readKept
+ if ($before -cne $after) { throw "Retained player data changed. Backup: $backup" }
+ $columns = Invoke-Database 'mysql.exe' $queryArguments "SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' ORDER BY ORDINAL_POSITION;"
+-if (@($columns.Trim() -split '\r?\n' | Sort-Object) -join ',' -ne 'accountId,avatarId,createTime,id,name,status') { throw 'Unexpected player columns.' }
++if (@($columns.Trim() -split '\r?\n' | Sort-Object) -join ',' -ne 'accountId,avatarId,baseLevel,createTime,id,mainStage,name,resonanceLevel,status,towerStage') { throw 'Unexpected player columns.' }
+ Write-Output "Player migration verified twice; retained data matches. Backup: $backup"
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Models/PlayerBasicInfoModel.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Models/PlayerBasicInfoModel.cs
+@@ -7,7 +7,12 @@
+         public string Name { get; }
+         public int AvatarId { get; }
+         public long CreateTime { get; }
+-        public PlayerBasicInfoModel(long playerId, long accountId, string name, int avatarId, long createTime)
+-        { PlayerId = playerId; AccountId = accountId; Name = name ?? ""; AvatarId = avatarId; CreateTime = createTime; }
++        public int BaseLevel { get; }
++        public int MainStage { get; }
++        public int ResonanceLevel { get; }
++        public int TowerStage { get; }
++        public PlayerBasicInfoModel(long playerId, long accountId, string name, int avatarId, long createTime, int baseLevel = 1, int mainStage = 1, int resonanceLevel = 0, int towerStage = 0)
++        { PlayerId = playerId; AccountId = accountId; Name = name ?? ""; AvatarId = avatarId; CreateTime = createTime;
++            BaseLevel = baseLevel; MainStage = mainStage; ResonanceLevel = resonanceLevel; TowerStage = towerStage; }
+     }
+ }
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager/PlayerBasicInfoManager.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager/PlayerBasicInfoManager.cs
+@@ -50,7 +50,7 @@
+                 if (_disposed || generation != _generation || accountId != login.CurrentAccountId || connection != network.ConnectionGeneration || !network.IsGameAuthenticated) return;
+                 if (response == null || response.status != (int)Respones.OK || response.playerId <= 0)
+                     throw new InvalidOperationException(response?.errorMessage ?? "查询用户信息失败。");
+-                CurrentInfo = new PlayerBasicInfoModel(response.playerId, accountId, response.name, response.avatarId, response.createTime);
++                CurrentInfo = new PlayerBasicInfoModel(response.playerId, accountId, response.name, response.avatarId, response.createTime, response.baseLevel, response.mainStage, response.resonanceLevel, response.towerStage);
+                 UniEvent.SendMessage(new PlayerBasicInfoLoadedEvent(request.RequestId, CurrentInfo));
+             }
+             catch (OperationCanceledException)
+--- a/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.cs
+@@ -13,6 +13,7 @@
+         public Button RefreshButton;
+         [Header("用户信息")]
+         public Text PlayerIdText, AccountIdText, NameText, AvatarIdText, CreateTimeText, StatusText;
++        public Text BaseLevelText, MainStageText, ResonanceLevelText, TowerStageText;
+         private CancellationTokenSource _request;
+         private Guid _requestId;
+         private bool _loading;
+@@ -62,6 +63,7 @@
+             PlayerIdText.text = info.PlayerId.ToString(); AccountIdText.text = info.AccountId.ToString();
+             NameText.text = string.IsNullOrEmpty(info.Name) ? "未命名" : info.Name; AvatarIdText.text = info.AvatarId.ToString();
+             CreateTimeText.text = FormatTime(info.CreateTime);
++            BaseLevelText.text = info.BaseLevel.ToString(); MainStageText.text = info.MainStage.ToString(); ResonanceLevelText.text = info.ResonanceLevel.ToString(); TowerStageText.text = info.TowerStage.ToString();
+             SetLoading(false, "已更新");
+         }
+         public static string FormatTime(long unixSeconds)
+@@ -79,7 +81,7 @@
+             CancelRequest(); ClearDisplay(); SetLoading(false, "会话已变化，请连接游戏服后刷新。");
+         }
+         private void ClearDisplay()
+-        { PlayerIdText.text = AccountIdText.text = NameText.text = AvatarIdText.text = CreateTimeText.text = "—"; }
++        { PlayerIdText.text = AccountIdText.text = NameText.text = AvatarIdText.text = CreateTimeText.text = BaseLevelText.text = MainStageText.text = ResonanceLevelText.text = TowerStageText.text = "—"; }
+         private void SetLoading(bool loading, string status)
+         { _loading = loading; RefreshButton.interactable = !loading; StatusText.text = status; }
+         private void CancelRequest()
+--- a/client/Assets/Rogue/Scripts/Editor/IntegrationUI/PlayerBasicInfoPrefabBuilder.cs
++++ b/client/Assets/Rogue/Scripts/Editor/IntegrationUI/PlayerBasicInfoPrefabBuilder.cs
+@@ -44,7 +44,7 @@
+             finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
+             AssetDatabase.SaveAssets();
+             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath).GetComponent<UIPlayerBasicInfo>();
+-            if (prefab == null || prefab.RefreshButton == null || prefab.CloseButton == null || prefab.CreateTimeText == null || prefab.PlayerIdText == null || prefab.AccountIdText == null || prefab.NameText == null || prefab.AvatarIdText == null || prefab.StatusText == null)
++            if (prefab == null || prefab.RefreshButton == null || prefab.CloseButton == null || prefab.CreateTimeText == null || prefab.PlayerIdText == null || prefab.AccountIdText == null || prefab.NameText == null || prefab.AvatarIdText == null || prefab.StatusText == null || prefab.BaseLevelText == null || prefab.MainStageText == null || prefab.ResonanceLevelText == null || prefab.TowerStageText == null)
+                 throw new InvalidOperationException("Missing panel reference.");
+             Debug.Log("PLAYER_BASIC_INFO_UI_BUILT");
+         }
+@@ -70,24 +70,25 @@
+             {
+                 var rect = root.GetComponent<RectTransform>(); rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero;
+                 var backdrop = root.AddComponent<Image>(); backdrop.color = new Color(0.025f, 0.04f, 0.07f, .92f);
+-                var card = Node("Card", root.transform, new Vector2(820, 750), Vector2.zero);
++                var card = Node("Card", root.transform, new Vector2(820, 1120), Vector2.zero);
+                 card.AddComponent<Image>().color = new Color(.09f, .14f, .20f, 1);
+-                Label("Title", card.transform, "用户信息", font, 42, new Vector2(0, 282), new Vector2(700, 75));
+-                string[] labels = { "玩家ID", "账号ID", "玩家名称", "头像ID", "创建时间" };
+-                var values = new Text[5];
+-                for (int i = 0; i < 5; i++)
++                Label("Title", card.transform, "用户信息", font, 42, new Vector2(0, 470), new Vector2(700, 75));
++                string[] labels = { "玩家ID", "账号ID", "玩家名称", "头像ID", "创建时间", "基地等级", "主线关卡", "共鸣等级", "爬塔关卡" };
++                var values = new Text[9];
++                for (int i = 0; i < 9; i++)
+                 {
+-                    float y = 180 - i * 72;
++                    float y = 360 - i * 72;
+                     var label = Label("Label" + i, card.transform, labels[i], font, 25, new Vector2(-240, y), new Vector2(180, 58));
+                     label.color = new Color(.65f, .74f, .83f);
+                     values[i] = Label("Value" + i, card.transform, "—", font, 25, new Vector2(105, y), new Vector2(480, 58));
+                 }
+-                var status = Label("Status", card.transform, "打开后自动查询", font, 22, new Vector2(0, -210), new Vector2(700, 65));
++                var status = Label("Status", card.transform, "打开后自动查询", font, 22, new Vector2(0, -325), new Vector2(700, 65));
+                 status.alignment = TextAnchor.MiddleCenter;
+-                var refresh = Button("Refresh", card.transform, "刷新", font, new Vector2(-175, -300));
+-                var close = Button("Close", card.transform, "关闭", font, new Vector2(175, -300));
++                var refresh = Button("Refresh", card.transform, "刷新", font, new Vector2(-175, -435));
++                var close = Button("Close", card.transform, "关闭", font, new Vector2(175, -435));
+                 var ui = root.AddComponent<UIPlayerBasicInfo>();
+                 ui.PlayerIdText = values[0]; ui.AccountIdText = values[1]; ui.NameText = values[2]; ui.AvatarIdText = values[3]; ui.CreateTimeText = values[4];
++                ui.BaseLevelText = values[5]; ui.MainStageText = values[6]; ui.ResonanceLevelText = values[7]; ui.TowerStageText = values[8];
+                 ui.StatusText = status; ui.RefreshButton = refresh; ui.CloseButton = close;
+                 Directory.CreateDirectory(Path.GetDirectoryName(PrefabPath));
+                 root.SetActive(true);
+--- a/client/Assets/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab
++++ b/client/Assets/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab
+@@ -35,7 +35,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: -240, y: 180}
++  m_AnchoredPosition: {x: -240, y: 360}
+   m_SizeDelta: {x: 180, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &1863805467600822055
+@@ -115,7 +115,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: -240, y: 108}
++  m_AnchoredPosition: {x: -240, y: 288}
+   m_SizeDelta: {x: 180, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &901412576621593152
+@@ -160,6 +160,166 @@
+     m_VerticalOverflow: 0
+     m_LineSpacing: 1
+   m_Text: "\u8D26\u53F7ID"
++--- !u!1 &553619876307675833
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 225030447218477920}
++  - component: {fileID: 3393381925452971608}
++  - component: {fileID: 2702945459853018248}
++  m_Layer: 5
++  m_Name: Value6
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &225030447218477920
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 553619876307675833}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 14
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: -72}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &3393381925452971608
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 553619876307675833}
++  m_CullTransparentMesh: 1
++--- !u!114 &2702945459853018248
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 553619876307675833}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
++--- !u!1 &770354457527840866
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 7266154096226842748}
++  - component: {fileID: 1202311646645980293}
++  - component: {fileID: 6892168233842818990}
++  m_Layer: 5
++  m_Name: Value5
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &7266154096226842748
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 770354457527840866}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 12
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: 0}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &1202311646645980293
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 770354457527840866}
++  m_CullTransparentMesh: 1
++--- !u!114 &6892168233842818990
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 770354457527840866}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
+ --- !u!1 &786293249835812126
+ GameObject:
+   m_ObjectHideFlags: 0
+@@ -193,11 +353,11 @@
+   m_Children:
+   - {fileID: 1770818464658294751}
+   m_Father: {fileID: 8931291746047420044}
+-  m_RootOrder: 12
++  m_RootOrder: 20
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: -175, y: -300}
++  m_AnchoredPosition: {x: -175, y: -435}
+   m_SizeDelta: {x: 280, y: 70}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &8454942938857389775
+@@ -282,6 +442,86 @@
+   m_OnClick:
+     m_PersistentCalls:
+       m_Calls: []
++--- !u!1 &1779746188723655497
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 1819987585190610864}
++  - component: {fileID: 7582014389849808735}
++  - component: {fileID: 151646527690625922}
++  m_Layer: 5
++  m_Name: Label5
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &1819987585190610864
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 1779746188723655497}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 11
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: 0}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &7582014389849808735
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 1779746188723655497}
++  m_CullTransparentMesh: 1
++--- !u!114 &151646527690625922
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 1779746188723655497}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u57FA\u5730\u7B49\u7EA7"
+ --- !u!1 &1905991486868048481
+ GameObject:
+   m_ObjectHideFlags: 0
+@@ -317,7 +557,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: -240, y: -108}
++  m_AnchoredPosition: {x: -240, y: 72}
+   m_SizeDelta: {x: 180, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &4535745261028016821
+@@ -397,7 +637,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 105, y: -36}
++  m_AnchoredPosition: {x: 105, y: 144}
+   m_SizeDelta: {x: 480, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &8443819650864649945
+@@ -477,7 +717,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: -240, y: -36}
++  m_AnchoredPosition: {x: -240, y: 144}
+   m_SizeDelta: {x: 180, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &3738655732675759895
+@@ -557,7 +797,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 105, y: 108}
++  m_AnchoredPosition: {x: 105, y: 288}
+   m_SizeDelta: {x: 480, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &4917554797084912445
+@@ -700,6 +940,10 @@
+   AvatarIdText: {fileID: 6068913094662425615}
+   CreateTimeText: {fileID: 2013723636361816823}
+   StatusText: {fileID: 1237835708235929834}
++  BaseLevelText: {fileID: 6892168233842818990}
++  MainStageText: {fileID: 2702945459853018248}
++  ResonanceLevelText: {fileID: 1018571667591567531}
++  TowerStageText: {fileID: 6770802102133657967}
+ --- !u!1 &4020593302057313901
+ GameObject:
+   m_ObjectHideFlags: 0
+@@ -731,11 +975,11 @@
+   m_ConstrainProportionsScale: 0
+   m_Children: []
+   m_Father: {fileID: 8931291746047420044}
+-  m_RootOrder: 11
++  m_RootOrder: 19
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 0, y: -210}
++  m_AnchoredPosition: {x: 0, y: -325}
+   m_SizeDelta: {x: 700, y: 65}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &6946981497518646067
+@@ -780,6 +1024,166 @@
+     m_VerticalOverflow: 0
+     m_LineSpacing: 1
+   m_Text: "\u6253\u5F00\u540E\u81EA\u52A8\u67E5\u8BE2"
++--- !u!1 &4387645462114360113
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8752123585223266863}
++  - component: {fileID: 3717692867788097383}
++  - component: {fileID: 572408514013228089}
++  m_Layer: 5
++  m_Name: Label
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8752123585223266863
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4387645462114360113}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 5308989785800147242}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0, y: 0}
++  m_AnchorMax: {x: 1, y: 1}
++  m_AnchoredPosition: {x: 0, y: 0}
++  m_SizeDelta: {x: 0, y: 0}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &3717692867788097383
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4387645462114360113}
++  m_CullTransparentMesh: 1
++--- !u!114 &572408514013228089
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4387645462114360113}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 27
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 4
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u5173\u95ED"
++--- !u!1 &4573791823517667047
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 486050717663373270}
++  - component: {fileID: 311175755404070568}
++  - component: {fileID: 1997555289802416581}
++  m_Layer: 5
++  m_Name: Label7
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &486050717663373270
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4573791823517667047}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 15
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: -144}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &311175755404070568
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4573791823517667047}
++  m_CullTransparentMesh: 1
++--- !u!114 &1997555289802416581
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4573791823517667047}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u5171\u9E23\u7B49\u7EA7"
+ --- !u!1 &4666147941988132691
+ GameObject:
+   m_ObjectHideFlags: 0
+@@ -815,7 +1219,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 105, y: -108}
++  m_AnchoredPosition: {x: 105, y: 72}
+   m_SizeDelta: {x: 480, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &7919557705944972502
+@@ -901,6 +1305,14 @@
+   - {fileID: 3132618764394070463}
+   - {fileID: 3744717482473679024}
+   - {fileID: 4287489369881379855}
++  - {fileID: 1819987585190610864}
++  - {fileID: 7266154096226842748}
++  - {fileID: 3058305608506216848}
++  - {fileID: 225030447218477920}
++  - {fileID: 486050717663373270}
++  - {fileID: 8110796311134715800}
++  - {fileID: 6919367864432231170}
++  - {fileID: 2735690616861184544}
+   - {fileID: 7637982953230908957}
+   - {fileID: 718749854313086962}
+   - {fileID: 5308989785800147242}
+@@ -910,7 +1322,7 @@
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+   m_AnchoredPosition: {x: 0, y: 0}
+-  m_SizeDelta: {x: 820, y: 750}
++  m_SizeDelta: {x: 820, y: 1120}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &1090004771358512061
+ CanvasRenderer:
+@@ -985,7 +1397,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 0, y: 282}
++  m_AnchoredPosition: {x: 0, y: 470}
+   m_SizeDelta: {x: 700, y: 75}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &6578198090613751976
+@@ -1065,7 +1477,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: -240, y: 36}
++  m_AnchoredPosition: {x: -240, y: 216}
+   m_SizeDelta: {x: 180, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &2074252446263105122
+@@ -1225,7 +1637,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 105, y: 36}
++  m_AnchoredPosition: {x: 105, y: 216}
+   m_SizeDelta: {x: 480, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &3051942316126933153
+@@ -1305,7 +1717,7 @@
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 105, y: 180}
++  m_AnchoredPosition: {x: 105, y: 360}
+   m_SizeDelta: {x: 480, y: 58}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &4896293285005742982
+@@ -1350,66 +1762,66 @@
+     m_VerticalOverflow: 0
+     m_LineSpacing: 1
+   m_Text: "\u2014"
+---- !u!1 &5746549330535850738
+-GameObject:
+-  m_ObjectHideFlags: 0
+-  m_CorrespondingSourceObject: {fileID: 0}
+-  m_PrefabInstance: {fileID: 0}
+-  m_PrefabAsset: {fileID: 0}
+-  serializedVersion: 6
+-  m_Component:
+-  - component: {fileID: 8904029020619378752}
+-  - component: {fileID: 5334075684462199954}
+-  - component: {fileID: 1816074656441906865}
+-  m_Layer: 5
+-  m_Name: Label
+-  m_TagString: Untagged
+-  m_Icon: {fileID: 0}
+-  m_NavMeshLayer: 0
+-  m_StaticEditorFlags: 0
+-  m_IsActive: 1
+---- !u!224 &8904029020619378752
+-RectTransform:
+-  m_ObjectHideFlags: 0
+-  m_CorrespondingSourceObject: {fileID: 0}
+-  m_PrefabInstance: {fileID: 0}
+-  m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 5746549330535850738}
++--- !u!1 &5772695730203646070
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 6919367864432231170}
++  - component: {fileID: 4104084758221372503}
++  - component: {fileID: 680221949707523325}
++  m_Layer: 5
++  m_Name: Label8
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &6919367864432231170
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5772695730203646070}
+   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+   m_LocalPosition: {x: 0, y: 0, z: 0}
+   m_LocalScale: {x: 1, y: 1, z: 1}
+   m_ConstrainProportionsScale: 0
+   m_Children: []
+-  m_Father: {fileID: 5308989785800147242}
+-  m_RootOrder: 0
+-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+-  m_AnchorMin: {x: 0, y: 0}
+-  m_AnchorMax: {x: 1, y: 1}
+-  m_AnchoredPosition: {x: 0, y: 0}
+-  m_SizeDelta: {x: 0, y: 0}
+-  m_Pivot: {x: 0.5, y: 0.5}
+---- !u!222 &5334075684462199954
+-CanvasRenderer:
+-  m_ObjectHideFlags: 0
+-  m_CorrespondingSourceObject: {fileID: 0}
+-  m_PrefabInstance: {fileID: 0}
+-  m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 5746549330535850738}
+-  m_CullTransparentMesh: 1
+---- !u!114 &1816074656441906865
+-MonoBehaviour:
+-  m_ObjectHideFlags: 0
+-  m_CorrespondingSourceObject: {fileID: 0}
+-  m_PrefabInstance: {fileID: 0}
+-  m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 5746549330535850738}
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 17
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: -216}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &4104084758221372503
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5772695730203646070}
++  m_CullTransparentMesh: 1
++--- !u!114 &680221949707523325
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5772695730203646070}
+   m_Enabled: 1
+   m_EditorHideFlags: 0
+   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+   m_Name: 
+   m_EditorClassIdentifier: 
+   m_Material: {fileID: 0}
+-  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
+   m_RaycastTarget: 0
+   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+   m_Maskable: 1
+@@ -1418,18 +1830,98 @@
+       m_Calls: []
+   m_FontData:
+     m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
+-    m_FontSize: 27
++    m_FontSize: 25
+     m_FontStyle: 0
+     m_BestFit: 0
+     m_MinSize: 10
+     m_MaxSize: 40
+-    m_Alignment: 4
++    m_Alignment: 3
+     m_AlignByGeometry: 0
+     m_RichText: 1
+     m_HorizontalOverflow: 0
+     m_VerticalOverflow: 0
+     m_LineSpacing: 1
+-  m_Text: "\u5173\u95ED"
++  m_Text: "\u722C\u5854\u5173\u5361"
++--- !u!1 &6024780656738181443
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8110796311134715800}
++  - component: {fileID: 1983347708313068081}
++  - component: {fileID: 1018571667591567531}
++  m_Layer: 5
++  m_Name: Value7
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8110796311134715800
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6024780656738181443}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 16
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: -144}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &1983347708313068081
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6024780656738181443}
++  m_CullTransparentMesh: 1
++--- !u!114 &1018571667591567531
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6024780656738181443}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
+ --- !u!1 &6408485316032184491
+ GameObject:
+   m_ObjectHideFlags: 0
+@@ -1461,13 +1953,13 @@
+   m_LocalScale: {x: 1, y: 1, z: 1}
+   m_ConstrainProportionsScale: 0
+   m_Children:
+-  - {fileID: 8904029020619378752}
++  - {fileID: 8752123585223266863}
+   m_Father: {fileID: 8931291746047420044}
+-  m_RootOrder: 13
++  m_RootOrder: 21
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0.5, y: 0.5}
+   m_AnchorMax: {x: 0.5, y: 0.5}
+-  m_AnchoredPosition: {x: 175, y: -300}
++  m_AnchoredPosition: {x: 175, y: -435}
+   m_SizeDelta: {x: 280, y: 70}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &6781129113105959152
+@@ -1552,3 +2044,163 @@
+   m_OnClick:
+     m_PersistentCalls:
+       m_Calls: []
++--- !u!1 &7307716678313825173
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 3058305608506216848}
++  - component: {fileID: 7280997657368375428}
++  - component: {fileID: 2409483762182956184}
++  m_Layer: 5
++  m_Name: Label6
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &3058305608506216848
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 7307716678313825173}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 13
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: -72}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &7280997657368375428
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 7307716678313825173}
++  m_CullTransparentMesh: 1
++--- !u!114 &2409483762182956184
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 7307716678313825173}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u4E3B\u7EBF\u5173\u5361"
++--- !u!1 &9065303660364953036
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 2735690616861184544}
++  - component: {fileID: 2831825145123675975}
++  - component: {fileID: 6770802102133657967}
++  m_Layer: 5
++  m_Name: Value8
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &2735690616861184544
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 9065303660364953036}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 18
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: -216}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &2831825145123675975
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 9065303660364953036}
++  m_CullTransparentMesh: 1
++--- !u!114 &6770802102133657967
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 9065303660364953036}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
+--- a/client/Tools/SessionVerification/LoopbackGameServer.cs
++++ b/client/Tools/SessionVerification/LoopbackGameServer.cs
+@@ -159,7 +159,7 @@
+                 Interlocked.Increment(ref BasicInfoRequests);
+                 if (DropBasicInfoResponse) continue;
+                 if (BasicInfoDelayMilliseconds > 0) await Task.Delay(BasicInfoDelayMilliseconds).ConfigureAwait(false);
+-                response = new ResGetPlayerBasicInfo { status = 1, playerId = 9000000001, name = "事件验证角色", avatarId = 7, createTime = 1792000000, displayAchievementIds = "[0,0,0,0,0,0,0]", displayCharacterIds = "[0,0,0,0,0,0]", signature = "" };
++                response = new ResGetPlayerBasicInfo { status = 1, playerId = 9000000001, name = "事件验证角色", avatarId = 7, baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45, createTime = 1792000000, displayAchievementIds = "[0,0,0,0,0,0,0]", displayCharacterIds = "[0,0,0,0,0,0]", signature = "" };
+             }
+             else throw new InvalidDataException("Unexpected test TCP request.");
+             byte[] frame = TcpFraming.Encode(_codec.Encode(response, envelope.RequestId));
+--- a/client/Tools/PlayerBasicInfoVerification/PlayerBasicInfoSmoke.cs
++++ b/client/Tools/PlayerBasicInfoVerification/PlayerBasicInfoSmoke.cs
+@@ -46,6 +46,7 @@
+         _panel.OnSHow(); Check(_panel.RefreshButton.interactable && _panel.StatusText.text.Contains("登录"), "unauthenticated query restores refresh");
+         string username = "zprofile_" + DateTime.UtcNow.ToString("MMddHHmmss") + Guid.NewGuid().ToString("N").Substring(0, 5);
+         File.WriteAllText("profile-test-account.txt", username);
++        File.AppendAllText("profile-test-accounts-progress.txt", username + "\n");
+         await login.RegisterAsync(username, "ProfileTest_123", "ProfileTest_123");
+         Check((await login.LoginAsync(username, "ProfileTest_123")).Success, "real account login");
+         await ConnectReal();
+@@ -59,12 +60,13 @@
+         var real = PlayerBasicInfoManager.Singleton.CurrentInfo;
+         Check(real.AccountId == login.CurrentAccountId && real.PlayerId > 0 && real.CreateTime > 0, "real role created in minimal table");
+         Check(_panel.NameText.text == real.Name && _panel.AccountIdText.text == real.AccountId.ToString(), "real fields rendered");
++        Check(_panel.BaseLevelText.text == "1" && _panel.MainStageText.text == "1" && _panel.ResonanceLevelText.text == "0" && _panel.TowerStageText.text == "0", "new role progress defaults rendered");
+         File.WriteAllText("profile-test-player.txt", real.PlayerId.ToString());
+         UniEvent.SendMessage(new PlayerBasicInfoLoadedEvent(Guid.NewGuid(), new PlayerBasicInfoModel(1, 1, "stale", 1, 1)));
+         Check(_panel.NameText.text == real.Name, "foreign result ignored");
+         var updated = await network.RequestAsync<TowerDefence.Networking.Messages.ResUpdatePlayerBasicInfo>(new TowerDefence.Networking.Messages.ReqUpdatePlayerBasicInfo {
+             updateFields = new[] { TowerDefence.Networking.Messages.PlayerProfileField.Avatar }, avatarId = 12 });
+-        Check(updated.status == 1 && updated.avatarId == 12 && updated.guildId == 0 && updated.displayCharacterIds == "[0,0,0,0,0,0]", "real write codec and compatibility fields");
++        Check(updated.status == 1 && updated.avatarId == 12 && updated.guildId == 0 && updated.displayCharacterIds == "[0,0,0,0,0,0]" && updated.baseLevel == 1 && updated.mainStage == 1 && updated.resonanceLevel == 0 && updated.towerStage == 0, "real write codec and compatibility fields");
+         _panel.RefreshButton.onClick.Invoke(); await Until(() => _panel.RefreshButton.interactable);
+         Check(_panel.AvatarIdText.text == "12", "refresh reads persisted avatar");
+         Capture();
+@@ -91,6 +93,7 @@
+             await Task.Delay(500); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null, "cancelled late response cannot populate snapshot");
+             _panel.gameObject.SetActive(true); _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
+             Check(_panel.NameText.text == "事件验证角色", "reopen after cancellation");
++            Check(_panel.BaseLevelText.text == "12" && _panel.MainStageText.text == "23" && _panel.ResonanceLevelText.text == "34" && _panel.TowerStageText.text == "45", "non-default progress values reach UI through events");
+             fixture.DropBasicInfoResponse = true; var watch = System.Diagnostics.Stopwatch.StartNew();
+             _panel.RefreshButton.onClick.Invoke(); await Until(() => _panel.RefreshButton.interactable, 13);
+             Check(watch.Elapsed.TotalSeconds >= 9 && _panel.StatusText.text != "已更新", "10 second timeout restores refresh");
+--- a/server/docs/ZombiePlayerBasicInfoChanges.md
++++ b/server/docs/ZombiePlayerBasicInfoChanges.md
+@@ -1,4 +1,6 @@
+-# 用户信息精简及客户端事件模板交付清单
++# 用户信息精简及客户端事件模板交付清单
++
++> 本页为精简资料阶段的历史记录。后续已新增基地等级、主线关卡、共鸣等级、爬塔关卡，当前player为10列，响应末尾追加14～17号字段。最新说明和差异见 [ZombiePlayerProgressChanges.md](ZombiePlayerProgressChanges.md)。
+ 
+ ## 结果
+ 
+Binary artifact added: server/docs/ZombiePlayerProgress.png (87446 bytes)

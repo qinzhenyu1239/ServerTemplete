@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj": {}
+    "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj": {}
   },
   "projects": {
-    "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj": {
+    "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj",
+        "projectUniqueName": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj",
         "projectName": "GameServer",
-        "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj",
+        "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj",
         "packagesPath": "C:\\Users\\Windows\\.nuget\\packages\\",
-        "outputPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\obj\\",
+        "outputPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Windows\\AppData\\Roaming\\NuGet\\NuGet.Config"

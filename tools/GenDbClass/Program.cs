@@ -1,4 +1,4 @@
-﻿using SqlSugar;
+using SqlSugar;
 using System;
 
 namespace GenDbClass
@@ -10,7 +10,7 @@ namespace GenDbClass
             // step1: 创建连接
             var db = new SqlSugarClient(new ConnectionConfig()
             {
-                ConnectionString = "Database=auth_10001;Data Source=127.0.0.1;Port=3306;User Id=root;Password=123456;Charset=utf8", // 数据库连接字符串
+                ConnectionString = "Database=zombie_auth;Data Source=127.0.0.1;Port=3306;User Id=root;Password=123456;Charset=utf8", // 数据库连接字符串
                 DbType = DbType.MySql, // 指定数据库类型
                 IsAutoCloseConnection = true, // 是否自动关闭连接
                 InitKeyType = InitKeyType.Attribute // 从实体特性中读取主键自增列信息
@@ -32,7 +32,7 @@ namespace GenDbClass
             // step1: 创建连接
             var gamedb = new SqlSugarClient(new ConnectionConfig()
             {
-                ConnectionString = "Database=ugame_10001;Data Source=127.0.0.1;Port=3306;User Id=root;Password=123456;Charset=utf8", // 数据库连接字符串
+                ConnectionString = "Database=zombie_game;Data Source=127.0.0.1;Port=3306;User Id=root;Password=123456;Charset=utf8", // 数据库连接字符串
                 DbType = DbType.MySql, // 指定数据库类型
                 IsAutoCloseConnection = true, // 是否自动关闭连接
                 InitKeyType = InitKeyType.Attribute // 从实体特性中读取主键自增列信息

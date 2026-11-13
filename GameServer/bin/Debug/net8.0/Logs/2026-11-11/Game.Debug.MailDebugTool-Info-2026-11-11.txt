@@ -1,0 +1,1 @@
+[2026-11-11 16:44:35.9385] New player test mails: playerId[113921808423469056], succeeded[10/10] 

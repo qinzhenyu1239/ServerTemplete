@@ -290,7 +290,7 @@ namespace Game.Core.EntityMgr
 
         public Player GetOrCreatePlayer(long accountId, PlayerCreationCommand command)
         {
-            if (accountId <= 0 || command == null || command.Job <= 0) return null;
+            if (accountId <= 0 || command == null) return null;
 
             Player player = GetPlayerByAccountId(accountId, command.Job);
             if (player != null) return player;
@@ -435,12 +435,6 @@ namespace Game.Core.EntityMgr
                 Player target = online?.uPlayer.playerInfo ?? account.uPlayer.playerInfo;
                 if (target == null || target.id != player.id) target = player;
                 target.avatarId = player.avatarId;
-                target.avatarFrameId = player.avatarFrameId;
-                target.titleId = player.titleId;
-                target.backgroundId = player.backgroundId;
-                target.signature = player.signature;
-                target.displayAchievementIds = player.displayAchievementIds;
-                target.displayCharacterIds = player.displayCharacterIds;
                 AttachPlayer(target);
                 if (online != null) online.uPlayer.playerInfo = target;
             }
@@ -496,28 +490,9 @@ namespace Game.Core.EntityMgr
 
         private static Player BuildPlayer(long accountId, PlayerCreationCommand command) => new Player
         {
-            id = IdGenerator.GetNextId(),
-            accountId = accountId,
-            job = command.Job,
-            name = command.Name,
-            avatarId = 0,
-            avatarFrameId = 0,
-            backgroundId = 0,
-            displayAchievementIds = "[0,0,0,0,0,0,0]",
-            displayCharacterIds = "[0,0,0,0,0,0]",
-            guildId = 0,
-            titleId = 0,
-            signature = string.Empty,
-            createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            HP = 100,
-            MP = 0,
-            status = 0,
-            lastDailyReset = 0,
-            level = 1,
-            ucoin = 100,
-            umoney = 0,
-            usex = command.Sex,
-            vipRightJson = string.Empty
+            id = IdGenerator.GetNextId(), accountId = accountId, name = command.Name,
+            avatarId = 0, createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), status = 0,
+            baseLevel = 1, mainStage = 1, resonanceLevel = 0, towerStage = 0
         };
 
         private static IReadOnlyList<InitialPlayerItem> LoadInitialPlayerItems()

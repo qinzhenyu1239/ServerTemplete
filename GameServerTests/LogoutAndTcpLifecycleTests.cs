@@ -44,7 +44,8 @@ public class LogoutAndTcpLifecycleTests
         Type factoryType = assembly.GetType("Framework.Core.Serializer.MessageFactory");
         object factory = factoryType.GetField("Instance").GetValue(null);
         var mappings = (System.Collections.IDictionary)factoryType.GetField("keyTypeDic", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(factory);
-        var previousMappings = mappings.Cast<System.Collections.DictionaryEntry>().ToArray();
+        var previousMappings = mappings.Keys.Cast<object>()
+            .Select(key => new System.Collections.DictionaryEntry(key, mappings[key])).ToArray();
         try
         {
         if (mappings.Count == 0) factoryType.GetMethod("InitMeesagePool").Invoke(factory, null);

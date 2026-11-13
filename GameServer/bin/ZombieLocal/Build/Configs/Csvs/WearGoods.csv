@@ -1,0 +1,6 @@
+﻿唯一ID,设备名称,装备描述,攻击力,防御力,可强化的属性,买入价格,出售价格
+int,string,string,float,float,string,int,int
+ID,name,EqpmtDesic,Attack,Defense,UpgradeProp,BuyInPrice,SellOutPrice
+20001,普通衣,普通的刀，尽快换掉吧,0,1,define,3,2
+20002,强化衣,强力一点弓箭，凑合用吧,0,5,define,6,4
+20003,魔法衣,"被施魔法,相当不错",0,20,define,20,18

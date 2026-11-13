@@ -1,4 +1,4 @@
-﻿using Framework.Core.Serializer;
+using Framework.Core.Serializer;
 using Game.Core.EntityMgr;
 using Game.Datas.DBEntities;
 using Game.Datas.GMEntities;
@@ -52,9 +52,9 @@ namespace Game.LogicServer
             // 
             ch.chInfo = new CharactorInfo();
             ch.chInfo.unick = e.uPlayer.playerInfo.name;
-            ch.chInfo.job = e.uPlayer.playerInfo.job;
+            ch.chInfo.job = 0;
             ch.chInfo.charactorId = -1;  // 保留，如果你后续有需求, 数据库保留这个角色ID就可以了;
-            ch.chInfo.sex = e.uPlayer.playerInfo.usex;
+            ch.chInfo.sex = 0;
 
             // Transform
             ch.transform = new CharactorTransform();

@@ -1,4 +1,4 @@
-﻿using Game.Datas.GMEntities;
+using Game.Datas.GMEntities;
 using Game.Utils;
 using System;
 using System.Collections.Generic;
@@ -28,30 +28,8 @@ namespace Game.LogicServer
 
         public static int ParseCondGE(GM_PlayerEntity e, string lhs, string rhs)
         {
-            int status = (int)Respones.InvalidOpt;
-            int value = 0;
-            if (lhs.Equals("ulevel"))
-            {
-                value = int.Parse(rhs);
-                if (e.uPlayer.playerInfo.level >= value)
-                {
-                    return (int)Respones.OK;
-                }
-
-                status = (int)Respones.LevelIsNotEnough;
-                // status = (int)Respones.OK;
-            }
-            else if (lhs.Equals("uchip"))
-            {
-                value = int.Parse(rhs);
-                if (e.uPlayer.playerInfo.ucoin >= value)
-                {
-                    return (int)Respones.OK;
-                }
-
-                status = (int)Respones.ChipIsNotEnough;
-            }
-            return status;
+            // Legacy level and currency conditions are not supported by the minimal player.
+            return (int)Respones.InvalidOpt;
         }
 
 

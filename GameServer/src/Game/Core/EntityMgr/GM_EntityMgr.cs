@@ -1,4 +1,4 @@
-﻿using Framework.Core.Net;
+using Framework.Core.Net;
 using Game.Core.Configs;
 using Game.Core.GM_MailMessage;
 using Game.Core.GM_Rank;
@@ -25,7 +25,7 @@ namespace Game.Core.EntityMgr
         }
 
         public bool BindPlayerSession(IdSession session, long accountId, long playerId, int job) {
-            if (session == null || accountId <= 0 || playerId <= 0 || job <= 0 ||
+            if (session == null || accountId <= 0 || playerId <= 0 ||
                 session.accountId != accountId) {
                 return false;
             }
@@ -120,9 +120,7 @@ namespace Game.Core.EntityMgr
             // end
 
             // 世界金币排行榜
-            if (ConfigMgr.Instance.useRedis) {
-                GM_RankMgr.Instance.FlushRank((int)RankType.WorldCoin, playerId, player.uPlayer.playerInfo.ucoin);
-            }
+            // Player currency columns and their legacy leaderboard are retired.
 
             int ret = (player.uRoomGame.playInRoomState == (int)PlayerInRoomState.Playing) ? 1 : 0;
 

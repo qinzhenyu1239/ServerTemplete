@@ -8,6 +8,10 @@ namespace Game.Core.GM_PlayerProfile
 
     public sealed class PlayerBasicInfoSnapshot
     {
+        public int BaseLevel { get; init; }
+        public int MainStage { get; init; }
+        public int ResonanceLevel { get; init; }
+        public int TowerStage { get; init; }
         public long PlayerId { get; init; }
         public int AvatarId { get; init; }
         public string Name { get; init; }
@@ -36,23 +40,7 @@ namespace Game.Core.GM_PlayerProfile
         public bool Includes(ProfileField field) => Fields?.Contains(field) == true;
         public bool IsValid()
         {
-            if (Fields == null || Fields.Length == 0 || Fields.Distinct().Count() != Fields.Length) return false;
-            foreach (ProfileField field in Fields)
-            {
-                bool valid = field switch
-                {
-                    ProfileField.Avatar => AvatarId.HasValue && AvatarId.Value >= 0,
-                    ProfileField.AvatarFrame => AvatarFrameId.HasValue && AvatarFrameId.Value >= 0,
-                    ProfileField.Title => TitleId.HasValue && TitleId.Value >= 0,
-                    ProfileField.Background => BackgroundId.HasValue && BackgroundId.Value >= 0,
-                    ProfileField.Achievements => ValidSlots(DisplayAchievementIds?.Select(x => (long)x).ToArray(), 7),
-                    ProfileField.Characters => ValidSlots(DisplayCharacterIds, 6),
-                    ProfileField.Signature => ValidSignature(Signature),
-                    _ => false
-                };
-                if (!valid) return false;
-            }
-            return true;
+            return Fields != null && Fields.Length == 1 && Fields[0] == ProfileField.Avatar && AvatarId.HasValue && AvatarId.Value >= 0;
         }
         public static bool ValidSlots(long[] ids, int count) => ids != null && ids.Length == count &&
             ids.All(x => x >= 0) && ids.Where(x => x != 0).Distinct().Count() == ids.Count(x => x != 0);

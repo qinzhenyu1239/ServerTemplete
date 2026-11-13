@@ -1,0 +1,4356 @@
+--- /dev/null
++++ b/server/.codex/skills/zombie-ui-network-template/SKILL.md
+@@ -0,0 +1,31 @@
++---
++name: zombie-ui-network-template
++description: Build or refactor TowerDefence client network features using MiaoWu-style UI, Manager, Network layers and bidirectional UniFramework events. Use for zombie project protocol-driven UI and MainInterface feature panels.
++---
++
++# 僵尸项目客户端事件模板
++
++客户端为 D:/apk/TowerDefence，服务端为本技能所在仓库。MiaoWu（D:/iaowu/MiaoWu）仅作只读参考，不修改其代码或技能。
++
++## 两项必需模式
++
++1. 使用 UI → Manager → Network 分层。Network 复用 TowerDefence 的 SessionNetwork；不新增传输层。
++2. UI／Manager 双向事件交互：UI 发布请求事件，Manager 监听后调用 Network，再发布加载、成功、失败或清空事件，UI 监听结果更新展示。UI 不直接调用 Manager 业务方法或 Network；Manager 不持有 UI 组件引用。
++
++## 实施基准
++
++先读取目标项目当前调用链与协议。喵呜参考 Assets/Scripts/HotUpdate/UI/Gacha/UIGacha.cs，以及 Game/Gacha 下 Manager/GachaManager.cs、Network/GachaNetwork.cs、Events；路径失效时用 rg 定位，不能照抄旧路径。
++TowerDefence 现有基础设施在 Assets/Rogue/Scripts/HotUpdate：Game/Shared/Network/SessionNetwork.cs、UI/UIMgr.cs、UI/IUIPanel.cs。完整本项目示例为 Game/PlayerBasicInfo 与 UI/Panel/PlayerBasicInfo。
++
++## 职责和生命周期
++
++- UI 在 Awake 绑定按钮、OnDestroy 解绑，OnEnable 订阅、OnDisable 退订；OnSHow 初始化并发布首个查询事件。UI 仅保存展示和请求匹配所需的短期状态。
++- Manager 在功能初始化时注册请求及会话事件，销毁时退订；初始化必须幂等，确保 UI 发事件前已就绪。Manager 保存权威资料快照及请求状态。
++- 使用 UniFramework.Event，不创建事件总线。请求带唯一请求标识和取消令牌；结果带同一标识。会话级清空事件广播所有面板；单次结果只能更新匹配请求的面板。
++- Network 只构造协议、调用 SessionNetwork、接收响应并设置超时与取消，不保存 UI 或全局业务状态。
++- 关联面板、账号、连接和功能生命周期取消令牌。隐藏面板取消自己的读请求；注销、断线、切换连接清空快照。检查账号及连接代次，旧响应不得写入新会话。
++- 加载期间禁用相关按钮，Manager 拒绝重复请求；错误必须通过结果事件恢复 UI。写请求的取消及重试规则以服务端幂等契约为准，不能机械套用读请求。
++
++## 验证
++
++核对协议号、字段类型、服务端语义；编译实际 TowerDefence 项目及相关测试，不编译 MiaoWu 作为替代。验证重复点击、关闭、超时、注销、断线、重连及过期响应；确保没有重复订阅、悬空监听或 UI 直接调用 Manager 业务方法。按 show-code-diffs 要求保留已有改动，提供完整实际差异及验证限制。
+--- a/server/sql/zombie_init.sql
++++ b/server/sql/zombie_init.sql
+@@ -140,117 +140,16 @@
+ CREATE TABLE IF NOT EXISTS `player` (
+   `id` bigint(20) NOT NULL DEFAULT '10000' COMMENT 'playerId',
+   `accountId` bigint(20) NOT NULL DEFAULT '0' COMMENT '账号ID',
+-  `level` int(11) NOT NULL DEFAULT '1' COMMENT '等级',
+   `name` varchar(128) DEFAULT NULL COMMENT '用户名字',
+   `avatarId` int(11) NOT NULL DEFAULT '0' COMMENT '头像ID，0表示未设置',
+-  `guildId` bigint(20) NOT NULL DEFAULT '0' COMMENT '公会ID，0表示未加入公会',
+-  `titleId` int(11) NOT NULL DEFAULT '0' COMMENT '称号ID，0表示未佩戴称号',
+-  `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '' COMMENT '个性签名',
+   `createTime` bigint(20) NOT NULL DEFAULT '0' COMMENT '创建角色Unix秒时间戳，0表示未知',
+-  `avatarFrameId` int(11) NOT NULL DEFAULT '0' COMMENT '头像框ID，0表示未设置',
+-  `backgroundId` int(11) NOT NULL DEFAULT '0' COMMENT '资料背景ID，0表示默认背景',
+-  `displayAchievementIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0,0]' COMMENT '展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位',
+-  `displayCharacterIds` varchar(255) NOT NULL DEFAULT '[0,0,0,0,0,0]' COMMENT '展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位',
+-  `usex` int(11) NOT NULL DEFAULT '0',
+-  `job` int(11) NOT NULL DEFAULT '0' COMMENT '职业',
+-  `exp` int(11) NOT NULL DEFAULT '0' COMMENT '经验',
+-  `HP` int(11) NOT NULL DEFAULT '0' COMMENT '玩家当前的HP',
+-  `MP` int(11) NOT NULL DEFAULT '0' COMMENT '玩家当前的MP',
+-  `equipment` varchar(128) DEFAULT NULL COMMENT '装备情况',
+-  `ucoin` int(11) NOT NULL DEFAULT '0' COMMENT '玩家的金币,游戏，奖励，卖装备获取, 购买消耗品',
+-  `umoney` int(11) NOT NULL DEFAULT '0' COMMENT '玩家的元宝, 充值可以获得',
+-  `lastDailyReset` bigint(255) DEFAULT NULL,
+-  `vipRightJson` varchar(255) DEFAULT NULL COMMENT 'VIP特权',
+-  `platform` varchar(255) DEFAULT NULL COMMENT '用户在哪个平台',
+   `status` int(11) NOT NULL DEFAULT '0' COMMENT '账号的状态',
+   PRIMARY KEY (`id`)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+ 
+--- 兼容已有player表：仅添加缺少的资料字段，重复执行不会重复添加列（兼容MySQL 5.7）。
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `avatarId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像ID，0表示未设置'' AFTER `name`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'guildId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `guildId` bigint(20) NOT NULL DEFAULT 0 COMMENT ''公会ID，0表示未加入公会'' AFTER `avatarId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'titleId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `titleId` int(11) NOT NULL DEFAULT 0 COMMENT ''称号ID，0表示未佩戴称号'' AFTER `guildId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'signature'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `signature` varchar(255) CHARACTER SET utf8mb4 NOT NULL DEFAULT '''' COMMENT ''个性签名'' AFTER `titleId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'createTime'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `createTime` bigint(20) NOT NULL DEFAULT 0 COMMENT ''创建角色Unix秒时间戳，0表示未知'' AFTER `signature`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+--- MySQL 5.7的JSON列不支持非NULL默认值，展示槽位使用varchar保存JSON数组文本。
+--- 数组长度、ID有效性、重复ID和归属由服务端保存时校验。
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'avatarFrameId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `avatarFrameId` int(11) NOT NULL DEFAULT 0 COMMENT ''头像框ID，0表示未设置'' AFTER `createTime`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'backgroundId'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `backgroundId` int(11) NOT NULL DEFAULT 0 COMMENT ''资料背景ID，0表示默认背景'' AFTER `avatarFrameId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayAchievementIds'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `displayAchievementIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0,0]'' COMMENT ''展示成就ID的JSON数组，固定7项，按槽位排序，0表示空位'' AFTER `backgroundId`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+-SET @player_profile_sql = IF(
+-  EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'player' AND column_name = 'displayCharacterIds'),
+-  'SELECT 1',
+-  'ALTER TABLE `player` ADD COLUMN `displayCharacterIds` varchar(255) NOT NULL DEFAULT ''[0,0,0,0,0,0]'' COMMENT ''展示角色实例ID的JSON数组，关联player_character.id，固定6项，按槽位排序，0表示空位'' AFTER `displayAchievementIds`'
+-);
+-PREPARE player_profile_statement FROM @player_profile_sql;
+-EXECUTE player_profile_statement;
+-DEALLOCATE PREPARE player_profile_statement;
+-
+--- 抽奖使用的玩家角色、道具、保底和记录表。全部使用 InnoDB，确保一次抽奖可原子提交。
++
++-- Existing installations: run migrations/20261112_001_zombie_player_minimal.sql after backing up player.
++
+ CREATE TABLE IF NOT EXISTS `player_item` (
+   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+   `player_id` bigint(20) NOT NULL COMMENT '玩家ID',
+--- /dev/null
++++ b/server/sql/migrations/20261112_001_zombie_player_minimal.sql
+@@ -0,0 +1,97 @@
++-- Target: zombie_game only. Back up player before running; MySQL 5.7 DDL auto-commits.
++USE `zombie_game`;
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='level'), 'ALTER TABLE zombie_game.player DROP COLUMN `level`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='guildId'), 'ALTER TABLE zombie_game.player DROP COLUMN `guildId`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='titleId'), 'ALTER TABLE zombie_game.player DROP COLUMN `titleId`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='signature'), 'ALTER TABLE zombie_game.player DROP COLUMN `signature`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='avatarFrameId'), 'ALTER TABLE zombie_game.player DROP COLUMN `avatarFrameId`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='backgroundId'), 'ALTER TABLE zombie_game.player DROP COLUMN `backgroundId`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='displayAchievementIds'), 'ALTER TABLE zombie_game.player DROP COLUMN `displayAchievementIds`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='displayCharacterIds'), 'ALTER TABLE zombie_game.player DROP COLUMN `displayCharacterIds`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='usex'), 'ALTER TABLE zombie_game.player DROP COLUMN `usex`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='job'), 'ALTER TABLE zombie_game.player DROP COLUMN `job`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='exp'), 'ALTER TABLE zombie_game.player DROP COLUMN `exp`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='HP'), 'ALTER TABLE zombie_game.player DROP COLUMN `HP`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='MP'), 'ALTER TABLE zombie_game.player DROP COLUMN `MP`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='equipment'), 'ALTER TABLE zombie_game.player DROP COLUMN `equipment`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='ucoin'), 'ALTER TABLE zombie_game.player DROP COLUMN `ucoin`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='umoney'), 'ALTER TABLE zombie_game.player DROP COLUMN `umoney`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='lastDailyReset'), 'ALTER TABLE zombie_game.player DROP COLUMN `lastDailyReset`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='vipRightJson'), 'ALTER TABLE zombie_game.player DROP COLUMN `vipRightJson`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
++SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' AND column_name='platform'), 'ALTER TABLE zombie_game.player DROP COLUMN `platform`', 'SELECT 1');
++PREPARE minimal_player_statement FROM @sql;
++EXECUTE minimal_player_statement;
++DEALLOCATE PREPARE minimal_player_statement;
++
+--- a/server/GameServer/src/Game/Datas/DbEntities/Player.cs
++++ b/server/GameServer/src/Game/Datas/DbEntities/Player.cs
+@@ -1,150 +1,60 @@
+-using System;
+-using System.Linq;
+-using System.Text;
+-
+-namespace Game.Datas.DBEntities
+-{
+-    ///<summary>
+-    ///
+-    ///</summary>
++using System;
++using System.Linq;
++using System.Text;
++
++namespace Game.Datas.DBEntities
++{
++    ///<summary>
++    ///
++    ///</summary>
+     [SqlSugar.SugarTable("player")]
+-    public partial class Player
+-    {
+-           public Player(){
+-
+-
+-           }
+-           /// <summary>
+-           /// Desc:playerId
+-           /// Default:10000
+-           /// Nullable:False
+-           /// </summary>           
+-           public long id {get;set;}
+-
+-           /// <summary>
+-           /// Desc:账号ID
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public long accountId {get;set;}
+-
+-           /// <summary>
+-           /// Desc:等级
+-           /// Default:1
+-           /// Nullable:False
+-           /// </summary>           
+-           public int level {get;set;}
+-
+-           /// <summary>
+-           /// Desc:用户名字
+-           /// Default:
+-           /// Nullable:True
+-           /// </summary>           
+-           public string name {get;set;}
+-
+-           /// <summary>头像ID，0表示未设置。</summary>
+-           public int avatarId {get;set;}
+-
+-           /// <summary>公会ID，0表示未加入公会。</summary>
+-           public long guildId {get;set;}
+-
+-           /// <summary>称号ID，0表示未佩戴称号。</summary>
+-           public int titleId {get;set;}
+-
+-           /// <summary>个性签名，最多255个字符。</summary>
+-           public string signature {get;set;} = string.Empty;
+-
+-           /// <summary>创建角色的Unix秒时间戳，0表示历史创建时间未知。</summary>
+-           public long createTime {get;set;}
+-
+-           public int avatarFrameId {get;set;}
+-           public int backgroundId {get;set;}
+-           public string displayAchievementIds {get;set;} = "[0,0,0,0,0,0,0]";
+-           public string displayCharacterIds {get;set;} = "[0,0,0,0,0,0]";
+-
+-           /// <summary>
+-           /// Desc:
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int usex {get;set;}
+-
+-           /// <summary>
+-           /// Desc:职业
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int job {get;set;}
+-
+-           /// <summary>
+-           /// Desc:经验
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int exp {get;set;}
+-
+-           /// <summary>
+-           /// Desc:玩家当前的HP
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int HP {get;set;}
+-
+-           /// <summary>
+-           /// Desc:玩家当前的MP
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int MP {get;set;}
+-
+-           /// <summary>
+-           /// Desc:装备情况
+-           /// Default:
+-           /// Nullable:True
+-           /// </summary>           
+-           public string equipment {get;set;}
+-
+-           /// <summary>
+-           /// Desc:玩家的金币,游戏，奖励，卖装备获取, 购买消耗品
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int ucoin {get;set;}
+-
+-           /// <summary>
+-           /// Desc:玩家的元宝, 充值可以获得
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int umoney {get;set;}
+-
+-           /// <summary>
+-           /// Desc:
+-           /// Default:
+-           /// Nullable:True
+-           /// </summary>           
+-           public long? lastDailyReset {get;set;}
+-
+-           /// <summary>
+-           /// Desc:VIP特权
+-           /// Default:
+-           /// Nullable:True
+-           /// </summary>           
+-           public string vipRightJson {get;set;}
+-
+-           /// <summary>
+-           /// Desc:用户在哪个平台
+-           /// Default:
+-           /// Nullable:True
+-           /// </summary>           
+-           public string platform {get;set;}
+-
+-           /// <summary>
+-           /// Desc:账号的状态
+-           /// Default:0
+-           /// Nullable:False
+-           /// </summary>           
+-           public int status {get;set;}
+-
+-    }
+-}
++    public partial class Player
++    {
++           public Player(){
++
++
++           }
++           /// <summary>
++           /// Desc:playerId
++           /// Default:10000
++           /// Nullable:False
++           /// </summary>           
++           public long id {get;set;}
++
++           /// <summary>
++           /// Desc:账号ID
++           /// Default:0
++           /// Nullable:False
++           /// </summary>           
++           public long accountId {get;set;}
++
++           /// <summary>
++           /// Desc:用户名字
++           /// Default:
++           /// Nullable:True
++           /// </summary>           
++           public string name {get;set;}
++
++           /// <summary>
++           /// Desc:头像ID，0表示未设置
++           /// Default:0
++           /// Nullable:False
++           /// </summary>           
++           public int avatarId {get;set;}
++
++           /// <summary>
++           /// Desc:创建角色Unix秒时间戳，0表示未知
++           /// Default:0
++           /// Nullable:False
++           /// </summary>           
++           public long createTime {get;set;}
++
++           /// <summary>
++           /// Desc:账号的状态
++           /// Default:0
++           /// Nullable:False
++           /// </summary>           
++           public int status {get;set;}
++
++    }
++}
+--- a/server/GameServer/src/Game/Core/EntityMgr/GM_AccountEntityMgr.cs
++++ b/server/GameServer/src/Game/Core/EntityMgr/GM_AccountEntityMgr.cs
+@@ -290,7 +290,7 @@
+ 
+         public Player GetOrCreatePlayer(long accountId, PlayerCreationCommand command)
+         {
+-            if (accountId <= 0 || command == null || command.Job <= 0) return null;
++            if (accountId <= 0 || command == null) return null;
+ 
+             Player player = GetPlayerByAccountId(accountId, command.Job);
+             if (player != null) return player;
+@@ -435,12 +435,6 @@
+                 Player target = online?.uPlayer.playerInfo ?? account.uPlayer.playerInfo;
+                 if (target == null || target.id != player.id) target = player;
+                 target.avatarId = player.avatarId;
+-                target.avatarFrameId = player.avatarFrameId;
+-                target.titleId = player.titleId;
+-                target.backgroundId = player.backgroundId;
+-                target.signature = player.signature;
+-                target.displayAchievementIds = player.displayAchievementIds;
+-                target.displayCharacterIds = player.displayCharacterIds;
+                 AttachPlayer(target);
+                 if (online != null) online.uPlayer.playerInfo = target;
+             }
+@@ -496,28 +490,8 @@
+ 
+         private static Player BuildPlayer(long accountId, PlayerCreationCommand command) => new Player
+         {
+-            id = IdGenerator.GetNextId(),
+-            accountId = accountId,
+-            job = command.Job,
+-            name = command.Name,
+-            avatarId = 0,
+-            avatarFrameId = 0,
+-            backgroundId = 0,
+-            displayAchievementIds = "[0,0,0,0,0,0,0]",
+-            displayCharacterIds = "[0,0,0,0,0,0]",
+-            guildId = 0,
+-            titleId = 0,
+-            signature = string.Empty,
+-            createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+-            HP = 100,
+-            MP = 0,
+-            status = 0,
+-            lastDailyReset = 0,
+-            level = 1,
+-            ucoin = 100,
+-            umoney = 0,
+-            usex = command.Sex,
+-            vipRightJson = string.Empty
++            id = IdGenerator.GetNextId(), accountId = accountId, name = command.Name,
++            avatarId = 0, createTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), status = 0
+         };
+ 
+         private static IReadOnlyList<InitialPlayerItem> LoadInitialPlayerItems()
+--- a/server/GameServer/src/Game/Entries/Modules/GameAuthModule.cs
++++ b/server/GameServer/src/Game/Entries/Modules/GameAuthModule.cs
+@@ -87,7 +87,7 @@
+                     session,
+                     result.AccountId,
+                     player.id,
+-                    player.job))
++                    0))
+             {
+                 response.status = (int)Respones.SystemErr;
+                 response.errorMessage = "Failed to bind the default player session.";
+--- a/server/GameServer/src/Game/Entries/Modules/PlayerModule.cs
++++ b/server/GameServer/src/Game/Entries/Modules/PlayerModule.cs
+@@ -112,73 +112,13 @@
+ 
+         private void CopyDbPlayerToResponesData(Game.Datas.DBEntities.Player p, PlayerInfo pInfo)
+         {
+-            pInfo.exp = p.exp;
+-            pInfo.hp = p.HP;
+-            pInfo.mp = p.MP;
+-            pInfo.umoney = p.umoney;
++            pInfo.exp = pInfo.hp = pInfo.mp = pInfo.umoney = pInfo.ucion = pInfo.usex = 0;
+             pInfo.unick = p.name;
+-            pInfo.ucion = p.ucoin;
+-            pInfo.usex = p.usex;
+         }
+ 
+         public ResRecvLoginBonues HandlerRecvLoginBonues(IdSession s, ReqRecvLoginBonues req, long playerId)
+         {
+-            ResRecvLoginBonues res = new ResRecvLoginBonues();
+-
+-            // ��֤accountId, playerID�˺�;
+-            if (playerId <= 0)
+-            {
+-                res.status = (int)Respones.AccountIsNotLogin;
+-                return res;
+-            }
+-
+-
+-            Loginbonues data = GM_AccountEntityMgr.Instance.GetLoginBonues(playerId);
+-            if (data == null)
+-            {
+-                res.status = (int)Respones.SystemErr;
+-                return res;
+-            }
+-
+-            if (data.days == 0 || data.status != 0)
+-            { // ����������ȡ���Ƿ�����
+-                res.status = (int)Respones.InvalidOpt;
+-                return res;
+-            }
+-
+-
+-            res.status = (int)Respones.OK;
+-            res.num = data.bonues;
+-
+-            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
+-            if (p != null)
+-            { // ���ڽ�����ʲô��������Ϸ��������������;
+-                // logger.Info($"{p.GetHashCode()}");
+-                p.ucoin += data.bonues;
+-            }
+-
+-            if (p != null)
+-            {
+-                GM_AccountEntityMgr.Instance.UpdatePlayer(p);
+-            }
+-
+-            // The account entity already keeps the account-to-player association.
+-            /* 
+-             * ���������Bug,Ҫ����һ�£�����δ������������һ��Player ֻ����һ��ְҵ;
+-            p = GM_AccountEntityMgr.Instance.GetPlayerByAccountId(accountId, 0);
+-            if (p != null)
+-            {
+-                // logger.Info($"{p.GetHashCode()}");
+-                p.ucoin += data.bonues;
+-            }*/
+-
+-            data.bonues = 0;
+-            data.status = 1;
+-            GM_AccountEntityMgr.Instance.UpdateLoginBonues(data);
+-
+-
+-
+-            return res;
++            return new ResRecvLoginBonues { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
+         }
+ 
+         public ResSelectPlayer HandlerHttpReqSelectPlayer(ReqSelectPlayer req, long accountId)
+@@ -193,11 +133,7 @@
+             }
+ 
+             // ���req����,����зǷ��ģ���ô�ͷ��ز�������
+-            if (req.job <= 0)
+-            {  // �����Լ���ʵ�������������
+-                res.status = (int)Respones.InvalidParams;
+-                return res;
+-            }
++            // Legacy job and sex parameters are accepted but no longer select a player.
+ 
+             Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
+                 accountId,
+@@ -248,11 +184,7 @@
+             }
+ 
+             // ���req����,����зǷ��ģ���ô�ͷ��ز�������
+-            if (req.job <= 0)
+-            {  // �����Լ���ʵ�������������
+-                res.status = (int)Respones.InvalidParams;
+-                return res;
+-            }
++            // Legacy job and sex parameters are accepted but no longer select a player.
+ 
+             Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
+                 accountId,
+@@ -480,29 +412,7 @@
+         }
+ 
+         public ResRecvBonues HandlerReqRecvBonues(IdSession s, ReqRecvBonues req, long playerId) {
+-            ResRecvBonues res = new ResRecvBonues();
+-            // ��֤accountId, playerID�˺�;
+-            if (playerId <= 0) {
+-                res.status = (int)Respones.AccountIsNotLogin;
+-                return res;
+-            }
+-
+-            Bonues data = GM_BonuesMgr.Instance.GetBonuesBy(req.bonuesId);
+-            if (data == null || data.uid != playerId || data.status != 0) {
+-                res.status = (int)Respones.InvalidOpt;
+-                return res;
+-            }
+-
+-            GM_BonuesMgr.Instance.RecvBonues(req.bonuesId, data);
+-            res.status = (int)Respones.OK;
+-            res.typeId = data.tid;
+-            res.b1 = data.bonues1;
+-            res.b2 = data.bonues2;
+-            res.b3 = data.bonues3;
+-            res.b4 = data.bonues4;
+-            res.b5 = data.bonues5;
+-
+-            return res;
++            return new ResRecvBonues { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
+         }
+ 
+         public ResPullingTaskList HandlerReqPullingTaskList(IdSession s, ReqPullingTaskList req, long playerId) {
+@@ -553,57 +463,7 @@
+         }
+ 
+         public ResPullingRank HandlerReqPullingRank(IdSession s, ReqPullingRank req, long playerId) {
+-            ResPullingRank res = new ResPullingRank();
+-            // ��֤accountId, playerID�˺�;
+-            if (playerId <= 0)
+-            {
+-                res.status = (int)Respones.AccountIsNotLogin;
+-                return res;
+-            }
+-
+-            GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);
+-            if (player == null)
+-            {
+-                res.status = (int)Respones.InvalidOpt;
+-                return res;
+-            }
+-            res.status = (int)Respones.OK;
+-            res.selfIndex = -1;
+-
+-            // int rankType = req.typeId;
+-            int rankType = (int)RankType.WorldCoin;
+-            RankData[] rankData = GM_RankMgr.Instance.GetRankData(rankType, 30);
+-            if (rankData == null || rankData.Length <= 0) {
+-                return res;
+-            }
+-
+-            res.ranks = new RankItem[rankData.Length];
+-            for (int i = 0; i < rankData.Length; i++) {
+-                RankItem item = new RankItem(); // uid ��Ҫ�Žo�ͻ���;
+-
+-                Player p = GM_AccountEntityMgr.Instance.GetPlayerById(rankData[i].uid);
+-                if (p == null) {
+-                    this.logger.Error($"rankdata Error uid {rankData[i].uid}");
+-                    continue;
+-                }
+-                Account a = GM_AccountEntityMgr.Instance.GetAccountById(p.accountId);
+-                if (a == null) {
+-                    this.logger.Error($"rankdata Error uid {rankData[i].uid}");
+-                    continue;
+-                }
+-                item.uface = a.uface;
+-                item.unick = a.unick;
+-                item.value = rankData[i].value;
+-
+-                if (rankData[i].uid == playerId) {
+-                    res.selfIndex = i;
+-                }
+-
+-                res.ranks[i] = item;
+-            }
+-
+-
+-            return res;
++            return new ResPullingRank { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
+         }
+ 
+         public void HandlerReqEnterLogicServer(IdSession s, ReqEnterLogicServer req, long playerId)
+@@ -693,31 +553,7 @@
+         }
+ 
+         public ResExchangeProduct HandlerReqExchangeProduct(IdSession s, ReqExchangeProduct req, long playerId) {
+-            ResExchangeProduct res = new ResExchangeProduct();
+-            // ��֤accountId, playerID�˺�;
+-            if (/*s.accountId <= 0 || */playerId <= 0)
+-            {
+-                res.status = (int)Respones.AccountIsNotLogin;
+-                return res;
+-            }
+-
+-            GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);
+-            if (player == null)
+-            {
+-                res.status = (int)Respones.InvalidOpt;
+-                return res;
+-            }
+-
+-            int status = GM_TradingMgr.Instance.CanExchangeProduct(player, req.productId);
+-            if (status != (int)Respones.OK) {
+-                res.status = status;
+-                return res;
+-            }
+-
+-            GM_TradingMgr.Instance.DoExchangeProduct(player, req.productId);
+-
+-            res.status = (int)Respones.OK;
+-            return res;
++            return new ResExchangeProduct { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
+         }
+ 
+         public ResPullingPackData HandlerReqPullingPackData(IdSession s, ReqPullingPackData req, long playerId) {
+--- a/server/GameServer/src/Game/Core/GM_PlayerProfile/GM_PlayerProfileMgr.cs
++++ b/server/GameServer/src/Game/Core/GM_PlayerProfile/GM_PlayerProfileMgr.cs
+@@ -1,11 +1,7 @@
+ using System;
+-using System.Linq;
+-using System.Collections.Generic;
+-using System.Text.Json;
+ using Framework.Core.Concurrency;
+ using Game.Core.Db;
+ using Game.Core.EntityMgr;
+-using Game.Core.GM_Character;
+ using Game.Datas.DBEntities;
+ using SqlSugar;
+ 
+@@ -16,124 +12,61 @@
+         public static GM_PlayerProfileMgr Instance { get; } = new GM_PlayerProfileMgr();
+         private readonly NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+         private GM_PlayerProfileMgr() { }
+-
+         public PlayerBasicInfoResult GetBasicInfo(long playerId)
+         {
+-            using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
+-            lock (playerLock.SyncRoot) return GetBasicInfoLocked(playerId);
++            using var lease = PlayerOperationLock.Acquire(playerId);
++            lock (lease.SyncRoot) return GetBasicInfoLocked(playerId);
+         }
+-
+         private PlayerBasicInfoResult GetBasicInfoLocked(long playerId)
+         {
+-            try
+-            {
+-                Player player = ReadPlayer(playerId);
+-                return player == null ? Result(PlayerProfileStatus.NotFound) : Success(player);
+-            }
+-            catch (Exception exception)
+-            {
+-                logger.Error(exception, $"Failed to load basic info for player[{playerId}].");
+-                return Result(PlayerProfileStatus.Failed);
+-            }
++            try { var player = ReadPlayer(playerId); return player == null ? Result(PlayerProfileStatus.NotFound) : Success(player); }
++            catch (Exception error) { logger.Error(error, "Failed to load player basic info."); return Result(PlayerProfileStatus.Failed); }
+         }
+-
+         public PlayerBasicInfoResult UpdateBasicInfo(long playerId, long accountId, PlayerProfileUpdate update)
+         {
+-            if (playerId <= 0 || accountId <= 0 || update?.IsValid() != true)
+-                return Result(PlayerProfileStatus.InvalidInput);
+-            using PlayerOperationLock.Lease playerLock = PlayerOperationLock.Acquire(playerId);
+-            lock (playerLock.SyncRoot)
++            if (playerId <= 0 || accountId <= 0 || update?.IsValid() != true) return Result(PlayerProfileStatus.InvalidInput);
++            using var lease = PlayerOperationLock.Acquire(playerId);
++            lock (lease.SyncRoot)
+             {
+                 SqlSugarClient db = null;
+-                bool transaction = false;
+                 try
+                 {
+                     db = DBService.Instance.GetGameInstance();
+                     db.Ado.BeginTran();
+-                    transaction = true;
+-                    Player player = db.Ado.SqlQuery<Player>(
+-                        "SELECT * FROM player WHERE id=@id AND accountId=@accountId FOR UPDATE",
+-                        new SugarParameter("@id", playerId), new SugarParameter("@accountId", accountId)).SingleOrDefault();
+-                    if (player == null)
+-                    {
+-                        db.Ado.RollbackTran(); transaction = false;
+-                        return Result(PlayerProfileStatus.NotFound);
+-                    }
+-                    if (update.Includes(ProfileField.Characters) &&
+-                        !GM_CharacterMgr.Instance.OwnsCharacterInstances(db, playerId, update.DisplayCharacterIds))
+-                    {
+-                        db.Ado.RollbackTran(); transaction = false;
+-                        return Result(PlayerProfileStatus.InvalidInput);
+-                    }
+-                    var columns = new List<string>();
+-                    var parameters = new List<SugarParameter> { new SugarParameter("@id", playerId) };
+-                    void Set(string column, object value)
+-                    {
+-                        columns.Add("`" + column + "`=@" + column);
+-                        parameters.Add(new SugarParameter("@" + column, value));
+-                    }
+-                    foreach (ProfileField field in update.Fields)
+-                    {
+-                        switch (field)
+-                        {
+-                            case ProfileField.Avatar: player.avatarId = update.AvatarId.Value; Set("avatarId", player.avatarId); break;
+-                            case ProfileField.AvatarFrame: player.avatarFrameId = update.AvatarFrameId.Value; Set("avatarFrameId", player.avatarFrameId); break;
+-                            case ProfileField.Title: player.titleId = update.TitleId.Value; Set("titleId", player.titleId); break;
+-                            case ProfileField.Background: player.backgroundId = update.BackgroundId.Value; Set("backgroundId", player.backgroundId); break;
+-                            case ProfileField.Achievements: player.displayAchievementIds = JsonSerializer.Serialize(update.DisplayAchievementIds); Set("displayAchievementIds", player.displayAchievementIds); break;
+-                            case ProfileField.Characters: player.displayCharacterIds = JsonSerializer.Serialize(update.DisplayCharacterIds); Set("displayCharacterIds", player.displayCharacterIds); break;
+-                            case ProfileField.Signature: player.signature = update.Signature; Set("signature", player.signature); break;
+-                        }
+-                    }
+-                    // Validate the complete response before committing; malformed stored slots are never silently replaced.
+-                    PlayerBasicInfoResult result = Success(player);
+-                    int affected = db.Ado.ExecuteCommand("UPDATE player SET " + string.Join(",", columns) + " WHERE id=@id", parameters.ToArray());
+-                    // MySQL may report either matched rows or changed rows. The row was locked and checked above.
++                    var player = db.Ado.SqlQuerySingle<Player>("SELECT * FROM player WHERE id=@id AND accountId=@accountId FOR UPDATE",
++                        new SugarParameter("@id", playerId), new SugarParameter("@accountId", accountId));
++                    if (player == null) { db.Ado.RollbackTran(); return Result(PlayerProfileStatus.NotFound); }
++                    int affected = db.Updateable<Player>().SetColumns(p => p.avatarId == update.AvatarId.Value).Where(p => p.id == playerId && p.accountId == accountId).ExecuteCommand();
+                     if (affected < 0 || affected > 1) throw new InvalidOperationException("Unexpected player update count.");
+-                    db.Ado.CommitTran(); transaction = false;
++                    player.avatarId = update.AvatarId.Value;
++                    db.Ado.CommitTran();
+                     GM_AccountEntityMgr.Instance.ApplyCommittedPlayer(player);
+-                    return result;
++                    return Success(player);
+                 }
+-                catch (Exception exception)
++                catch (Exception error)
+                 {
+-                    if (transaction)
+-                    {
+-                        try { db.Ado.RollbackTran(); }
+-                        catch (Exception rollback) { logger.Error(rollback, "Profile rollback failed."); }
+-                    }
+-                    logger.Error(exception, $"Failed to update basic info for player[{playerId}].");
+-                    return Result(PlayerProfileStatus.Failed);
++                    try { db?.Ado.RollbackTran(); } catch (Exception rollback) { logger.Error(rollback, "Profile rollback failed."); }
++                    logger.Error(error, "Failed to update player avatar."); return Result(PlayerProfileStatus.Failed);
+                 }
+                 finally { db?.Dispose(); }
+             }
+         }
+-
+         private static PlayerBasicInfoResult Result(PlayerProfileStatus status) => new PlayerBasicInfoResult { Status = status };
+-        private static PlayerBasicInfoResult Success(Player player)
++        private static PlayerBasicInfoResult Success(Player player) => new PlayerBasicInfoResult
+         {
+-            int[] achievements = JsonSerializer.Deserialize<int[]>(player.displayAchievementIds);
+-            long[] characters = JsonSerializer.Deserialize<long[]>(player.displayCharacterIds);
+-            if (!PlayerProfileUpdate.ValidSlots(achievements?.Select(x => (long)x).ToArray(), 7) ||
+-                !PlayerProfileUpdate.ValidSlots(characters, 6)) throw new InvalidOperationException("Invalid stored profile slots.");
+-            return new PlayerBasicInfoResult
++            Status = PlayerProfileStatus.Success,
++            Info = new PlayerBasicInfoSnapshot
+             {
+-                Status = PlayerProfileStatus.Success,
+-                Info = new PlayerBasicInfoSnapshot
+-                {
+-                    PlayerId = player.id, AvatarId = player.avatarId, Name = player.name ?? string.Empty,
+-                    GuildId = player.guildId, CreateTime = player.createTime, TitleId = player.titleId,
+-                    Signature = player.signature ?? string.Empty, AvatarFrameId = player.avatarFrameId,
+-                    BackgroundId = player.backgroundId, DisplayAchievementIds = achievements, DisplayCharacterIds = characters
+-                }
+-            };
+-        }
+-
++                PlayerId = player.id, Name = player.name ?? string.Empty, AvatarId = player.avatarId, CreateTime = player.createTime,
++                Signature = string.Empty, DisplayAchievementIds = new int[7], DisplayCharacterIds = new long[6]
++            }
++        };
+         private static Player ReadPlayer(long playerId)
+         {
+             if (playerId <= 0) return null;
+             var entity = GM_EntityMgr.Instance.Get(playerId);
+             if (entity?.uPlayer.playerInfo?.id == playerId) return entity.uPlayer.playerInfo;
+-            Player player = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
++            var player = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
+             if (player != null && entity != null) entity.uPlayer.playerInfo = player;
+             return player;
+         }
+--- a/server/GameServer/src/Game/Core/GM_PlayerProfile/PlayerProfileDefinitions.cs
++++ b/server/GameServer/src/Game/Core/GM_PlayerProfile/PlayerProfileDefinitions.cs
+@@ -36,23 +36,7 @@
+         public bool Includes(ProfileField field) => Fields?.Contains(field) == true;
+         public bool IsValid()
+         {
+-            if (Fields == null || Fields.Length == 0 || Fields.Distinct().Count() != Fields.Length) return false;
+-            foreach (ProfileField field in Fields)
+-            {
+-                bool valid = field switch
+-                {
+-                    ProfileField.Avatar => AvatarId.HasValue && AvatarId.Value >= 0,
+-                    ProfileField.AvatarFrame => AvatarFrameId.HasValue && AvatarFrameId.Value >= 0,
+-                    ProfileField.Title => TitleId.HasValue && TitleId.Value >= 0,
+-                    ProfileField.Background => BackgroundId.HasValue && BackgroundId.Value >= 0,
+-                    ProfileField.Achievements => ValidSlots(DisplayAchievementIds?.Select(x => (long)x).ToArray(), 7),
+-                    ProfileField.Characters => ValidSlots(DisplayCharacterIds, 6),
+-                    ProfileField.Signature => ValidSignature(Signature),
+-                    _ => false
+-                };
+-                if (!valid) return false;
+-            }
+-            return true;
++            return Fields != null && Fields.Length == 1 && Fields[0] == ProfileField.Avatar && AvatarId.HasValue && AvatarId.Value >= 0;
+         }
+         public static bool ValidSlots(long[] ids, int count) => ids != null && ids.Length == count &&
+             ids.All(x => x >= 0) && ids.Where(x => x != 0).Distinct().Count() == ids.Count(x => x != 0);
+--- a/server/GameServer/src/Game/Core/EntityMgr/GM_EntityMgr.cs
++++ b/server/GameServer/src/Game/Core/EntityMgr/GM_EntityMgr.cs
+@@ -25,7 +25,7 @@
+         }
+ 
+         public bool BindPlayerSession(IdSession session, long accountId, long playerId, int job) {
+-            if (session == null || accountId <= 0 || playerId <= 0 || job <= 0 ||
++            if (session == null || accountId <= 0 || playerId <= 0 ||
+                 session.accountId != accountId) {
+                 return false;
+             }
+@@ -120,9 +120,7 @@
+             // end
+ 
+             // 世界金币排行榜
+-            if (ConfigMgr.Instance.useRedis) {
+-                GM_RankMgr.Instance.FlushRank((int)RankType.WorldCoin, playerId, player.uPlayer.playerInfo.ucoin);
+-            }
++            // Player currency columns and their legacy leaderboard are retired.
+ 
+             int ret = (player.uRoomGame.playInRoomState == (int)PlayerInRoomState.Playing) ? 1 : 0;
+ 
+--- a/server/GameServer/src/Game/LogicServer/Room/RoomMgr.cs
++++ b/server/GameServer/src/Game/LogicServer/Room/RoomMgr.cs
+@@ -120,7 +120,7 @@
+         protected ResUserArrivedSeat GetUserArrivedSeatData(GM_PlayerEntity entity, int seatId) {
+             ResUserArrivedSeat userData = new ResUserArrivedSeat();
+             userData.unick = entity.uPlayer.playerInfo.name;
+-            userData.usex = entity.uPlayer.playerInfo.usex;
++            userData.usex = 0;
+             userData.uface = entity.uPlayer.accountInfo.uface;
+ 
+             userData.seatId = seatId;
+--- a/server/GameServer/src/Game/LogicServer/ZoneRule.cs
++++ b/server/GameServer/src/Game/LogicServer/ZoneRule.cs
+@@ -28,30 +28,8 @@
+ 
+         public static int ParseCondGE(GM_PlayerEntity e, string lhs, string rhs)
+         {
+-            int status = (int)Respones.InvalidOpt;
+-            int value = 0;
+-            if (lhs.Equals("ulevel"))
+-            {
+-                value = int.Parse(rhs);
+-                if (e.uPlayer.playerInfo.level >= value)
+-                {
+-                    return (int)Respones.OK;
+-                }
+-
+-                status = (int)Respones.LevelIsNotEnough;
+-                // status = (int)Respones.OK;
+-            }
+-            else if (lhs.Equals("uchip"))
+-            {
+-                value = int.Parse(rhs);
+-                if (e.uPlayer.playerInfo.ucoin >= value)
+-                {
+-                    return (int)Respones.OK;
+-                }
+-
+-                status = (int)Respones.ChipIsNotEnough;
+-            }
+-            return status;
++            // Legacy level and currency conditions are not supported by the minimal player.
++            return (int)Respones.InvalidOpt;
+         }
+ 
+ 
+--- a/server/GameServer/src/Game/Core/GM_Bonues/Rules/BonuesRuleA.cs
++++ b/server/GameServer/src/Game/Core/GM_Bonues/Rules/BonuesRuleA.cs
+@@ -31,13 +31,7 @@
+             
+             logger.Info("DefaultBonuesApplayToPlayer");
+             // 给玩家计算出来，它这次账号升级可以获得的奖励
+-            Game.Datas.DBEntities.Player playerInfo = GM_AccountEntityMgr.Instance.GetPlayerById(bonues.uid);
+-            playerInfo.ucoin += bonues.bonues1; 
+-            GM_AccountEntityMgr.Instance.UpdatePlayer(playerInfo);
+-            // end
+-
+-
+-            return;
++            throw new NotSupportedException("Legacy player currency rewards are disabled.");
+         }
+ 
+         [RuleProcesser("Calc", -1)]
+@@ -88,13 +82,7 @@
+ 
+             logger.Info("MonneyBonuesApplayToPlayer");
+             // 给玩家计算出来，它这次账号升级可以获得的奖励
+-            Game.Datas.DBEntities.Player playerInfo = GM_AccountEntityMgr.Instance.GetPlayerById(bonues.uid);
+-            playerInfo.umoney += bonues.bonues1; // 配置表里面读;
+-            GM_AccountEntityMgr.Instance.UpdatePlayer(playerInfo);
+-            // end
+-
+-
+-            return;
++            throw new NotSupportedException("Legacy player currency rewards are disabled.");
+         }
+     }
+ }
+--- a/server/GameServer/src/Game/Core/GM_Trading/Rules/ExchangeTradingRules.cs
++++ b/server/GameServer/src/Game/Core/GM_Trading/Rules/ExchangeTradingRules.cs
+@@ -23,39 +23,14 @@
+                 return (int)Respones.InvalidParams;
+             }
+ 
+-            if (player.uPlayer.playerInfo.umoney < config.Price) {
+-                return (int)Respones.MoneyIsNotEnough;
+-            }
+-
+-            return (int)Respones.OK;
++            return (int)Respones.InvalidOpt;
+         }
+ 
+ 
+         [RuleProcesser("DoExchange", -1)]
+         static bool DefaultDoExchange(GM_PlayerEntity player, int productId)
+         {
+-            ExchangeTrading config = (ExchangeTrading)ExcelUtils.GetConfigData<ExchangeTrading>(productId.ToString());
+-            if (config == null) {
+-                return false;
+-            }
+-            Dictionary<string, int> products = GameUtils.ParseStringWithKeyIntValue(config.Product);
+-            if (products.Count <= 0) {
+-                return false;
+-            }
+-
+-            player.uPlayer.playerInfo.umoney -= config.Price;
+-            GM_AccountEntityMgr.Instance.UpdatePlayer(player.uPlayer.playerInfo);
+-
+-            foreach (var key in products.Keys) {
+-                int value = products[key];
+-                int typeId = int.Parse(key);
+-
+-                
+-                // 注意多线程
+-                GM_BackpackMgr.Instance.UpdateGoodsWithTid(player, typeId, value);
+-            }
+-
+-            return true;
++            return false; // Legacy yuanbao exchange is disabled.
+         }
+ 
+ 
+--- a/server/GameServer/src/Game/Core/GM_Bonues/GM_BonuesMgr.cs
++++ b/server/GameServer/src/Game/Core/GM_Bonues/GM_BonuesMgr.cs
+@@ -46,7 +46,8 @@
+             return true;
+         }
+ 
+-        private bool ApplayBonuesToPlayer(Bonues dbBonues) {
++        private bool ApplayBonuesToPlayer(Bonues dbBonues) {
++            if (dbBonues != null && dbBonues.tid / 100000 == 1) return false;
+             if (dbBonues == null || dbBonues.status != 0)
+             {
+                 return false;
+@@ -67,7 +68,8 @@
+             return true;
+         }
+ 
+-        public bool RecvBonues(long bonuesId, Bonues dbBonues = null) {
++        public bool RecvBonues(long bonuesId, Bonues dbBonues = null) {
++            if (dbBonues != null && dbBonues.tid / 100000 == 1) return false;
+ 
+             if (dbBonues != null) {
+                 dbBonues = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Bonues>().First(it => it.id == bonuesId);//查询单条
+@@ -101,7 +103,7 @@
+             dbBonues.bonues4 = b4;
+             dbBonues.bonues5 = b5;
+ 
+-            this.ApplayBonuesToPlayer(dbBonues);
++            if (!this.ApplayBonuesToPlayer(dbBonues)) return null;
+ 
+             dbBonues.status = 1;
+             DBService.Instance.GetGameInstance().Insertable(dbBonues).ExecuteCommandAsync();
+@@ -145,7 +147,7 @@
+             }
+ 
+ 
+-            this.ApplayBonuesToPlayer(dbBonues);
++            if (!this.ApplayBonuesToPlayer(dbBonues)) return;
+             dbBonues.status = 1;
+ 
+             DBService.Instance.GetGameInstance().Insertable(dbBonues).ExecuteCommandAsync();
+--- /dev/null
++++ b/server/tools/Update-ZombiePlayer.ps1
+@@ -0,0 +1,52 @@
++#requires -Version 7.0
++[CmdletBinding()]
++param(
++    [string]$BackupDirectory = (Join-Path $env:LOCALAPPDATA ('Temp/zombie-player-backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))),
++    [string]$MySqlDirectory = 'C:/Program Files/MySQL/MySQL Server 5.7/bin'
++)
++$ErrorActionPreference = 'Stop'
++$serverRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
++[xml]$config = Get-Content -LiteralPath (Join-Path $serverRoot 'GameServer/App.config') -Raw
++$connection = ($config.configuration.connectionStrings.add | Where-Object { $_.name -eq 'connGameDataStr' }).connectionString
++$settings = @{}
++foreach ($part in $connection.Split(';')) { $pair = $part.Split('=', 2); if ($pair.Count -eq 2) { $settings[$pair[0].Trim()] = $pair[1].Trim() } }
++if ($settings.Database -ne 'zombie_game') { throw 'Only zombie_game can be migrated.' }
++function Invoke-Database([string]$Executable, [string[]]$ExtraArguments, [string]$InputSql) {
++    $start = [Diagnostics.ProcessStartInfo]::new((Join-Path $MySqlDirectory $Executable))
++    $start.UseShellExecute = $false; $start.CreateNoWindow = $true
++    $start.RedirectStandardInput = $true; $start.RedirectStandardOutput = $true; $start.RedirectStandardError = $true
++    $start.StandardInputEncoding = [Text.UTF8Encoding]::new($false)
++    $start.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
++    foreach ($arg in @('--no-defaults', '--protocol=TCP', '--default-character-set=utf8mb4', "--host=$($settings['Data Source'])", "--port=$($settings.Port)", "--user=$($settings['User Id'])") + $ExtraArguments) { $start.ArgumentList.Add($arg) }
++    $start.Environment['MYSQL_PWD'] = $settings.Password
++    $process = [Diagnostics.Process]::Start($start)
++    try {
++        $output = $process.StandardOutput.ReadToEndAsync(); $errors = $process.StandardError.ReadToEndAsync()
++        if ($InputSql) { $process.StandardInput.WriteLine($InputSql) }; $process.StandardInput.Close(); $process.WaitForExit()
++        $errorText = $errors.GetAwaiter().GetResult()
++        if ($process.ExitCode -ne 0) { throw "Database command failed: $errorText" }
++        return $output.GetAwaiter().GetResult()
++    } finally { $process.Dispose() }
++}
++# Only stop executable paths within this project's GameServer/bin directory.
++$binRoot = [IO.Path]::GetFullPath((Join-Path $serverRoot 'GameServer/bin')) + [IO.Path]::DirectorySeparatorChar
++Get-CimInstance Win32_Process | Where-Object {
++    ($_.Name -eq 'GameServer.exe' -and $_.ExecutablePath -and $_.ExecutablePath.StartsWith($binRoot, [StringComparison]::OrdinalIgnoreCase)) -or
++    ($_.Name -eq 'dotnet.exe' -and $_.CommandLine -and $_.CommandLine.Contains($binRoot) -and $_.CommandLine.Contains('GameServer.dll'))
++} | ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction Stop }
++New-Item -ItemType Directory -Path $BackupDirectory -Force | Out-Null
++$backup = Join-Path $BackupDirectory 'zombie_game.player.sql'
++$dump = Invoke-Database 'mysqldump.exe' @('--single-transaction', '--skip-lock-tables', '--set-gtid-purged=OFF', 'zombie_game', 'player') ''
++if ($dump -notmatch 'CREATE TABLE.*player') { throw 'Player backup was not produced.' }
++[IO.File]::WriteAllText($backup, $dump, [Text.UTF8Encoding]::new($false))
++$queryArguments = @('--batch', '--raw', '--skip-column-names', 'zombie_game')
++$readKept = 'SELECT id,accountId,HEX(name),avatarId,createTime,status FROM player ORDER BY id;'
++$before = Invoke-Database 'mysql.exe' $queryArguments $readKept
++$migration = Get-Content -LiteralPath (Join-Path $serverRoot 'sql/migrations/20261112_001_zombie_player_minimal.sql') -Raw
++Invoke-Database 'mysql.exe' $queryArguments $migration | Out-Null
++Invoke-Database 'mysql.exe' $queryArguments $migration | Out-Null
++$after = Invoke-Database 'mysql.exe' $queryArguments $readKept
++if ($before -cne $after) { throw "Retained player data changed. Backup: $backup" }
++$columns = Invoke-Database 'mysql.exe' $queryArguments "SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema='zombie_game' AND table_name='player' ORDER BY ORDINAL_POSITION;"
++if (@($columns.Trim() -split '\r?\n' | Sort-Object) -join ',' -ne 'accountId,avatarId,createTime,id,name,status') { throw 'Unexpected player columns.' }
++Write-Output "Player migration verified twice; retained data matches. Backup: $backup"
+--- a/server/GameServer/src/Game/LogicServer/World/AOI/AOIMgr.cs
++++ b/server/GameServer/src/Game/LogicServer/World/AOI/AOIMgr.cs
+@@ -52,9 +52,9 @@
+             // 
+             ch.chInfo = new CharactorInfo();
+             ch.chInfo.unick = e.uPlayer.playerInfo.name;
+-            ch.chInfo.job = e.uPlayer.playerInfo.job;
++            ch.chInfo.job = 0;
+             ch.chInfo.charactorId = -1;  // 保留，如果你后续有需求, 数据库保留这个角色ID就可以了;
+-            ch.chInfo.sex = e.uPlayer.playerInfo.usex;
++            ch.chInfo.sex = 0;
+ 
+             // Transform
+             ch.transform = new CharactorTransform();
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Models/PlayerBasicInfoModel.cs
+@@ -0,0 +1,13 @@
++namespace TowerDefence.Networking.Integration
++{
++    public sealed class PlayerBasicInfoModel
++    {
++        public long PlayerId { get; }
++        public long AccountId { get; }
++        public string Name { get; }
++        public int AvatarId { get; }
++        public long CreateTime { get; }
++        public PlayerBasicInfoModel(long playerId, long accountId, string name, int avatarId, long createTime)
++        { PlayerId = playerId; AccountId = accountId; Name = name ?? ""; AvatarId = avatarId; CreateTime = createTime; }
++    }
++}
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Events/PlayerBasicInfoEvents.cs
+@@ -0,0 +1,35 @@
++using System;
++using System.Threading;
++using UniFramework.Event;
++namespace TowerDefence.Networking.Integration
++{
++    public sealed class PlayerBasicInfoRequestedEvent : IEventMessage
++    {
++        public readonly Guid RequestId;
++        public readonly CancellationToken Cancellation;
++        public PlayerBasicInfoRequestedEvent(Guid requestId, CancellationToken cancellation) { RequestId = requestId; Cancellation = cancellation; }
++    }
++    public sealed class PlayerBasicInfoLoadingEvent : IEventMessage
++    {
++        public readonly Guid RequestId;
++        public PlayerBasicInfoLoadingEvent(Guid requestId) => RequestId = requestId;
++    }
++    public sealed class PlayerBasicInfoLoadedEvent : IEventMessage
++    {
++        public readonly Guid RequestId;
++        public readonly PlayerBasicInfoModel Info;
++        public PlayerBasicInfoLoadedEvent(Guid requestId, PlayerBasicInfoModel info) { RequestId = requestId; Info = info; }
++    }
++    public sealed class PlayerBasicInfoFailedEvent : IEventMessage
++    {
++        public readonly Guid RequestId;
++        public readonly string Error;
++        public PlayerBasicInfoFailedEvent(Guid requestId, string error) { RequestId = requestId; Error = error; }
++    }
++    // Guid.Empty means a session-wide invalidation for every panel, including completed queries.
++    public sealed class PlayerBasicInfoClearedEvent : IEventMessage
++    {
++        public readonly Guid RequestId;
++        public PlayerBasicInfoClearedEvent(Guid requestId) => RequestId = requestId;
++    }
++}
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Network/PlayerBasicInfoNetwork.cs
+@@ -0,0 +1,13 @@
++using System;
++using System.Threading;
++using Cysharp.Threading.Tasks;
++using TowerDefence.Networking.Messages;
++namespace TowerDefence.Networking.Integration
++{
++    public static class PlayerBasicInfoNetwork
++    {
++        public static UniTask<ResGetPlayerBasicInfo> QueryAsync(CancellationToken cancellation) =>
++            SessionNetwork.Singleton.RequestAsync<ResGetPlayerBasicInfo>(new ReqGetPlayerBasicInfo(),
++                new NetworkRequestOptions { Timeout = TimeSpan.FromSeconds(10), OperationKey = "player.basic-info", DuplicatePolicy = DuplicateRequestPolicy.RejectNew }, cancellation);
++    }
++}
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager/PlayerBasicInfoManager.cs
+@@ -0,0 +1,93 @@
++using System;
++using System.Threading;
++using Cysharp.Threading.Tasks;
++using TowerDefence.Networking.Messages;
++using UniFramework.Event;
++using UnityEngine;
++namespace TowerDefence.Networking.Integration
++{
++    public sealed class PlayerBasicInfoManager : Singleton_Mono<PlayerBasicInfoManager>
++    {
++        private bool _initialized, _disposed;
++        private long _generation;
++        private CancellationTokenSource _operation;
++        public PlayerBasicInfoModel CurrentInfo { get; private set; }
++        public bool IsBusy => _operation != null;
++        protected override bool Can_AutoInstance() => true;
++        protected override void OnInit()
++        {
++            if (_initialized) return;
++            _initialized = true;
++            DontDestroyOnLoad(gameObject);
++            UniEvent.AddListener<PlayerBasicInfoRequestedEvent>(OnRequested);
++            UniEvent.AddListener<UserLogoutStartedEvent>(OnSessionChanged);
++            UniEvent.AddListener<UserLoginSucceededEvent>(OnSessionChanged);
++            UniEvent.AddListener<NetworkDisconnectedEvent>(OnSessionChanged);
++            UniEvent.AddListener<NetworkConnectingEvent>(OnSessionChanged);
++            UniEvent.AddListener<NetworkRecoveryStartedEvent>(OnSessionChanged);
++        }
++        private void OnRequested(IEventMessage message)
++        {
++            var request = (PlayerBasicInfoRequestedEvent)message;
++            if (_disposed || request.RequestId == Guid.Empty || request.Cancellation.IsCancellationRequested) return;
++            if (IsBusy) { Fail(request.RequestId, "正在查询，请稍后重试。"); return; }
++            QueryAsync(request).Forget();
++        }
++        private async UniTaskVoid QueryAsync(PlayerBasicInfoRequestedEvent request)
++        {
++            CancellationTokenSource scope = null;
++            try
++            {
++                var login = LoginManager.Singleton;
++                var network = SessionNetwork.Singleton;
++                if (!login.IsLoggedIn || !network.IsGameAuthenticated) { Fail(request.RequestId, "请先登录并连接游戏服。"); return; }
++                long accountId = login.CurrentAccountId, connection = network.ConnectionGeneration, generation = _generation;
++                scope = CancellationTokenSource.CreateLinkedTokenSource(request.Cancellation, login.SessionCancellation, network.ConnectionCancellation);
++                _operation = scope;
++                UniEvent.SendMessage(new PlayerBasicInfoLoadingEvent(request.RequestId));
++                var response = await PlayerBasicInfoNetwork.QueryAsync(scope.Token);
++                scope.Token.ThrowIfCancellationRequested();
++                if (_disposed || generation != _generation || accountId != login.CurrentAccountId || connection != network.ConnectionGeneration || !network.IsGameAuthenticated) return;
++                if (response == null || response.status != (int)Respones.OK || response.playerId <= 0)
++                    throw new InvalidOperationException(response?.errorMessage ?? "查询用户信息失败。");
++                CurrentInfo = new PlayerBasicInfoModel(response.playerId, accountId, response.name, response.avatarId, response.createTime);
++                UniEvent.SendMessage(new PlayerBasicInfoLoadedEvent(request.RequestId, CurrentInfo));
++            }
++            catch (OperationCanceledException)
++            {
++                if (!_disposed && !request.Cancellation.IsCancellationRequested && ReferenceEquals(_operation, scope)) Fail(request.RequestId, "连接已变化，请重新查询。");
++            }
++            catch (Exception error)
++            {
++                if (!_disposed && !request.Cancellation.IsCancellationRequested && (scope == null || ReferenceEquals(_operation, scope))) Fail(request.RequestId, error.Message);
++            }
++            finally
++            {
++                if (ReferenceEquals(_operation, scope)) _operation = null;
++                scope?.Dispose();
++            }
++        }
++        private static void Fail(Guid id, string error) => UniEvent.SendMessage(new PlayerBasicInfoFailedEvent(id, error));
++        private void OnSessionChanged(IEventMessage message)
++        {
++            _generation++; CurrentInfo = null;
++            var operation = _operation; _operation = null; operation?.Cancel();
++            UniEvent.SendMessage(new PlayerBasicInfoClearedEvent(Guid.Empty));
++        }
++        protected override void OnDestroy()
++        {
++            _disposed = true;
++            if (_initialized)
++            {
++                UniEvent.RemoveListener<PlayerBasicInfoRequestedEvent>(OnRequested);
++                UniEvent.RemoveListener<UserLogoutStartedEvent>(OnSessionChanged);
++                UniEvent.RemoveListener<UserLoginSucceededEvent>(OnSessionChanged);
++                UniEvent.RemoveListener<NetworkDisconnectedEvent>(OnSessionChanged);
++                UniEvent.RemoveListener<NetworkConnectingEvent>(OnSessionChanged);
++                UniEvent.RemoveListener<NetworkRecoveryStartedEvent>(OnSessionChanged);
++            }
++            OnSessionChanged(null);
++            base.OnDestroy();
++        }
++    }
++}
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.cs
+@@ -0,0 +1,89 @@
++using System;
++using System.Threading;
++using TowerDefence.Networking.Integration;
++using UniFramework.Event;
++using UnityEngine;
++using UnityEngine.UI;
++namespace R.UI
++{
++    public sealed class UIPlayerBasicInfo : MonoBehaviour, IUIPanel
++    {
++        [Header("操作")]
++        public Button CloseButton;
++        public Button RefreshButton;
++        [Header("用户信息")]
++        public Text PlayerIdText, AccountIdText, NameText, AvatarIdText, CreateTimeText, StatusText;
++        private CancellationTokenSource _request;
++        private Guid _requestId;
++        private bool _loading;
++        public GameObject GameObject => gameObject;
++        private void Awake()
++        {
++            CloseButton.onClick.AddListener(Close);
++            RefreshButton.onClick.AddListener(Refresh);
++        }
++        private void OnEnable()
++        {
++            UniEvent.AddListener<PlayerBasicInfoLoadingEvent>(OnLoading);
++            UniEvent.AddListener<PlayerBasicInfoLoadedEvent>(OnLoaded);
++            UniEvent.AddListener<PlayerBasicInfoFailedEvent>(OnFailed);
++            UniEvent.AddListener<PlayerBasicInfoClearedEvent>(OnCleared);
++        }
++        private void OnDisable()
++        {
++            UniEvent.RemoveListener<PlayerBasicInfoLoadingEvent>(OnLoading);
++            UniEvent.RemoveListener<PlayerBasicInfoLoadedEvent>(OnLoaded);
++            UniEvent.RemoveListener<PlayerBasicInfoFailedEvent>(OnFailed);
++            UniEvent.RemoveListener<PlayerBasicInfoClearedEvent>(OnCleared);
++            CancelRequest();
++        }
++        private void OnDestroy()
++        {
++            CloseButton.onClick.RemoveListener(Close);
++            RefreshButton.onClick.RemoveListener(Refresh);
++            CancelRequest();
++        }
++        public void OnSHow() { if (!_loading) { ClearDisplay(); Refresh(); } }
++        private void Refresh()
++        {
++            if (_loading) return;
++            CancelRequest();
++            _request = new CancellationTokenSource(); _requestId = Guid.NewGuid();
++            SetLoading(true, "正在获取用户信息…");
++            UniEvent.SendMessage(new PlayerBasicInfoRequestedEvent(_requestId, _request.Token));
++        }
++        private void OnLoading(IEventMessage message)
++        { if (((PlayerBasicInfoLoadingEvent)message).RequestId == _requestId) SetLoading(true, "正在获取用户信息…"); }
++        private void OnLoaded(IEventMessage message)
++        {
++            var result = (PlayerBasicInfoLoadedEvent)message;
++            if (result.RequestId != _requestId) return;
++            var info = result.Info;
++            PlayerIdText.text = info.PlayerId.ToString(); AccountIdText.text = info.AccountId.ToString();
++            NameText.text = string.IsNullOrEmpty(info.Name) ? "未命名" : info.Name; AvatarIdText.text = info.AvatarId.ToString();
++            CreateTimeText.text = FormatTime(info.CreateTime);
++            SetLoading(false, "已更新");
++        }
++        public static string FormatTime(long unixSeconds)
++        {
++            if (unixSeconds <= 0) return "未知";
++            try { return DateTimeOffset.FromUnixTimeSeconds(unixSeconds).LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss"); }
++            catch (ArgumentOutOfRangeException) { return "未知"; }
++        }
++        private void OnFailed(IEventMessage message)
++        { var result = (PlayerBasicInfoFailedEvent)message; if (result.RequestId == _requestId) SetLoading(false, result.Error); }
++        private void OnCleared(IEventMessage message)
++        {
++            var result = (PlayerBasicInfoClearedEvent)message;
++            if (result.RequestId != Guid.Empty && result.RequestId != _requestId) return;
++            CancelRequest(); ClearDisplay(); SetLoading(false, "会话已变化，请连接游戏服后刷新。");
++        }
++        private void ClearDisplay()
++        { PlayerIdText.text = AccountIdText.text = NameText.text = AvatarIdText.text = CreateTimeText.text = "—"; }
++        private void SetLoading(bool loading, string status)
++        { _loading = loading; RefreshButton.interactable = !loading; StatusText.text = status; }
++        private void CancelRequest()
++        { _requestId = Guid.Empty; _request?.Cancel(); _request?.Dispose(); _request = null; _loading = false; }
++        private void Close() => UIMgr.Singleton.ConcealUI(nameof(UIPlayerBasicInfo));
++    }
++}
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/Shared/Network/SessionNetwork.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/Shared/Network/SessionNetwork.cs
+@@ -47,6 +47,7 @@
+             _ownerThread = Thread.CurrentThread.ManagedThreadId;
+             _config = IntegrationConfiguration.Load();
+             InitializeNetwork();
++            _ = PlayerBasicInfoManager.Singleton;
+         }
+         internal void EnsureReady()
+         {
+--- a/client/Assets/Rogue/Scripts/HotUpdate/MainInterface.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/MainInterface.cs
+@@ -53,6 +53,17 @@
+     public Button MonsterManualBut;
+ 
+     public Button SettingBtn;
++    public Button PlayerBasicInfoButton;
++    private bool openingPlayerBasicInfo;
++
++    public async void OpenPlayerBasicInfo()
++    {
++        if (openingPlayerBasicInfo) return;
++        openingPlayerBasicInfo = true;
++        try { await UIMgr.Singleton.ShowUI(nameof(UIPlayerBasicInfo)); }
++        catch (Exception error) { Debug.LogException(error); }
++        finally { openingPlayerBasicInfo = false; }
++    }
+ 
+     public Toggle toggle;
+     public RectTransform target; // 拖 ScrollView 对象
+@@ -144,6 +155,11 @@
+         UpdateTop();
+     }
+ 
++    private void OnDestroy()
++    {
++        if (PlayerBasicInfoButton != null) PlayerBasicInfoButton.onClick.RemoveListener(OpenPlayerBasicInfo);
++    }
++
+     private void OnDisable()
+     {
+         UniEvent.RemoveListener<EventMessage_ButtonStart>(ButtonStart);
+@@ -192,6 +208,8 @@
+ 
+     private async void Start()
+     {
++        _ = TowerDefence.Networking.Integration.SessionNetwork.Singleton;
++        if (PlayerBasicInfoButton != null) PlayerBasicInfoButton.onClick.AddListener(OpenPlayerBasicInfo);
+         AchievementBTN.onClick.AddListener(async () =>
+         {
+             //var uITask = UIMgr.Singleton.ShowUI(nameof(Tips));
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: b68d5f918700b1af84e9531ad2456ed6
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Models.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: a6aeebff8b78f0e606ac44cea78b0e74
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Events.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: 9cc72ced0fc33bbdf59457b901a44791
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Network.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: 939d2282acf2d60488f14c8118ce3a04
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: 3744f14d588a48c87079cb034f55eeaf
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: ea8d98a5d27739f8b951af617c97c809
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Models/PlayerBasicInfoModel.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: 99f89a0b5b81914aa575e5c3c03a6c1d
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Events/PlayerBasicInfoEvents.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: de18b638e5f9bb9f5991690d73ba8e1e
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Network/PlayerBasicInfoNetwork.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: 55c433982afe8522844f5d4ebcf42c2a
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager/PlayerBasicInfoManager.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: 1a8e0296d0613616a1b4a72ba06f1c60
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: 8be24b4957a3f022781e6c32364b6782
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- a/client/Tools/NetworkVerification/UnityCompile.csproj
++++ b/client/Tools/NetworkVerification/UnityCompile.csproj
+@@ -9,7 +9,7 @@
+     <Reference Include="UniTask"><HintPath>../../Library/ScriptAssemblies/UniTask.dll</HintPath></Reference>
+     <Reference Include="UniFramework.Event"><HintPath>../../Library/ScriptAssemblies/UniFramework.Event.dll</HintPath></Reference>
+     <Compile Include="../../Assets/Rogue/Scripts/HotUpdate/Framework/Network/**/*.cs;../../Assets/Rogue/Scripts/HotUpdate/Game/Login/**/*.cs;../../Assets/Rogue/Scripts/HotUpdate/Game/ServerSelect/**/*.cs;../../Assets/Rogue/Scripts/HotUpdate/Game/Shared/**/*.cs;../../Assets/Rogue/Scripts/HotUpdate/Game/Protocol/**/*.cs" />
+-    <Compile Include="../../Assets/Rogue/Scripts/HotUpdate/UI/Panel/Login/*.cs" />
++    <Compile Include="../../Assets/Rogue/Scripts/HotUpdate/UI/Panel/Login/*.cs;../../Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/*.cs;../../Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/**/*.cs" />
+     <Compile Include="../../Assets/Rogue/Scripts/HotUpdate/Common/Singleton.cs" />
+     <Compile Include="../SessionVerification/UnityUIHarness.cs" />
+     <Compile Include="../../Assets/Rogue/Scripts/HotUpdate/UI/Component/UIServerZoneItem.cs" />
+--- a/client/Tools/SessionVerification/UnityUIHarness.cs
++++ b/client/Tools/SessionVerification/UnityUIHarness.cs
+@@ -29,6 +29,8 @@
+         public Func<string, Task<IUIPanel>> Loader;
+         protected override bool Can_AutoInstance() => true;
+         protected override void OnInit() { }
++        public Action<string> Concealer;
++        public void ConcealUI(string name) => Concealer?.Invoke(name);
+         public Task<IUIPanel> ShowUI(string name, EPanelLoadMode mode = EPanelLoadMode.Add)
+             => Loader != null ? Loader(name) : throw new InvalidOperationException("Test UI loader was not assigned.");
+     }
+--- a/server/GameServerTests/PlayerProfile/PlayerBasicInfoTests.cs
++++ b/server/GameServerTests/PlayerProfile/PlayerBasicInfoTests.cs
+@@ -20,8 +20,7 @@
+     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+     private static Player Player(long id) => new()
+     {
+-        id = id, accountId = id + 1, avatarId = 4, name = "测试玩家", guildId = 8_000_000_001,
+-        titleId = 7, signature = "你好，世界 🌟", createTime = 1_792_000_000
++        id = id, accountId = id + 1, avatarId = 4, name = "测试玩家", createTime = 1_792_000_000
+     };
+ 
+     private static GM_PlayerEntity Online(Player player)
+@@ -65,11 +64,13 @@
+             var session = new IdSession { accountId = player.accountId, playerId = player.id };
+             var response = PlayerModule.Instance.HandlerGetPlayerBasicInfo(session, new ReqGetPlayerBasicInfo(), player.id);
+             Assert.Equal((int)Respones.OK, response.status);
+-            Assert.Equal(player.guildId, response.guildId);
++            Assert.Equal(0, response.guildId);
+             Assert.Equal(player.avatarId, response.avatarId);
+-            Assert.Equal(player.titleId, response.titleId);
++            Assert.Equal(0, response.titleId);
+             Assert.Equal(player.createTime, response.createTime);
+-            Assert.Equal(player.signature, response.signature);
++            Assert.Equal("", response.signature);
++            Assert.Equal("[0,0,0,0,0,0,0]", response.displayAchievementIds);
++            Assert.Equal("[0,0,0,0,0,0]", response.displayCharacterIds);
+             player.name = "changed";
+             Assert.Equal("测试玩家", result.Info.Name);
+         }
+@@ -147,7 +148,7 @@
+     [Trait("Category", "Database")]
+     public async Task DatabaseFallbackFillsCacheAndMissingPlayerReturnsNotFound()
+     {
+-        long playerId = -GachaMySqlTestEnvironment.PlayerId(903);
++        long playerId = Math.Abs(GachaMySqlTestEnvironment.PlayerId(903));
+         string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+         await using var connection = await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+         GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+@@ -155,12 +156,12 @@
+         try
+         {
+             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
+-                $"INSERT INTO player(id,accountId,name,avatarId,guildId,titleId,signature,createTime) " +
+-                $"VALUES ({playerId},{playerId},'profile-test',4,8000000001,7,'signature',1792000000)");
++                $"INSERT INTO player(id,accountId,name,avatarId,createTime) " +
++                $"VALUES ({playerId},{playerId},'profile-test',4,1792000000)");
+             var result = GM_PlayerProfileMgr.Instance.GetBasicInfo(playerId);
+             Assert.Equal(PlayerProfileStatus.Success, result.Status);
+-            Assert.Equal(8_000_000_001, result.Info.GuildId);
+-            Assert.Equal("signature", result.Info.Signature);
++            Assert.Equal(0, result.Info.GuildId);
++            Assert.Equal("", result.Info.Signature);
+             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection, $"DELETE FROM player WHERE id={playerId}");
+             Assert.Equal(PlayerProfileStatus.Success, GM_PlayerProfileMgr.Instance.GetBasicInfo(playerId).Status);
+             GM_AccountEntityMgr.Instance.Init();
+--- a/server/GameServerTests/PlayerProfile/PlayerProfileUpdateTests.cs
++++ b/server/GameServerTests/PlayerProfile/PlayerProfileUpdateTests.cs
+@@ -21,7 +21,8 @@
+     public void PartialUpdateValidationPreservesZeroAndClearSemantics()
+     {
+         Assert.True(new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar }, AvatarId = 0 }.IsValid());
+-        Assert.True(new PlayerProfileUpdate { Fields = new[] { ProfileField.Signature }, Signature = "" }.IsValid());
++        Assert.False(new PlayerProfileUpdate { Fields = new[] { ProfileField.Signature }, Signature = "" }.IsValid());
++        Assert.False(new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Title }, AvatarId = 4, TitleId = 1 }.IsValid());
+         Assert.False(new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar } }.IsValid());
+         Assert.False(new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Avatar }, AvatarId = 1 }.IsValid());
+         Assert.False(new PlayerProfileUpdate { Fields = new[] { (ProfileField)99 } }.IsValid());
+@@ -87,33 +88,33 @@
+     }
+ 
+     [Fact]
+-    public void QueryCopiesSlotsAndRejectsCorruptStoredJson()
++    public void CompatibilitySlotsAreIndependentAndRemovedWritesAreRejected()
+     {
+         GM_EntityMgr.Instance.Init();
+         long id = 909123;
+-        var player = new Player { id = id, accountId = 1, avatarFrameId = 3, backgroundId = 4,
+-            displayAchievementIds = "[1,2,0,0,0,0,0]", displayCharacterIds = "[9000000001,0,0,0,0,0]" };
+-        var entity = new GM_PlayerEntity(); entity.uPlayer.playerInfo = player;
+-        var players = (ConcurrentDictionary<long, GM_PlayerEntity>)typeof(GM_EntityMgr)
+-            .GetField("players", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(GM_EntityMgr.Instance);
++        var entity = new GM_PlayerEntity(); entity.uPlayer.playerInfo = new Player { id = id, accountId = 1, avatarId = 3 };
++        var players = (ConcurrentDictionary<long, GM_PlayerEntity>)typeof(GM_EntityMgr).GetField("players", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(GM_EntityMgr.Instance);
+         players[id] = entity;
+         try
+         {
+             var first = GM_PlayerProfileMgr.Instance.GetBasicInfo(id);
+-            Assert.Equal(3, first.Info.AvatarFrameId); Assert.Equal(9000000001, first.Info.DisplayCharacterIds[0]);
++            Assert.Equal(0, first.Info.AvatarFrameId);
++            Assert.Equal(new long[6], first.Info.DisplayCharacterIds);
+             first.Info.DisplayAchievementIds[0] = 99;
+-            Assert.Equal(1, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.DisplayAchievementIds[0]);
+-            player.displayCharacterIds = "[1]";
+-            Assert.Equal(PlayerProfileStatus.Failed, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Status);
++            Assert.Equal(new int[7], GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.DisplayAchievementIds);
++            foreach (var field in Enum.GetValues<ProfileField>().Where(x => x != ProfileField.Avatar))
++                Assert.Equal(PlayerProfileStatus.InvalidInput, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, 1,
++                    new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, field }, AvatarId = 9 }).Status);
++            Assert.Equal(3, entity.uPlayer.playerInfo.avatarId);
+         }
+         finally { players.TryRemove(id, out _); }
+     }
+ 
+     [DatabaseFact]
+     [Trait("Category", "Database")]
+-    public async Task DatabaseUpdateIsPartialRepeatableAndValidatesOwnershipBeforeWriting()
++    public async Task AvatarWritePreservesDataChecksAccountAndSupportsRepeatedZero()
+     {
+-        long id = -GachaMySqlTestEnvironment.PlayerId(990);
++        long id = Math.Abs(GachaMySqlTestEnvironment.PlayerId(990));
+         string connectionString = GachaMySqlTestEnvironment.ReadConnectionString();
+         await using var connection = await GachaMySqlTestEnvironment.OpenConnectionAsync(connectionString);
+         GachaMySqlTestEnvironment.InitializeServerServices(connectionString);
+@@ -121,44 +122,24 @@
+         try
+         {
+             await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
+-                $"INSERT INTO player(id,accountId,name,avatarId,titleId,signature) VALUES({id},{id},'profile-write-test',3,4,'before')");
++                $"INSERT INTO player(id,accountId,name,avatarId,createTime,status) VALUES({id},{id},'profile-write-test',3,1792000000,0)");
+             Player cached = GM_AccountEntityMgr.Instance.GetPlayerById(id);
+-            var command = new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Signature }, AvatarId = 0, Signature = "" };
++            var command = new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar }, AvatarId = 0 };
++            Assert.Equal(PlayerProfileStatus.NotFound, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id + 1, command).Status);
++            Assert.Equal(3, cached.avatarId);
+             Assert.Equal(PlayerProfileStatus.Success, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id, command).Status);
+             Assert.Equal(PlayerProfileStatus.Success, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id, command).Status);
+-            await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection,
+-                $"INSERT INTO player_character(player_id,character_id,star) VALUES({id},123456,0)");
+-            long instanceId = await GachaMySqlTestEnvironment.ReadScalarAsync(connection,
+-                $"SELECT id FROM player_character WHERE player_id={id}");
+             Assert.Same(cached, GM_AccountEntityMgr.Instance.GetPlayerById(id));
+-            Assert.Equal(0, cached.avatarId); Assert.Equal("", cached.signature);
+-            var slots = new PlayerProfileUpdate
+-            {
+-                Fields = new[] { ProfileField.Characters, ProfileField.Achievements, ProfileField.AvatarFrame, ProfileField.Background },
+-                DisplayCharacterIds = new long[] { instanceId, 0, 0, 0, 0, 0 },
+-                DisplayAchievementIds = new[] { 11, 22, 0, 0, 0, 0, 0 }, AvatarFrameId = 5, BackgroundId = 6
+-            };
+-            Assert.Equal(PlayerProfileStatus.Success, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id, slots).Status);
+-            var saved = GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info;
+-            Assert.Equal(instanceId, saved.DisplayCharacterIds[0]); Assert.Equal(22, saved.DisplayAchievementIds[1]);
+-            Assert.Equal(5, saved.AvatarFrameId); Assert.Equal(6, saved.BackgroundId);
+-            Assert.Equal(4, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.TitleId);
+-            Assert.Equal(0, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.AvatarId);
+-            Assert.Equal("", GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.Signature);
++            Assert.Equal(0, cached.avatarId);
++            Assert.Equal("profile-write-test", cached.name);
++            Assert.Equal(1792000000, cached.createTime);
+             Assert.Equal(PlayerProfileStatus.InvalidInput, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id,
+-                new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Characters }, AvatarId = 99,
+-                    DisplayCharacterIds = new long[] { long.MaxValue, 0, 0, 0, 0, 0 } }).Status);
+-            Assert.Equal(0, await GachaMySqlTestEnvironment.ReadScalarAsync(connection, $"SELECT avatarId FROM player WHERE id={id}"));
+-            Assert.Equal(0, GM_PlayerProfileMgr.Instance.GetBasicInfo(id).Info.AvatarId);
+-            Assert.Equal(PlayerProfileStatus.NotFound, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id + 1, command).Status);
+-            await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection, $"UPDATE player SET displayAchievementIds='bad-json' WHERE id={id}");
+-            Assert.Equal(PlayerProfileStatus.Failed, GM_PlayerProfileMgr.Instance.UpdateBasicInfo(id, id,
+-                new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar }, AvatarId = 99 }).Status);
++                new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Signature }, AvatarId = 99, Signature = "x" }).Status);
+             Assert.Equal(0, await GachaMySqlTestEnvironment.ReadScalarAsync(connection, $"SELECT avatarId FROM player WHERE id={id}"));
+         }
+         finally
+         {
+-            await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection, $"DELETE FROM player_character WHERE player_id={id}; DELETE FROM player WHERE id={id}");
++            await GachaMySqlTestEnvironment.ExecuteNonQueryAsync(connection, $"DELETE FROM player WHERE id={id}");
+             GM_AccountEntityMgr.Instance.Init();
+         }
+     }
+--- a/client/Assets/Scenes/Start.unity
++++ b/client/Assets/Scenes/Start.unity
+@@ -10003,6 +10003,7 @@
+   - {fileID: 1817647438}
+   - {fileID: 1916735756}
+   - {fileID: 1498753896}
++  - {fileID: 8900000000000000001}
+   m_Father: {fileID: 2123290789}
+   m_RootOrder: 1
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+@@ -10059,6 +10060,7 @@
+   Button_nextlevel: {fileID: 2157772264610865309}
+   MonsterManualBut: {fileID: 730497198}
+   SettingBtn: {fileID: 1922905621}
++  PlayerBasicInfoButton: {fileID: 8900000000000000004}
+   toggle: {fileID: 2157772264094750413}
+   target: {fileID: 2157772265626273889}
+   animTime: 0.3
+@@ -14622,3 +14624,206 @@
+   m_SortingLayerID: 0
+   m_SortingOrder: 12
+   m_TargetDisplay: 0
++
++--- !u!1 &8900000000000000000
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8900000000000000001}
++  - component: {fileID: 8900000000000000002}
++  - component: {fileID: 8900000000000000003}
++  - component: {fileID: 8900000000000000004}
++  m_Layer: 5
++  m_Name: PlayerBasicInfoButton
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8900000000000000001
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000000}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children:
++  - {fileID: 8900000000000000006}
++  m_Father: {fileID: 2157772264242585097}
++  m_RootOrder: 35
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0, y: 1}
++  m_AnchorMax: {x: 0, y: 1}
++  m_AnchoredPosition: {x: 102, y: -431}
++  m_SizeDelta: {x: 160, y: 64}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &8900000000000000002
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000000}
++  m_CullTransparentMesh: 1
++--- !u!114 &8900000000000000003
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000000}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.16, g: 0.38, b: 0.48, a: 1}
++  m_RaycastTarget: 1
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_Sprite: {fileID: 0}
++  m_Type: 0
++  m_PreserveAspect: 0
++  m_FillCenter: 1
++  m_FillMethod: 4
++  m_FillAmount: 1
++  m_FillClockwise: 1
++  m_FillOrigin: 0
++  m_UseSpriteMesh: 0
++  m_PixelsPerUnitMultiplier: 1
++--- !u!114 &8900000000000000004
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000000}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Navigation:
++    m_Mode: 3
++    m_WrapAround: 0
++    m_SelectOnUp: {fileID: 0}
++    m_SelectOnDown: {fileID: 0}
++    m_SelectOnLeft: {fileID: 0}
++    m_SelectOnRight: {fileID: 0}
++  m_Transition: 1
++  m_Colors:
++    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
++    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
++    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
++    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
++    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
++    m_ColorMultiplier: 1
++    m_FadeDuration: 0.1
++  m_SpriteState:
++    m_HighlightedSprite: {fileID: 0}
++    m_PressedSprite: {fileID: 0}
++    m_SelectedSprite: {fileID: 0}
++    m_DisabledSprite: {fileID: 0}
++  m_AnimationTriggers:
++    m_NormalTrigger: Normal
++    m_HighlightedTrigger: Highlighted
++    m_PressedTrigger: Pressed
++    m_SelectedTrigger: Selected
++    m_DisabledTrigger: Disabled
++  m_Interactable: 1
++  m_TargetGraphic: {fileID: 8900000000000000003}
++  m_OnClick:
++    m_PersistentCalls:
++      m_Calls: []
++--- !u!1 &8900000000000000005
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8900000000000000006}
++  - component: {fileID: 8900000000000000007}
++  - component: {fileID: 8900000000000000008}
++  m_Layer: 5
++  m_Name: Label
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8900000000000000006
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000005}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8900000000000000001}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0, y: 0}
++  m_AnchorMax: {x: 1, y: 1}
++  m_AnchoredPosition: {x: 0, y: 0}
++  m_SizeDelta: {x: 0, y: 0}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &8900000000000000007
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000005}
++  m_CullTransparentMesh: 1
++--- !u!114 &8900000000000000008
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 8900000000000000005}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 27
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 4
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u7528\u6237\u4FE1\u606F"
+--- /dev/null
++++ b/client/Assets/Prefabs/UI/Panel/PlayerBasicInfo.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: 32fa67e9e90e424556228060b78dab7a
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab
+@@ -0,0 +1,1554 @@
++%YAML 1.1
++%TAG !u! tag:unity3d.com,2011:
++--- !u!1 &133593248211497994
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 1592449992744826553}
++  - component: {fileID: 1863805467600822055}
++  - component: {fileID: 8080039990479598604}
++  m_Layer: 5
++  m_Name: Label0
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &1592449992744826553
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 133593248211497994}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 1
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: 180}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &1863805467600822055
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 133593248211497994}
++  m_CullTransparentMesh: 1
++--- !u!114 &8080039990479598604
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 133593248211497994}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u73A9\u5BB6ID"
++--- !u!1 &359287778518497454
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 3150477814726902785}
++  - component: {fileID: 901412576621593152}
++  - component: {fileID: 556324451812512030}
++  m_Layer: 5
++  m_Name: Label1
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &3150477814726902785
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 359287778518497454}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 3
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: 108}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &901412576621593152
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 359287778518497454}
++  m_CullTransparentMesh: 1
++--- !u!114 &556324451812512030
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 359287778518497454}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u8D26\u53F7ID"
++--- !u!1 &786293249835812126
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 718749854313086962}
++  - component: {fileID: 8454942938857389775}
++  - component: {fileID: 5183560995428801570}
++  - component: {fileID: 2809038776759769908}
++  m_Layer: 5
++  m_Name: Refresh
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &718749854313086962
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 786293249835812126}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children:
++  - {fileID: 1770818464658294751}
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 12
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -175, y: -300}
++  m_SizeDelta: {x: 280, y: 70}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &8454942938857389775
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 786293249835812126}
++  m_CullTransparentMesh: 1
++--- !u!114 &5183560995428801570
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 786293249835812126}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.16, g: 0.38, b: 0.48, a: 1}
++  m_RaycastTarget: 1
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_Sprite: {fileID: 0}
++  m_Type: 0
++  m_PreserveAspect: 0
++  m_FillCenter: 1
++  m_FillMethod: 4
++  m_FillAmount: 1
++  m_FillClockwise: 1
++  m_FillOrigin: 0
++  m_UseSpriteMesh: 0
++  m_PixelsPerUnitMultiplier: 1
++--- !u!114 &2809038776759769908
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 786293249835812126}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Navigation:
++    m_Mode: 3
++    m_WrapAround: 0
++    m_SelectOnUp: {fileID: 0}
++    m_SelectOnDown: {fileID: 0}
++    m_SelectOnLeft: {fileID: 0}
++    m_SelectOnRight: {fileID: 0}
++  m_Transition: 1
++  m_Colors:
++    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
++    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
++    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
++    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
++    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
++    m_ColorMultiplier: 1
++    m_FadeDuration: 0.1
++  m_SpriteState:
++    m_HighlightedSprite: {fileID: 0}
++    m_PressedSprite: {fileID: 0}
++    m_SelectedSprite: {fileID: 0}
++    m_DisabledSprite: {fileID: 0}
++  m_AnimationTriggers:
++    m_NormalTrigger: Normal
++    m_HighlightedTrigger: Highlighted
++    m_PressedTrigger: Pressed
++    m_SelectedTrigger: Selected
++    m_DisabledTrigger: Disabled
++  m_Interactable: 1
++  m_TargetGraphic: {fileID: 5183560995428801570}
++  m_OnClick:
++    m_PersistentCalls:
++      m_Calls: []
++--- !u!1 &1905991486868048481
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 3744717482473679024}
++  - component: {fileID: 4535745261028016821}
++  - component: {fileID: 2234456288794658079}
++  m_Layer: 5
++  m_Name: Label4
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &3744717482473679024
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 1905991486868048481}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 9
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: -108}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &4535745261028016821
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 1905991486868048481}
++  m_CullTransparentMesh: 1
++--- !u!114 &2234456288794658079
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 1905991486868048481}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u521B\u5EFA\u65F6\u95F4"
++--- !u!1 &2034138809592063903
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 3132618764394070463}
++  - component: {fileID: 8443819650864649945}
++  - component: {fileID: 6068913094662425615}
++  m_Layer: 5
++  m_Name: Value3
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &3132618764394070463
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 2034138809592063903}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 8
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: -36}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &8443819650864649945
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 2034138809592063903}
++  m_CullTransparentMesh: 1
++--- !u!114 &6068913094662425615
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 2034138809592063903}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
++--- !u!1 &2708909253819062550
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 4024836999352093500}
++  - component: {fileID: 3738655732675759895}
++  - component: {fileID: 5482781762344272035}
++  m_Layer: 5
++  m_Name: Label3
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &4024836999352093500
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 2708909253819062550}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 7
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: -36}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &3738655732675759895
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 2708909253819062550}
++  m_CullTransparentMesh: 1
++--- !u!114 &5482781762344272035
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 2708909253819062550}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u5934\u50CFID"
++--- !u!1 &3248502059963183881
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 5546109807718300445}
++  - component: {fileID: 4917554797084912445}
++  - component: {fileID: 7651327029056136239}
++  m_Layer: 5
++  m_Name: Value1
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &5546109807718300445
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3248502059963183881}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 4
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: 108}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &4917554797084912445
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3248502059963183881}
++  m_CullTransparentMesh: 1
++--- !u!114 &7651327029056136239
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3248502059963183881}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
++--- !u!1 &3343627971684426063
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 3426479251507852010}
++  - component: {fileID: 125902457426937855}
++  - component: {fileID: 8531345652876892655}
++  - component: {fileID: 7806025904065349305}
++  m_Layer: 0
++  m_Name: UIPlayerBasicInfo
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &3426479251507852010
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3343627971684426063}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children:
++  - {fileID: 8931291746047420044}
++  m_Father: {fileID: 0}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0, y: 0}
++  m_AnchorMax: {x: 1, y: 1}
++  m_AnchoredPosition: {x: 0, y: 0}
++  m_SizeDelta: {x: 0, y: 0}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &125902457426937855
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3343627971684426063}
++  m_CullTransparentMesh: 1
++--- !u!114 &8531345652876892655
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3343627971684426063}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.025, g: 0.04, b: 0.07, a: 0.92}
++  m_RaycastTarget: 1
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_Sprite: {fileID: 0}
++  m_Type: 0
++  m_PreserveAspect: 0
++  m_FillCenter: 1
++  m_FillMethod: 4
++  m_FillAmount: 1
++  m_FillClockwise: 1
++  m_FillOrigin: 0
++  m_UseSpriteMesh: 0
++  m_PixelsPerUnitMultiplier: 1
++--- !u!114 &7806025904065349305
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 3343627971684426063}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 8be24b4957a3f022781e6c32364b6782, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  CloseButton: {fileID: 1878415697602513061}
++  RefreshButton: {fileID: 2809038776759769908}
++  PlayerIdText: {fileID: 6181361305301271563}
++  AccountIdText: {fileID: 7651327029056136239}
++  NameText: {fileID: 3851987830202471630}
++  AvatarIdText: {fileID: 6068913094662425615}
++  CreateTimeText: {fileID: 2013723636361816823}
++  StatusText: {fileID: 1237835708235929834}
++--- !u!1 &4020593302057313901
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 7637982953230908957}
++  - component: {fileID: 6946981497518646067}
++  - component: {fileID: 1237835708235929834}
++  m_Layer: 5
++  m_Name: Status
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &7637982953230908957
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4020593302057313901}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 11
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 0, y: -210}
++  m_SizeDelta: {x: 700, y: 65}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &6946981497518646067
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4020593302057313901}
++  m_CullTransparentMesh: 1
++--- !u!114 &1237835708235929834
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4020593302057313901}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 22
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 4
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u6253\u5F00\u540E\u81EA\u52A8\u67E5\u8BE2"
++--- !u!1 &4666147941988132691
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 4287489369881379855}
++  - component: {fileID: 7919557705944972502}
++  - component: {fileID: 2013723636361816823}
++  m_Layer: 5
++  m_Name: Value4
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &4287489369881379855
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4666147941988132691}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 10
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: -108}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &7919557705944972502
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4666147941988132691}
++  m_CullTransparentMesh: 1
++--- !u!114 &2013723636361816823
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4666147941988132691}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
++--- !u!1 &4793282242350121683
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8931291746047420044}
++  - component: {fileID: 1090004771358512061}
++  - component: {fileID: 7584377655699322985}
++  m_Layer: 5
++  m_Name: Card
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8931291746047420044
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4793282242350121683}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children:
++  - {fileID: 6289257111706737140}
++  - {fileID: 1592449992744826553}
++  - {fileID: 4377282113255056812}
++  - {fileID: 3150477814726902785}
++  - {fileID: 5546109807718300445}
++  - {fileID: 5874675965422076329}
++  - {fileID: 8728803442905315879}
++  - {fileID: 4024836999352093500}
++  - {fileID: 3132618764394070463}
++  - {fileID: 3744717482473679024}
++  - {fileID: 4287489369881379855}
++  - {fileID: 7637982953230908957}
++  - {fileID: 718749854313086962}
++  - {fileID: 5308989785800147242}
++  m_Father: {fileID: 3426479251507852010}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 0, y: 0}
++  m_SizeDelta: {x: 820, y: 750}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &1090004771358512061
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4793282242350121683}
++  m_CullTransparentMesh: 1
++--- !u!114 &7584377655699322985
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 4793282242350121683}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.09, g: 0.14, b: 0.2, a: 1}
++  m_RaycastTarget: 1
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_Sprite: {fileID: 0}
++  m_Type: 0
++  m_PreserveAspect: 0
++  m_FillCenter: 1
++  m_FillMethod: 4
++  m_FillAmount: 1
++  m_FillClockwise: 1
++  m_FillOrigin: 0
++  m_UseSpriteMesh: 0
++  m_PixelsPerUnitMultiplier: 1
++--- !u!1 &5061522936660038858
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 6289257111706737140}
++  - component: {fileID: 6578198090613751976}
++  - component: {fileID: 7921939282090687293}
++  m_Layer: 5
++  m_Name: Title
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &6289257111706737140
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5061522936660038858}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 0, y: 282}
++  m_SizeDelta: {x: 700, y: 75}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &6578198090613751976
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5061522936660038858}
++  m_CullTransparentMesh: 1
++--- !u!114 &7921939282090687293
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5061522936660038858}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 42
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 42
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u7528\u6237\u4FE1\u606F"
++--- !u!1 &5360409088393953176
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 5874675965422076329}
++  - component: {fileID: 2074252446263105122}
++  - component: {fileID: 4631067853348541765}
++  m_Layer: 5
++  m_Name: Label2
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &5874675965422076329
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5360409088393953176}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 5
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: -240, y: 36}
++  m_SizeDelta: {x: 180, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &2074252446263105122
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5360409088393953176}
++  m_CullTransparentMesh: 1
++--- !u!114 &4631067853348541765
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5360409088393953176}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.65, g: 0.74, b: 0.83, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u73A9\u5BB6\u540D\u79F0"
++--- !u!1 &5435763323624540978
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 1770818464658294751}
++  - component: {fileID: 6728350795068031652}
++  - component: {fileID: 6457401585481367444}
++  m_Layer: 5
++  m_Name: Label
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &1770818464658294751
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5435763323624540978}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 718749854313086962}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0, y: 0}
++  m_AnchorMax: {x: 1, y: 1}
++  m_AnchoredPosition: {x: 0, y: 0}
++  m_SizeDelta: {x: 0, y: 0}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &6728350795068031652
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5435763323624540978}
++  m_CullTransparentMesh: 1
++--- !u!114 &6457401585481367444
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5435763323624540978}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 27
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 4
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u5237\u65B0"
++--- !u!1 &5495176811977234846
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8728803442905315879}
++  - component: {fileID: 3051942316126933153}
++  - component: {fileID: 3851987830202471630}
++  m_Layer: 5
++  m_Name: Value2
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8728803442905315879
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5495176811977234846}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 6
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: 36}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &3051942316126933153
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5495176811977234846}
++  m_CullTransparentMesh: 1
++--- !u!114 &3851987830202471630
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5495176811977234846}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
++--- !u!1 &5682969131967702667
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 4377282113255056812}
++  - component: {fileID: 4896293285005742982}
++  - component: {fileID: 6181361305301271563}
++  m_Layer: 5
++  m_Name: Value0
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &4377282113255056812
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5682969131967702667}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 2
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 105, y: 180}
++  m_SizeDelta: {x: 480, y: 58}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &4896293285005742982
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5682969131967702667}
++  m_CullTransparentMesh: 1
++--- !u!114 &6181361305301271563
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5682969131967702667}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 25
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 3
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u2014"
++--- !u!1 &5746549330535850738
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 8904029020619378752}
++  - component: {fileID: 5334075684462199954}
++  - component: {fileID: 1816074656441906865}
++  m_Layer: 5
++  m_Name: Label
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &8904029020619378752
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5746549330535850738}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children: []
++  m_Father: {fileID: 5308989785800147242}
++  m_RootOrder: 0
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0, y: 0}
++  m_AnchorMax: {x: 1, y: 1}
++  m_AnchoredPosition: {x: 0, y: 0}
++  m_SizeDelta: {x: 0, y: 0}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &5334075684462199954
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5746549330535850738}
++  m_CullTransparentMesh: 1
++--- !u!114 &1816074656441906865
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 5746549330535850738}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 1, g: 1, b: 1, a: 1}
++  m_RaycastTarget: 0
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_FontData:
++    m_Font: {fileID: 12800000, guid: 0f1025bb23c3e924da243e6b06776936, type: 3}
++    m_FontSize: 27
++    m_FontStyle: 0
++    m_BestFit: 0
++    m_MinSize: 10
++    m_MaxSize: 40
++    m_Alignment: 4
++    m_AlignByGeometry: 0
++    m_RichText: 1
++    m_HorizontalOverflow: 0
++    m_VerticalOverflow: 0
++    m_LineSpacing: 1
++  m_Text: "\u5173\u95ED"
++--- !u!1 &6408485316032184491
++GameObject:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  serializedVersion: 6
++  m_Component:
++  - component: {fileID: 5308989785800147242}
++  - component: {fileID: 6781129113105959152}
++  - component: {fileID: 4117209530835091614}
++  - component: {fileID: 1878415697602513061}
++  m_Layer: 5
++  m_Name: Close
++  m_TagString: Untagged
++  m_Icon: {fileID: 0}
++  m_NavMeshLayer: 0
++  m_StaticEditorFlags: 0
++  m_IsActive: 1
++--- !u!224 &5308989785800147242
++RectTransform:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6408485316032184491}
++  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
++  m_LocalPosition: {x: 0, y: 0, z: 0}
++  m_LocalScale: {x: 1, y: 1, z: 1}
++  m_ConstrainProportionsScale: 0
++  m_Children:
++  - {fileID: 8904029020619378752}
++  m_Father: {fileID: 8931291746047420044}
++  m_RootOrder: 13
++  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
++  m_AnchorMin: {x: 0.5, y: 0.5}
++  m_AnchorMax: {x: 0.5, y: 0.5}
++  m_AnchoredPosition: {x: 175, y: -300}
++  m_SizeDelta: {x: 280, y: 70}
++  m_Pivot: {x: 0.5, y: 0.5}
++--- !u!222 &6781129113105959152
++CanvasRenderer:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6408485316032184491}
++  m_CullTransparentMesh: 1
++--- !u!114 &4117209530835091614
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6408485316032184491}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Material: {fileID: 0}
++  m_Color: {r: 0.16, g: 0.38, b: 0.48, a: 1}
++  m_RaycastTarget: 1
++  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
++  m_Maskable: 1
++  m_OnCullStateChanged:
++    m_PersistentCalls:
++      m_Calls: []
++  m_Sprite: {fileID: 0}
++  m_Type: 0
++  m_PreserveAspect: 0
++  m_FillCenter: 1
++  m_FillMethod: 4
++  m_FillAmount: 1
++  m_FillClockwise: 1
++  m_FillOrigin: 0
++  m_UseSpriteMesh: 0
++  m_PixelsPerUnitMultiplier: 1
++--- !u!114 &1878415697602513061
++MonoBehaviour:
++  m_ObjectHideFlags: 0
++  m_CorrespondingSourceObject: {fileID: 0}
++  m_PrefabInstance: {fileID: 0}
++  m_PrefabAsset: {fileID: 0}
++  m_GameObject: {fileID: 6408485316032184491}
++  m_Enabled: 1
++  m_EditorHideFlags: 0
++  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
++  m_Name: 
++  m_EditorClassIdentifier: 
++  m_Navigation:
++    m_Mode: 3
++    m_WrapAround: 0
++    m_SelectOnUp: {fileID: 0}
++    m_SelectOnDown: {fileID: 0}
++    m_SelectOnLeft: {fileID: 0}
++    m_SelectOnRight: {fileID: 0}
++  m_Transition: 1
++  m_Colors:
++    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
++    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
++    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
++    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
++    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
++    m_ColorMultiplier: 1
++    m_FadeDuration: 0.1
++  m_SpriteState:
++    m_HighlightedSprite: {fileID: 0}
++    m_PressedSprite: {fileID: 0}
++    m_SelectedSprite: {fileID: 0}
++    m_DisabledSprite: {fileID: 0}
++  m_AnimationTriggers:
++    m_NormalTrigger: Normal
++    m_HighlightedTrigger: Highlighted
++    m_PressedTrigger: Pressed
++    m_SelectedTrigger: Selected
++    m_DisabledTrigger: Disabled
++  m_Interactable: 1
++  m_TargetGraphic: {fileID: 4117209530835091614}
++  m_OnClick:
++    m_PersistentCalls:
++      m_Calls: []
+--- /dev/null
++++ b/client/Assets/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab.meta
+@@ -0,0 +1,7 @@
++fileFormatVersion: 2
++guid: f2df05672464e054abb45db50ee811df
++PrefabImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/Editor/IntegrationUI/PlayerBasicInfoPrefabBuilder.cs
+@@ -0,0 +1,117 @@
++using System;
++using System.IO;
++using System.Linq;
++using R.UI;
++using UnityEditor;
++using UnityEditor.SceneManagement;
++using UnityEngine;
++using UnityEngine.SceneManagement;
++using UnityEngine.UI;
++
++namespace TowerDefence.EditorTools
++{
++    public static class PlayerBasicInfoPrefabBuilder
++    {
++        private const string PrefabPath = "Assets/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab";
++        private const string ScenePath = "Assets/Scenes/Start.unity";
++        [MenuItem("Tools/TowerDefence/Build Player Basic Info UI")]
++        public static void Build()
++        {
++            Font font = AssetDatabase.LoadAssetAtPath<Font>("Assets/typeface/荆南缘默体.ttf");
++            if (font == null) throw new InvalidOperationException("Missing Chinese font.");
++            BuildPrefab(font);
++            var scene = SceneManager.GetSceneByPath(ScenePath);
++            bool opened = !scene.IsValid() || !scene.isLoaded;
++            if (opened) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
++            try
++            {
++                if (scene.isDirty) throw new InvalidOperationException("Start scene has unsaved edits; save it before building this button.");
++                var main = scene.GetRootGameObjects().SelectMany(x => x.GetComponentsInChildren<MainInterface>(true)).Single();
++                if (main.PlayerBasicInfoButton == null)
++                {
++                    var setting = main.SettingBtn.GetComponent<RectTransform>();
++                    var button = Button("PlayerBasicInfoButton", setting.parent, "用户信息", font, Vector2.zero);
++                    var rect = button.GetComponent<RectTransform>();
++                    rect.anchorMin = setting.anchorMin; rect.anchorMax = setting.anchorMax; rect.pivot = setting.pivot;
++                    rect.anchoredPosition = setting.anchoredPosition + new Vector2(0, -110);
++                    rect.sizeDelta = new Vector2(160, 64);
++                    main.PlayerBasicInfoButton = button;
++                    EditorUtility.SetDirty(main); EditorSceneManager.MarkSceneDirty(scene);
++                    if (!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Could not save Start scene.");
++                }
++                if (main.PlayerBasicInfoButton == null) throw new InvalidOperationException("MainInterface button was not bound.");
++            }
++            finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
++            AssetDatabase.SaveAssets();
++            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath).GetComponent<UIPlayerBasicInfo>();
++            if (prefab == null || prefab.RefreshButton == null || prefab.CloseButton == null || prefab.CreateTimeText == null || prefab.PlayerIdText == null || prefab.AccountIdText == null || prefab.NameText == null || prefab.AvatarIdText == null || prefab.StatusText == null)
++                throw new InvalidOperationException("Missing panel reference.");
++            Debug.Log("PLAYER_BASIC_INFO_UI_BUILT");
++        }
++        public static void BuildPrefabAndExit()
++        {
++            try
++            {
++                var font = AssetDatabase.LoadAssetAtPath<Font>("Assets/typeface/荆南缘默体.ttf");
++                BuildPrefab(font);
++                var button = Button("PlayerBasicInfoButton", null, "用户信息", font, Vector2.zero);
++                button.GetComponent<RectTransform>().sizeDelta = new Vector2(160, 64);
++                PrefabUtility.SaveAsPrefabAsset(button.gameObject, "Assets/PlayerBasicInfoButton.prefab");
++                UnityEngine.Object.DestroyImmediate(button.gameObject);
++                EditorApplication.Exit(0);
++            }
++            catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }
++        }
++        private static void BuildPrefab(Font font)
++        {
++            var root = new GameObject("UIPlayerBasicInfo", typeof(RectTransform));
++            root.SetActive(false);
++            try
++            {
++                var rect = root.GetComponent<RectTransform>(); rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero;
++                var backdrop = root.AddComponent<Image>(); backdrop.color = new Color(0.025f, 0.04f, 0.07f, .92f);
++                var card = Node("Card", root.transform, new Vector2(820, 750), Vector2.zero);
++                card.AddComponent<Image>().color = new Color(.09f, .14f, .20f, 1);
++                Label("Title", card.transform, "用户信息", font, 42, new Vector2(0, 282), new Vector2(700, 75));
++                string[] labels = { "玩家ID", "账号ID", "玩家名称", "头像ID", "创建时间" };
++                var values = new Text[5];
++                for (int i = 0; i < 5; i++)
++                {
++                    float y = 180 - i * 72;
++                    var label = Label("Label" + i, card.transform, labels[i], font, 25, new Vector2(-240, y), new Vector2(180, 58));
++                    label.color = new Color(.65f, .74f, .83f);
++                    values[i] = Label("Value" + i, card.transform, "—", font, 25, new Vector2(105, y), new Vector2(480, 58));
++                }
++                var status = Label("Status", card.transform, "打开后自动查询", font, 22, new Vector2(0, -210), new Vector2(700, 65));
++                status.alignment = TextAnchor.MiddleCenter;
++                var refresh = Button("Refresh", card.transform, "刷新", font, new Vector2(-175, -300));
++                var close = Button("Close", card.transform, "关闭", font, new Vector2(175, -300));
++                var ui = root.AddComponent<UIPlayerBasicInfo>();
++                ui.PlayerIdText = values[0]; ui.AccountIdText = values[1]; ui.NameText = values[2]; ui.AvatarIdText = values[3]; ui.CreateTimeText = values[4];
++                ui.StatusText = status; ui.RefreshButton = refresh; ui.CloseButton = close;
++                Directory.CreateDirectory(Path.GetDirectoryName(PrefabPath));
++                root.SetActive(true);
++                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
++            }
++            finally { UnityEngine.Object.DestroyImmediate(root); }
++            AssetDatabase.SaveAssets();
++        }
++        private static GameObject Node(string name, Transform parent, Vector2 size, Vector2 position)
++        {
++            var node = new GameObject(name, typeof(RectTransform)); node.layer = 5; node.transform.SetParent(parent, false);
++            var rect = node.GetComponent<RectTransform>(); rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = size; rect.anchoredPosition = position; return node;
++        }
++        private static Text Label(string name, Transform parent, string value, Font font, int size, Vector2 position, Vector2 dimensions)
++        {
++            var node = Node(name, parent, dimensions, position); var text = node.AddComponent<Text>(); text.font = font; text.fontSize = size; text.text = value;
++            text.color = Color.white; text.alignment = TextAnchor.MiddleLeft; text.raycastTarget = false; return text;
++        }
++        private static Button Button(string name, Transform parent, string caption, Font font, Vector2 position)
++        {
++            var node = Node(name, parent, new Vector2(280, 70), position); var image = node.AddComponent<Image>(); image.color = new Color(.16f, .38f, .48f);
++            var button = node.AddComponent<Button>(); button.targetGraphic = image;
++            var text = Label("Label", node.transform, caption, font, 27, Vector2.zero, new Vector2(260, 60));
++            text.alignment = TextAnchor.MiddleCenter; var rect = text.rectTransform; rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = rect.offsetMax = Vector2.zero; return button;
++        }
++    }
++}
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/Editor/IntegrationUI/PlayerBasicInfoPrefabBuilder.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: d957f8fea2f4f991f7ddcaa6a34b8c59
+--- a/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
++++ b/server/GameServer/src/Framework/Core/serializer/GoogleProtocolCodec.Generated.cs
+@@ -3,7 +3,8 @@
+ using Game.Datas.Messages;
+ using Google.Protobuf;
+ using System;
+-using System.IO;
++using System.IO;
++using System.Collections.Generic;
+ 
+ namespace Framework.Core.Serializer
+ {
+@@ -15,7 +16,8 @@
+             try
+             {
+                 var output = new CodedOutputStream(stream, leaveOpen: true);
+-                if (source is ReqGuestLogin value0)
++                if (source is ReqUpdatePlayerBasicInfo updatedReqUpdatePlayerBasicInfo) { WriteReqUpdatePlayerBasicInfo(output, updatedReqUpdatePlayerBasicInfo); }
++                else if (source is ReqGuestLogin value0)
+                 {
+                     WriteReqGuestLogin(output, value0);
+                 }
+@@ -473,7 +475,8 @@
+             try
+             {
+                 var input = new CodedInputStream(stream, leaveOpen: true);
+-                if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
++                if (messageType == typeof(ReqUpdatePlayerBasicInfo)) message = ReadReqUpdatePlayerBasicInfo(input);
++                else if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
+                 else if (messageType == typeof(ReqGuestUpgrade)) message = ReadReqGuestUpgrade(input);
+                 else if (messageType == typeof(ReqRegisterUser)) message = ReadReqRegisterUser(input);
+                 else if (messageType == typeof(ResGuestLogin)) message = ReadResGuestLogin(input);
+@@ -7435,5 +7438,94 @@
+             T value = reader(nestedInput);
+             return value;
+         }
++        private static void WriteReqUpdatePlayerBasicInfo(CodedOutputStream output, ReqUpdatePlayerBasicInfo message)
++        {
++            if (message.updateFields != null)
++                foreach (var item in message.updateFields)
++                {
++                    output.WriteTag(1, (WireFormat.WireType)0);
++                    output.WriteEnum((int)item);
++                }
++            if (message.avatarId.HasValue)
++            {
++                output.WriteTag(2, (WireFormat.WireType)0);
++                output.WriteInt32(message.avatarId.Value);
++            }
++            if (message.avatarFrameId.HasValue)
++            {
++                output.WriteTag(3, (WireFormat.WireType)0);
++                output.WriteInt32(message.avatarFrameId.Value);
++            }
++            if (message.titleId.HasValue)
++            {
++                output.WriteTag(4, (WireFormat.WireType)0);
++                output.WriteInt32(message.titleId.Value);
++            }
++            if (message.backgroundId.HasValue)
++            {
++                output.WriteTag(5, (WireFormat.WireType)0);
++                output.WriteInt32(message.backgroundId.Value);
++            }
++            if (message.displayAchievementIds != null)
++            {
++                output.WriteTag(6, (WireFormat.WireType)2);
++                output.WriteString(message.displayAchievementIds);
++            }
++            if (message.displayCharacterIds != null)
++            {
++                output.WriteTag(7, (WireFormat.WireType)2);
++                output.WriteString(message.displayCharacterIds);
++            }
++            if (message.signature != null)
++            {
++                output.WriteTag(8, (WireFormat.WireType)2);
++                output.WriteString(message.signature);
++            }
++        }
++
++        private static ReqUpdatePlayerBasicInfo ReadReqUpdatePlayerBasicInfo(CodedInputStream input)
++        {
++            var message = new ReqUpdatePlayerBasicInfo();
++            var items_updateFields = new List<PlayerProfileField>();
++            uint tag;
++            while ((tag = input.ReadTag()) != 0)
++            {
++                switch (tag)
++                {
++                    case 8:
++                        items_updateFields.Add((PlayerProfileField)input.ReadEnum());
++                        break;
++                    case 10:
++                        using (var packed = new CodedInputStream(input.ReadBytes().ToByteArray()))
++                            while (!packed.IsAtEnd)
++                                items_updateFields.Add((PlayerProfileField)packed.ReadEnum());
++                        break;
++                    case 16:
++                        message.avatarId = input.ReadInt32();
++                        break;
++                    case 24:
++                        message.avatarFrameId = input.ReadInt32();
++                        break;
++                    case 32:
++                        message.titleId = input.ReadInt32();
++                        break;
++                    case 40:
++                        message.backgroundId = input.ReadInt32();
++                        break;
++                    case 50:
++                        message.displayAchievementIds = input.ReadString();
++                        break;
++                    case 58:
++                        message.displayCharacterIds = input.ReadString();
++                        break;
++                    case 66:
++                        message.signature = input.ReadString();
++                        break;
++                    default: input.SkipLastField(); break;
++                }
++            }
++            if (items_updateFields.Count > 0) message.updateFields = items_updateFields.ToArray();
++            return message;
++        }
+     }
+ }
+--- a/client/Tools/NetworkVerification/HotUpdate.Network.targets
++++ b/client/Tools/NetworkVerification/HotUpdate.Network.targets
+@@ -9,7 +9,7 @@
+     <Compile Remove="Assets\Rogue\Scripts\HotUpdate\UI\Account\UIServerZoneItem.cs" Condition="!Exists('Assets/Rogue/Scripts/HotUpdate/UI/Account/UIServerZoneItem.cs')" />
+     <_TowerExistingSources Include="@(Compile->'%(FullPath)')" />
+     <_TowerNetworkSources Include="$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/Framework/Network/**/*.cs;$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/Game/**/*.cs" />
+-    <_TowerNetworkSources Include="$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/UI/Panel/Login/*.cs" />
++    <_TowerNetworkSources Include="$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/UI/Panel/Login/*.cs;$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/*.cs" />
+     <_TowerNetworkSources Include="$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/UI/Component/UIServerZoneItem.cs;$(MSBuildThisFileDirectory)../../Assets/Rogue/Scripts/HotUpdate/UI/IUIPanel.cs" />
+     <Compile Include="@(_TowerNetworkSources->'%(FullPath)')" Exclude="@(_TowerExistingSources)" />
+     <Reference Include="Google.Protobuf">
+--- /dev/null
++++ b/client/Tools/PlayerBasicInfoVerification/Run-Verification.ps1
+@@ -0,0 +1,44 @@
++param([switch]$Smoke)
++$ErrorActionPreference = 'Stop'
++$clientRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
++$isolatedRoot = Join-Path $clientRoot 'Temp/PlayerBasicInfoVerification'
++New-Item -ItemType Directory -Force -Path "$isolatedRoot/Assets/Plugins", "$isolatedRoot/Assets/typeface", "$isolatedRoot/Packages", "$isolatedRoot/ProjectSettings", "$isolatedRoot/Assets/Rogue/Scripts/HotUpdate", "$isolatedRoot/Assets/Editor" | Out-Null
++foreach ($directory in @('Assets/Rogue/Scripts/HotUpdate/Framework/Network','Assets/Rogue/Scripts/HotUpdate/Game','Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo')) {
++    Get-ChildItem -LiteralPath (Join-Path $clientRoot $directory) -Recurse -File | Where-Object { $_.Extension -in @('.cs','.meta') } | ForEach-Object {
++        $relative = $_.FullName.Substring($clientRoot.Length).TrimStart('\')
++        $destination = Join-Path $isolatedRoot $relative
++        New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
++        Copy-Item -LiteralPath $_.FullName -Destination $destination
++    }
++}
++foreach ($relative in @('Assets/Rogue/Scripts/HotUpdate/Common/Singleton.cs','Assets/Rogue/Scripts/HotUpdate/UI/IUIPanel.cs')) {
++    Copy-Item -LiteralPath (Join-Path $clientRoot $relative) -Destination "$isolatedRoot/Assets/Rogue/Scripts/HotUpdate"
++}
++Copy-Item -LiteralPath (Join-Path $clientRoot 'Tools/SessionVerification/UnityUIHarness.cs') -Destination "$isolatedRoot/Assets/Rogue/Scripts/HotUpdate/UnityUIHarness.cs"
++Set-Content -LiteralPath "$isolatedRoot/Assets/Rogue/Scripts/HotUpdate/MainInterface.cs" -Value 'public sealed class MainInterface : UnityEngine.MonoBehaviour { public UnityEngine.UI.Button SettingBtn, PlayerBasicInfoButton; }'
++Copy-Item -LiteralPath (Join-Path $clientRoot 'Assets/Rogue/Scripts/Editor/IntegrationUI/PlayerBasicInfoPrefabBuilder.cs') -Destination "$isolatedRoot/Assets/Editor"
++Copy-Item -LiteralPath (Join-Path $clientRoot 'Assets/Plugins/Google.Protobuf/Google.Protobuf.dll') -Destination "$isolatedRoot/Assets/Plugins"
++foreach ($assembly in @('UniTask','UniFramework.Event')) { Copy-Item -LiteralPath (Join-Path $clientRoot "Library/ScriptAssemblies/$assembly.dll") -Destination "$isolatedRoot/Assets/Plugins" }
++Copy-Item -LiteralPath (Join-Path $clientRoot 'Assets/typeface/荆南缘默体.ttf'), (Join-Path $clientRoot 'Assets/typeface/荆南缘默体.ttf.meta') -Destination "$isolatedRoot/Assets/typeface"
++Copy-Item -LiteralPath (Join-Path $clientRoot 'ProjectSettings/ProjectVersion.txt') -Destination "$isolatedRoot/ProjectSettings"
++Set-Content -LiteralPath "$isolatedRoot/Assets/Rogue/Scripts/HotUpdate/HotUpdate.asmdef" -Value '{"name":"HotUpdate","references":["UnityEngine.UI"]}'
++Set-Content -LiteralPath "$isolatedRoot/Packages/manifest.json" -Value '{"dependencies":{"com.unity.ugui":"1.0.0","com.unity.modules.ui":"1.0.0","com.unity.modules.unitywebrequest":"1.0.0","com.unity.modules.jsonserialize":"1.0.0","com.unity.modules.imgui":"1.0.0"}}'
++$method = 'TowerDefence.EditorTools.PlayerBasicInfoPrefabBuilder.BuildPrefabAndExit'
++if ($Smoke) {
++    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'PlayerBasicInfoSmoke.cs') -Destination "$isolatedRoot/Assets/Editor"
++    New-Item -ItemType Directory -Path "$isolatedRoot/Assets/Resources" -Force | Out-Null
++    Copy-Item -LiteralPath (Join-Path $clientRoot 'Assets/Resources/ServerIntegrationConfig.json') -Destination "$isolatedRoot/Assets/Resources"
++    Copy-Item -LiteralPath (Join-Path $clientRoot 'Tools/SessionVerification/LoopbackGameServer.cs') -Destination "$isolatedRoot/Assets/Editor"
++    $method = 'PlayerBasicInfoSmoke.Run'
++}
++$log = Join-Path $isolatedRoot $(if ($Smoke) { 'smoke.log' } else { 'build.log' })
++$unity = 'C:/Program Files/Unity/Hub/Editor/2021.3.41f1c1/Editor/Unity.exe'
++$arguments = @('-batchmode','-projectPath',$isolatedRoot,'-executeMethod',$method,'-logFile',$log)
++# Quote paths for the Windows process command line.
++$arguments[2] = '"' + $isolatedRoot + '"'
++$arguments[6] = '"' + $log + '"'
++$process = Start-Process -FilePath $unity -ArgumentList $arguments -WindowStyle Hidden -PassThru
++Write-Output "Unity verification PID $($process.Id); log: $log"
++$process.WaitForExit()
++Get-Content -LiteralPath $log | Select-String 'PLAYER_BASIC_INFO|error CS|Exception:|Aborting'
++if ($process.ExitCode -ne 0) { throw "Unity verification failed: $($process.ExitCode)" }
+--- a/client/Tools/SessionVerification/LoopbackGameServer.cs
++++ b/client/Tools/SessionVerification/LoopbackGameServer.cs
+@@ -26,6 +26,9 @@
+     public int TicketRequests => Volatile.Read(ref _ticketRequests);
+     public volatile int RegistrationStatus = 1, LoginStatus = 1, TicketStatus = 1, LogoutStatus = 1, ServerZoneMode;
+     public volatile bool MissingLoginData;
++    public volatile bool DropBasicInfoResponse;
++    public volatile int BasicInfoDelayMilliseconds;
++    public int BasicInfoRequests;
+     public volatile int LoginDelayMilliseconds, TicketDelayMilliseconds;
+     public volatile bool DropAuthenticationResponse, SilenceHeartbeats;
+     public int Authentications => Volatile.Read(ref _authentications);
+@@ -151,6 +154,13 @@
+                 response = new ResHeartbeat { status = authenticated ? 1 : (int)Respones.AccountIsNotLogin,
+                     clientUnixMilliseconds = heartbeat.clientUnixMilliseconds, serverUnixMilliseconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+             }
++            else if (envelope.Message is ReqGetPlayerBasicInfo)
++            {
++                Interlocked.Increment(ref BasicInfoRequests);
++                if (DropBasicInfoResponse) continue;
++                if (BasicInfoDelayMilliseconds > 0) await Task.Delay(BasicInfoDelayMilliseconds).ConfigureAwait(false);
++                response = new ResGetPlayerBasicInfo { status = 1, playerId = 9000000001, name = "事件验证角色", avatarId = 7, createTime = 1792000000, displayAchievementIds = "[0,0,0,0,0,0,0]", displayCharacterIds = "[0,0,0,0,0,0]", signature = "" };
++            }
+             else throw new InvalidDataException("Unexpected test TCP request.");
+             byte[] frame = TcpFraming.Encode(_codec.Encode(response, envelope.RequestId));
+             await stream.WriteAsync(frame, 0, frame.Length).ConfigureAwait(false);
+--- /dev/null
++++ b/client/Tools/PlayerBasicInfoVerification/PlayerBasicInfoSmoke.cs
+@@ -0,0 +1,142 @@
++#if UNITY_EDITOR
++using System;
++using System.IO;
++using System.Linq;
++using System.Threading;
++using System.Threading.Tasks;
++using R.UI;
++using TowerDefence.Networking.Integration;
++using UniFramework.Event;
++using UnityEditor;
++using UnityEngine;
++using UnityEngine.UI;
++
++[InitializeOnLoad]
++public static class PlayerBasicInfoSmoke
++{
++    private const string Key = "TowerDefence.PlayerBasicInfoSmoke";
++    private static Task _task;
++    private static DateTime _deadline;
++    private static UIPlayerBasicInfo _panel;
++    private static GameObject _canvas;
++    static PlayerBasicInfoSmoke()
++    {
++        EditorApplication.playModeStateChanged += state => {
++            if (state == PlayModeStateChange.EnteredPlayMode && SessionState.GetBool(Key, false))
++                EditorApplication.delayCall += Start;
++        };
++    }
++    public static void Run() { SessionState.SetBool(Key, true); EditorApplication.EnterPlaymode(); }
++    private static void Start() { _deadline = DateTime.UtcNow.AddSeconds(100); _task = VerifyAsync(); EditorApplication.update += Tick; }
++    private static void Tick()
++    {
++        if (!_task.IsCompleted && DateTime.UtcNow < _deadline) return;
++        int exit = 0;
++        try { Check(_task.IsCompleted, "smoke deadline"); _task.GetAwaiter().GetResult(); Debug.Log("PLAYER_BASIC_INFO_PASS: real database query and avatar update; event request/result correlation; repeat click; panel cancellation; disconnect; logout; login again; delayed response; 10-second timeout; references and screenshot"); }
++        catch (Exception error) { Debug.LogException(error); exit = 1; }
++        SessionState.SetBool(Key, false); EditorApplication.update -= Tick; EditorApplication.Exit(exit);
++    }
++    private static async Task VerifyAsync()
++    {
++        UniEvent.Initalize();
++        Configure("http://127.0.0.1:16091", "http://127.0.0.1:16090/PullingServerZone");
++        var network = SessionNetwork.Singleton; var login = LoginManager.Singleton;
++        PlayerBasicInfoManager.Singleton.Init(); // Initialization must not duplicate subscriptions.
++        CreatePanel();
++        _panel.OnSHow(); Check(_panel.RefreshButton.interactable && _panel.StatusText.text.Contains("登录"), "unauthenticated query restores refresh");
++        string username = "zprofile_" + DateTime.UtcNow.ToString("MMddHHmmss") + Guid.NewGuid().ToString("N").Substring(0, 5);
++        File.WriteAllText("profile-test-account.txt", username);
++        await login.RegisterAsync(username, "ProfileTest_123", "ProfileTest_123");
++        Check((await login.LoginAsync(username, "ProfileTest_123")).Success, "real account login");
++        await ConnectReal();
++        _panel.OnSHow(); _panel.RefreshButton.onClick.Invoke();
++        Guid duplicate = Guid.NewGuid(); bool duplicateRejected = false;
++        Action<IEventMessage> failed = message => { if (((PlayerBasicInfoFailedEvent)message).RequestId == duplicate) duplicateRejected = true; };
++        UniEvent.AddListener<PlayerBasicInfoFailedEvent>(failed);
++        UniEvent.SendMessage(new PlayerBasicInfoRequestedEvent(duplicate, CancellationToken.None));
++        Check(duplicateRejected, "manager rejects second in-flight request"); UniEvent.RemoveListener<PlayerBasicInfoFailedEvent>(failed);
++        await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
++        var real = PlayerBasicInfoManager.Singleton.CurrentInfo;
++        Check(real.AccountId == login.CurrentAccountId && real.PlayerId > 0 && real.CreateTime > 0, "real role created in minimal table");
++        Check(_panel.NameText.text == real.Name && _panel.AccountIdText.text == real.AccountId.ToString(), "real fields rendered");
++        File.WriteAllText("profile-test-player.txt", real.PlayerId.ToString());
++        UniEvent.SendMessage(new PlayerBasicInfoLoadedEvent(Guid.NewGuid(), new PlayerBasicInfoModel(1, 1, "stale", 1, 1)));
++        Check(_panel.NameText.text == real.Name, "foreign result ignored");
++        var updated = await network.RequestAsync<TowerDefence.Networking.Messages.ResUpdatePlayerBasicInfo>(new TowerDefence.Networking.Messages.ReqUpdatePlayerBasicInfo {
++            updateFields = new[] { TowerDefence.Networking.Messages.PlayerProfileField.Avatar }, avatarId = 12 });
++        Check(updated.status == 1 && updated.avatarId == 12 && updated.guildId == 0 && updated.displayCharacterIds == "[0,0,0,0,0,0]", "real write codec and compatibility fields");
++        _panel.RefreshButton.onClick.Invoke(); await Until(() => _panel.RefreshButton.interactable);
++        Check(_panel.AvatarIdText.text == "12", "refresh reads persisted avatar");
++        Capture();
++        await network.DisconnectAsync(); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.PlayerIdText.text == "—", "disconnect clears UI and snapshot");
++        await ConnectReal(); _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
++        await login.LogoutAsync(); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.AccountIdText.text == "—", "logout clears");
++        Check((await login.LoginAsync(username, "ProfileTest_123")).Success, "login again"); await ConnectReal();
++        _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
++        Check(PlayerBasicInfoManager.Singleton.CurrentInfo.PlayerId == real.PlayerId, "relogin selects same role without job");
++        await login.LogoutAsync();
++        UnityEngine.Object.DestroyImmediate(network.gameObject); UnityEngine.Object.DestroyImmediate(login.gameObject);
++        using (var fixture = new LoopbackGameServer())
++        {
++            Configure(fixture.BaseUrl, fixture.BaseUrl + "/PullingServerZone");
++            network = SessionNetwork.Singleton; login = LoginManager.Singleton;
++            Check((await login.LoginAsync("fixture", "fixture123")).Success, "fixture login");
++            var zones = await ServerSelectManager.Singleton.PullServerZonesAsync(network.ServerListUrl);
++            Check(zones.Success, "fixture zones");
++            var zone = ServerSelectManager.Singleton.ServerZones[0];
++            Check((await ServerSelectManager.Singleton.ConnectAsync(zone)).Success, "fixture connect"); await login.AuthenticateGameServerAsync(zone.ID);
++            fixture.BasicInfoDelayMilliseconds = 300;
++            _panel.OnSHow(); await Until(() => fixture.BasicInfoRequests > 0); _panel.CloseButton.onClick.Invoke();
++            Check(!_panel.gameObject.activeSelf, "close button hides panel");
++            await Task.Delay(500); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null, "cancelled late response cannot populate snapshot");
++            _panel.gameObject.SetActive(true); _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
++            Check(_panel.NameText.text == "事件验证角色", "reopen after cancellation");
++            fixture.DropBasicInfoResponse = true; var watch = System.Diagnostics.Stopwatch.StartNew();
++            _panel.RefreshButton.onClick.Invoke(); await Until(() => _panel.RefreshButton.interactable, 13);
++            Check(watch.Elapsed.TotalSeconds >= 9 && _panel.StatusText.text != "已更新", "10 second timeout restores refresh");
++            _panel.RefreshButton.onClick.Invoke(); await network.DisconnectAsync(); await Task.Delay(100);
++            Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.PlayerIdText.text == "—", "disconnect cancels pending read");
++            Check(fixture.Failure == null, "fixture protocol health");
++        }
++        Check(UIPlayerBasicInfo.FormatTime(0) == "未知" && UIPlayerBasicInfo.FormatTime(long.MaxValue) == "未知", "invalid time");
++        _panel.gameObject.SetActive(false);
++        UnityEngine.Object.DestroyImmediate(_canvas);
++    }
++    private static async Task ConnectReal()
++    {
++        var network = SessionNetwork.Singleton;
++        await network.ConnectAsync("127.0.0.1", 7080, 4, CancellationToken.None);
++        await LoginManager.Singleton.AuthenticateGameServerAsync(4);
++        Check(network.IsGameAuthenticated, "real game authentication");
++    }
++    private static void CreatePanel()
++    {
++        _canvas = new GameObject("ProfileCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler)); _canvas.layer = 5;
++        var canvas = _canvas.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
++        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab");
++        _panel = UnityEngine.Object.Instantiate(prefab, _canvas.transform).GetComponent<UIPlayerBasicInfo>();
++        Check(_panel != null && _panel.CloseButton != null && _panel.RefreshButton != null, "serialized references");
++        UIMgr.Singleton.Concealer = name => _panel.gameObject.SetActive(false);
++    }
++    private static void Configure(string loginUrl, string zonesUrl)
++    {
++        var old = Resources.Load<TextAsset>("ServerIntegrationConfig"); if (old != null) Resources.UnloadAsset(old);
++        File.WriteAllText("Assets/Resources/ServerIntegrationConfig.json", JsonUtility.ToJson(new IntegrationConfiguration { Mode = "ServerIntegration", LoginServerUrl = loginUrl, ServerListUrl = zonesUrl }));
++        AssetDatabase.ImportAsset("Assets/Resources/ServerIntegrationConfig.json", ImportAssetOptions.ForceSynchronousImport);
++    }
++    private static async Task Until(Func<bool> done, int seconds = 10)
++    { var limit = DateTime.UtcNow.AddSeconds(seconds); while (!done() && DateTime.UtcNow < limit) await Task.Delay(10); Check(done(), "await condition"); }
++    private static void Check(bool condition, string message) { if (!condition) throw new Exception("Profile assertion: " + message); }
++    private static void Capture()
++    {
++        var canvas = _canvas.GetComponent<Canvas>(); var camera = new GameObject("CaptureCamera").AddComponent<Camera>();
++        var target = new RenderTexture(1080,1920,24); var previous = RenderTexture.active;
++        try {
++            canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = camera; canvas.planeDistance = 1; canvas.scaleFactor = 1;
++            camera.cullingMask = 1 << 5; camera.targetTexture = target; Canvas.ForceUpdateCanvases(); camera.Render(); RenderTexture.active = target;
++            var pixels = new Texture2D(1080,1920,TextureFormat.RGB24,false); pixels.ReadPixels(new Rect(0,0,1080,1920),0,0); pixels.Apply();
++            File.WriteAllBytes("profile-panel.png",pixels.EncodeToPNG()); UnityEngine.Object.Destroy(pixels);
++        } finally { camera.targetTexture = null; canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.worldCamera = null; RenderTexture.active = previous; target.Release(); UnityEngine.Object.Destroy(camera.gameObject); UnityEngine.Object.Destroy(target); }
++    }
++}
++#endif
+--- a/server/GameServerTests/LogoutAndTcpLifecycleTests.cs
++++ b/server/GameServerTests/LogoutAndTcpLifecycleTests.cs
+@@ -44,7 +44,8 @@
+         Type factoryType = assembly.GetType("Framework.Core.Serializer.MessageFactory");
+         object factory = factoryType.GetField("Instance").GetValue(null);
+         var mappings = (System.Collections.IDictionary)factoryType.GetField("keyTypeDic", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(factory);
+-        var previousMappings = mappings.Cast<System.Collections.DictionaryEntry>().ToArray();
++        var previousMappings = mappings.Keys.Cast<object>()
++            .Select(key => new System.Collections.DictionaryEntry(key, mappings[key])).ToArray();
+         try
+         {
+         if (mappings.Count == 0) factoryType.GetMethod("InitMeesagePool").Invoke(factory, null);
+--- /dev/null
++++ b/server/GameServerTests/PlayerProfile/PlayerMinimalSchemaTests.cs
+@@ -0,0 +1,36 @@
++using Game;
++using Framework.Core.Utils;
++using Game.Core.GM_Bonues;
++using Game.Core.GM_PlayerProfile;
++using Game.Datas.DBEntities;
++using Game.Datas.Messages;
++using Game.Entries.Modules;
++using Game.LogicServer;
++
++namespace GameServerTests.PlayerProfile;
++
++public sealed class PlayerMinimalSchemaTests
++{
++    [Fact]
++    public void PlayerEntityHasOnlyTheSixRetainedColumns()
++    {
++        Assert.Equal(new[] { "accountId", "avatarId", "createTime", "id", "name", "status" },
++            typeof(Player).GetProperties().Select(p => p.Name).OrderBy(x => x, StringComparer.Ordinal));
++    }
++
++    [Fact]
++    public void RetiredFeaturesRejectWithoutDatabaseOrClaimStateChanges()
++    {
++        var module = PlayerModule.Instance;
++        Assert.Equal((int)Respones.InvalidOpt, module.HandlerRecvLoginBonues(null, new ReqRecvLoginBonues(), 1).status);
++        Assert.Equal((int)Respones.InvalidOpt, module.HandlerReqRecvBonues(null, new ReqRecvBonues(), 1).status);
++        Assert.Equal((int)Respones.InvalidOpt, module.HandlerReqExchangeProduct(null, new ReqExchangeProduct(), 1).status);
++        Assert.Equal((int)Respones.InvalidOpt, module.HandlerReqPullingRank(null, new ReqPullingRank(), 1).status);
++        Assert.Equal((int)Respones.InvalidOpt, ZoneRule.ParseCondGE(null, "ulevel", "1"));
++        Assert.Equal((int)Respones.InvalidOpt, ZoneRule.ParseCondGE(null, "uchip", "1"));
++        var reward = new Bonues { uid = 1, tid = 100001, status = 0, bonues1 = 100 };
++        Assert.False(GM_BonuesMgr.Instance.RecvBonues(1, reward));
++        Assert.Equal(0, reward.status);
++        Assert.False(new PlayerProfileUpdate { Fields = new[] { ProfileField.Avatar, ProfileField.Signature }, AvatarId = 9, Signature = "x" }.IsValid());
++    }
++}
+--- a/server/docs/PlayerBasicInfo.md
++++ b/server/docs/PlayerBasicInfo.md
+@@ -1,138 +1,39 @@
+-# 玩家基础信息
+-
+-## 消息与服务端读取
+-
+-游戏服消息 `Module.PLAYER = 102`：请求 `ReqGetPlayerBasicInfo = 91`，响应 `ResGetPlayerBasicInfo = 92`。
+-空请求体，不接受客户端指定玩家ID；查询当前已鉴权连接绑定的角色。
+-
+-响应字段：1 status、2 errorMessage、3 playerId(long)、4 avatarId(int)、5 name(string)、
+-6 guildId(long)、7 createTime(long，Unix秒)、8 titleId(int)、9 signature(string)。
+-
+-调用链：PlayerController → PlayerModule → GM_PlayerProfileMgr。
+-读取顺序：在线玩家组件 → GM_AccountEntityMgr账号角色缓存 → MySQL player表。
+-查库结果回填账号角色缓存；在线组件缺失时补入同一个Player对象。接口不会创建角色。
+-返回已有状态码OK、AccountIsNotLogin、InvalidParams、PlayerIsNotExist或SystemErr。
+-先确认player表已有avatarId、guildId、titleId、signature、createTime五列。
+-
+-## MiaoWu客户端
+-
+-客户端根目录：`D:\iaowu\MiaoWu`。
+-
+-`PlayerBasicInfoNetwork.LoadAsync()`使用SessionNetwork，10秒超时，拒绝重复操作。
+-`PlayerBasicInfoManager.Singleton.LoadAsync(token)`更新只读CurrentInfo快照并发布
+-PlayerBasicInfoLoadedEvent / PlayerBasicInfoFailedEvent。注销清空快照并发布PlayerBasicInfoClearedEvent。
+-调用方取消或登录会话取消后，响应不能再更新快照或发布过时结果。
+-
+-## Unity面板绑定
+-
+-脚本：`Assets/Scripts/HotUpdate/UI/PlayerProfile/UIPlayerBasicInfo.cs`。
+-预制体：`Assets/ResOld/Prefabs/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.prefab`。
+-已挂载UIPlayerBasicInfo，绑定两个按钮和八个文本；无需手动补引用。
+-使用`Assets/Res/Art/UI/UI_Info_Assets`背景、猫咪、面板、按钮及徽章切图，
+-以及现有荆南缘默体字体。头像图案和徽章属于静态装饰，动态资料仍由七个文本展示。
+-签名区域支持纵向滚动；布局按项目现有UIRoot的1200参考高度制作，适配横屏16:9及更宽比例。
+-现有YooAsset的UI目录采集规则已覆盖新预制体，可按现有资源流程重新采集/构建后打开：
+-
+-```csharp
+-await R.UI.UIMgr.Singleton.ShowUI(nameof(R.UI.UIPlayerBasicInfo));
+-```
+-
+-Start场景的MainInterface下已添加PlayerBasicInfoButton（玩家资料），点击调用UIMainInterface.OpenPlayerBasicInfo()。
+-打开面板时UIMgr会调用IUIPanel.OnSHow()自动获取资料。
+-
+-Inspector引用已绑定，以下为节点用途：
+-
+-| 字段 | 组件/用途 |
+-| --- | --- |
+-| closeButton | Button，关闭面板 |
+-| refreshButton | Button，重新查询 |
+-| playerIdText | UnityEngine.UI.Text，玩家ID |
+-| avatarIdText | Text，头像ID |
+-| nameText | Text，角色名称 |
+-| guildIdText | Text，公会ID；0显示未加入公会 |
+-| createTimeText | Text，本地时间；0或越界显示未知 |
+-| titleIdText | Text，称号ID；0显示未佩戴称号 |
+-| signatureText | Text，空白显示暂无签名 |
+-| statusText | Text，请求/失败/注销状态 |
+-
+-打开自动查询；刷新中禁用刷新按钮；隐藏面板会取消它发起的请求。
+-头像和称号仅展示ID，不加载图片、名称配置或公会详情。
+-
+-## 验证
+-
+-服务端：PlayerBasicInfoTests覆盖缓存顺序、回填、快照、鉴权、协议与数据库异常。
+-数据库测试沿用GACHA_RUN_DATABASE_TESTS/GACHA_DB_CONFIGURATION_PATH/GACHA_TEST_PLAYER_ID开关，
+-只插入并清理自己生成的测试角色记录。
+-客户端：Assets/Tests/Editor/PlayerBasicInfoTests.cs，Unity EditMode运行，覆盖协议、重复请求、
+-取消、超时、断线、注销清空和延迟响应。
+-
+-
+-## 可编辑资料（2026-10-22）
+-
+-查询仍为 PLAYER=102、请求91／响应92。原字段1～9保持不变，新增：
+-
+-| Proto字段 | 名称 | 类型／含义 |
+-| --- | --- | --- |
+-| 10 | avatarFrameId | int，头像框ID，0表示未设置 |
+-| 11 | backgroundId | int，背景ID，0表示默认 |
+-| 12 | displayAchievementIds | JSON string，固定7项成就ID，例如 `[0,0,0,0,0,0,0]` |
+-| 13 | displayCharacterIds | JSON string，固定6项，关联player_character.id，例如 `[0,0,0,0,0,0]` |
+-
+-修改使用请求93 `ReqUpdatePlayerBasicInfo`、响应94 `ResUpdatePlayerBasicInfo`。
+-响应与查询布局一致，成功返回完整的最新资料。
+-
+-请求字段：1 updateFields（repeated PlayerProfileField）、2 avatarId（optional int）、
+-3 avatarFrameId（optional int）、4 titleId（optional int）、5 backgroundId（optional int）、
+-6 displayAchievementIds（JSON string）、7 displayCharacterIds（JSON string）、8 signature（string）。
+-枚举：Avatar=1、AvatarFrame=2、Title=3、Background=4、Achievements=5、Characters=6、Signature=7。
+-
+-只修改updateFields明确选中的字段；空列表、重复字段、未知字段、缺少所选值均拒绝。
+-标量0表示取消设置，空字符串清空签名，数组中的0表示空位；数组须完整提交7／6项，非零ID不能重复。
+-签名最多255个Unicode标量，拒绝无效UTF-16。ID不能为负。
+-角色实例必须属于当前玩家；装饰和成就当前仅基础校验，尚未实现配置及解锁校验。
+-仅允许操作已鉴权连接的玩家，姓名、公会、创建时间等不能通过此接口修改。
+-
+-持久化使用玩家锁和数据库事务，锁定玩家行，只更新所选列，提交后同步账号缓存和在线Player引用。
+-重复保存同样的值返回成功，无扣费／奖励副作用，不额外建立幂等记录。
+-数据库数组存为JSON文本，格式异常返回SystemErr并记录日志，不自动覆盖损坏的数据。
+-
+-### MiaoWu调用
+-
+-```csharp
+-var manager = PlayerBasicInfoManager.Singleton;
+-var loaded = await manager.LoadAsync(token);
+-if (!loaded.Success) return;
+-var result = await manager.SetSignatureAsync("新的签名", token);
+-
+-// 多个字段一次保存；不在UpdateFields中的内容保持原值。
+-result = await manager.UpdateAsync(new PlayerBasicInfoUpdate
+-{
+-    UpdateFields = new[] { PlayerProfileField.AvatarFrame, PlayerProfileField.Characters },
+-    AvatarFrameId = 12,
+-    DisplayCharacterIds = new long[] { 9000000001, 0, 0, 0, 0, 0 }
+-}, token);
+-if (result.Success)
+-{
+-    var latest = manager.CurrentInfo;
+-}
+-
+-// 事件来自MiaoWu.Networking.PlayerProfile，协议枚举来自Game.Datas.Messages。
+-UniEvent.AddListener<PlayerBasicInfoUpdatedEvent>(message =>
+-{
+-    var info = ((PlayerBasicInfoUpdatedEvent)message).Result.Info;
+-    // 用info刷新展示；失败事件为PlayerBasicInfoUpdateFailedEvent。
+-});
+-```
+-
+-便捷方法：SetAvatarAsync、SetAvatarFrameAsync、SetTitleAsync、SetBackgroundAsync、
+-SetDisplayAchievementsAsync、SetDisplayCharactersAsync、SetSignatureAsync。
+-CurrentInfo展示数组为只读、独立快照。查询和修改共用互斥及10秒超时。
+-修改成功直接应用服务端完整响应；失败不替换快照。
+-修改取消、超时或断线后结果可能不确定，NeedsRefresh=true，先查询确认，不自动重试写入。
+-注销清空资料；断线保留展示快照但标记待刷新；每次鉴权恢复自动重新查询，恢复完成前禁止编辑。
+-UIPlayerBasicInfo已监听修改成功事件；本次没有新增编辑按钮或修改预制体。
+-
+-部署顺序：执行ugame_10001.sql中新增四列的兼容语句 → 部署服务端 → 更新客户端。
+-展示字段为MySQL 5.7兼容的varchar(255)，保存JSON数组文本和固定长度全零默认值。
+-新增协议采用非打包格式写数组，同时接受打包格式读取；旧客户端可以忽略追加字段。
+-新客户端需要新服务端支持修改及重连恢复资料查询。
++# 僵尸项目玩家基础信息
++
++## 数据与协议
++
++服务端为本仓库，客户端为 D:/apk/TowerDefence。player 表仅保留 id、accountId、name、avatarId、createTime、status。
++查询保持 PLAYER=102、请求91／响应92，空请求查询当前已鉴权会话角色。响应 status 表示接口结果，不是 player.status。
++原响应字段1～13及类型、编号不变；playerId/name/avatarId/createTime 为真实值，guildId/titleId/avatarFrameId/backgroundId 为0，signature 为空字符串，displayAchievementIds 为 [0,0,0,0,0,0,0]，displayCharacterIds 为 [0,0,0,0,0,0]。
++修改仍为93／94，仅接受 updateFields=[Avatar] 且 avatarId>=0，混入已移除字段整体拒绝，响应布局与查询一致。
++
++读取仍为 PlayerController → PlayerModule → GM_PlayerProfileMgr → 在线组件 → 账号角色缓存 → MySQL。
++头像写入在 Manager 内加玩家锁、核对账号归属、事务提交后更新共享缓存。创建和选择角色按账号关联，旧职业及性别参数不再落库或影响选择。
++旧 PlayerInfo 保留布局，移除属性的数值返回0。旧签到领奖、奖励领取、元宝兑换、金币排行查询和等级/金币入场条件返回 InvalidOpt；不扣款、不发奖、不改变领取状态。独立道具与邮件资产不受影响。
++
++## 客户端事件模板
++
++MainInterface 的“用户信息”按钮通过 UIMgr 打开 UIPlayerBasicInfo。
++UI 发布 PlayerBasicInfoRequestedEvent，Manager 监听并调用 PlayerBasicInfoNetwork，再通过 SessionNetwork 发包；Manager 发布 Loading/Loaded/Failed/Cleared 事件，UI 订阅更新显示。
++UI 不直接调用 Manager 业务方法或 Network；Manager 不持有界面引用。
++
++请求及单次结果携带 Guid 请求标识，请求还携带取消令牌。Guid.Empty 的清空事件表示会话整体失效。
++Manager 保存只读资料快照并拒绝重复查询；UI 仅保存当前请求标识、取消源和加载状态。Network 超时10秒。
++UI 打开自动查询，支持刷新和关闭。隐藏取消本次请求；注销、断线和连接代次变化清空缓存。过期结果不会更新新会话。
++显示玩家ID、当前会话账号ID、名称、头像ID和本地创建时间；无效时间显示“未知”。本次不提供头像编辑界面。
++
++项目技能见 ../.codex/skills/zombie-ui-network-template/SKILL.md，固定 UI → Manager → Network 与 UI／Manager 双向事件交互两项规范。
++
++## 数据库更新与导表
++
++新环境使用 sql/zombie_init.sql。现有本机环境执行 tools/Update-ZombiePlayer.ps1：仅停止本项目服务，备份 player 后应用精简迁移两次，核对保留字段与最终列清单。备份默认保存在本机临时目录。
++迁移包含删列，MySQL DDL 自动提交。失败时停止后续操作，使用输出的完整备份恢复，不重建账号或其他业务表。
++导表继续使用 tools/GenDbClass 原有的统一生成流程。Program.cs 保持本次任务开始前的内容，不增加单表生成参数或针对 Player 的特殊处理。本次已生成的精简 Player 实体保留。
++
++完成后用 tools/Start-ZombieServers.ps1 启动本项目服务。历史原项目 SQL 和原数据库不改。
++
++## 验证
++
++服务端 PlayerProfile 测试覆盖协议、缓存顺序、兼容值、精简实体、停用入口、头像更新归属及重复更新；数据库测试沿用 GACHA_RUN_DATABASE_TESTS / GACHA_DB_CONFIGURATION_PATH / GACHA_TEST_PLAYER_ID。
++客户端 Tools/PlayerBasicInfoVerification/Run-Verification.ps1 在隔离 Unity 工程生成预制体，-Smoke 使用真实本机服务与受控协议端点验证事件链、取消、超时、断线及重新登录。它不会改变主客户端服务器地址；游戏主场景仍使用用户自己的配置。
++完整本次差异与验证清单见 ZombiePlayerBasicInfoChanges.md 和 ZombiePlayerBasicInfo.patch。
+Binary artifact added: server/docs/ZombiePlayerBasicInfo.png (75561 bytes)

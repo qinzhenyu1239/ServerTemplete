@@ -2,6 +2,7 @@ using System;
 
 namespace Game.Datas.DBEntities
 {
+    [SqlSugar.SugarTable("player_character_starup_operation")]
     public sealed class Player_character_starup_operation
     {
         public long id { get; set; }

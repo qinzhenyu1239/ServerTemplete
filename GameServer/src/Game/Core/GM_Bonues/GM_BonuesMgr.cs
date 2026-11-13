@@ -1,4 +1,4 @@
-﻿using Framework.Core.Utils;
+using Framework.Core.Utils;
 using Game.Datas.DBEntities;
 using Game.Core.Db;
 using System;
@@ -47,6 +47,7 @@ namespace Game.Core.GM_Bonues
         }
 
         private bool ApplayBonuesToPlayer(Bonues dbBonues) {
+            if (dbBonues != null && dbBonues.tid / 100000 == 1) return false;
             if (dbBonues == null || dbBonues.status != 0)
             {
                 return false;
@@ -68,6 +69,7 @@ namespace Game.Core.GM_Bonues
         }
 
         public bool RecvBonues(long bonuesId, Bonues dbBonues = null) {
+            if (dbBonues != null && dbBonues.tid / 100000 == 1) return false;
 
             if (dbBonues != null) {
                 dbBonues = DBService.Instance.GetGameInstance().Queryable<Game.Datas.DBEntities.Bonues>().First(it => it.id == bonuesId);//查询单条
@@ -101,7 +103,7 @@ namespace Game.Core.GM_Bonues
             dbBonues.bonues4 = b4;
             dbBonues.bonues5 = b5;
 
-            this.ApplayBonuesToPlayer(dbBonues);
+            if (!this.ApplayBonuesToPlayer(dbBonues)) return null;
 
             dbBonues.status = 1;
             DBService.Instance.GetGameInstance().Insertable(dbBonues).ExecuteCommandAsync();
@@ -145,7 +147,7 @@ namespace Game.Core.GM_Bonues
             }
 
 
-            this.ApplayBonuesToPlayer(dbBonues);
+            if (!this.ApplayBonuesToPlayer(dbBonues)) return;
             dbBonues.status = 1;
 
             DBService.Instance.GetGameInstance().Insertable(dbBonues).ExecuteCommandAsync();

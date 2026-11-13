@@ -1,0 +1,5 @@
+﻿唯一ID,Buff名字,Buf介绍,图标icon,Buff特效,Buff防御加成系数,Buff攻击加成系数,Buff冷却时间,Buff持续时间,消耗条件
+string,string,string,string,string,float,float,float,float,string
+ID,BuffName,BuffDesic,Icon,BuffEffectName,BuffDefense,BuffAttack,BuffFrezzeTime,BuffTime,Cost
+100001,防御加倍,使用buff期间防御加倍,default,default,1,2,5,5,default
+100002,防御加倍，攻击加倍,"使用buff期间防御加倍,攻击加倍",default,default,2,2,8,5,"{blue: 10, red: 10}"

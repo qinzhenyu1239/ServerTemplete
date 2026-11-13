@@ -1,0 +1,6 @@
+[2026-11-11 18:00:55.0267] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:192.168.1.5]:62147 method=GET uri=/PullingServerZone bytes=0 
+[2026-11-11 18:00:55.0346] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:192.168.1.5]:62147 status=200 bytes=184 
+[2026-11-11 18:01:54.4438] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:192.168.1.5]:62255 method=GET uri=/PullingServerZone bytes=0 
+[2026-11-11 18:01:54.4438] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:192.168.1.5]:62255 status=200 bytes=184 
+[2026-11-11 18:06:35.6953] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:192.168.1.5]:62835 method=GET uri=/PullingServerZone bytes=0 
+[2026-11-11 18:06:35.6953] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:192.168.1.5]:62835 status=200 bytes=184 

@@ -87,7 +87,7 @@ namespace Game.Entries.Modules
                     session,
                     result.AccountId,
                     player.id,
-                    player.job))
+                    0))
             {
                 response.status = (int)Respones.SystemErr;
                 response.errorMessage = "Failed to bind the default player session.";

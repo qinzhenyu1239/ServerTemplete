@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "HMG/oOIUWX0=",
+  "dgSpecHash": "lItVPa3Co9g=",
   "success": true,
-  "projectFilePath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenDbClass\\GenDbClass.csproj",
+  "projectFilePath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenDbClass\\GenDbClass.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Windows\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

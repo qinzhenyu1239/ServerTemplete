@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///玩家拥有的角色
     ///</summary>
+    [SqlSugar.SugarTable("player_character")]
     public partial class Player_character
     {
            public Player_character(){

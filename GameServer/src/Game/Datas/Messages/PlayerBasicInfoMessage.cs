@@ -27,6 +27,10 @@ namespace Game.Datas.Messages
         [ProtoMember(11)] public int backgroundId;
         [ProtoMember(12)] public string displayAchievementIds;
         [ProtoMember(13)] public string displayCharacterIds;
+        [ProtoMember(14)] public int baseLevel; // 基地等级
+        [ProtoMember(15)] public int mainStage; // 主线关卡章节编号
+        [ProtoMember(16)] public int resonanceLevel; // 共鸣等级
+        [ProtoMember(17)] public int towerStage; // 爬塔关卡
     }
 
     [ProtoContract]
@@ -60,5 +64,9 @@ namespace Game.Datas.Messages
         [ProtoMember(11)] public int backgroundId;
         [ProtoMember(12)] public string displayAchievementIds;
         [ProtoMember(13)] public string displayCharacterIds;
+        [ProtoMember(14)] public int baseLevel; // 基地等级
+        [ProtoMember(15)] public int mainStage; // 主线关卡章节编号
+        [ProtoMember(16)] public int resonanceLevel; // 共鸣等级
+        [ProtoMember(17)] public int towerStage; // 爬塔关卡
     }
 }

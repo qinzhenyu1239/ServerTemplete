@@ -1,0 +1,10 @@
+节点ID,节点名称,父节点ID,消除类型,是否启用,提示版本
+int,string,int,int,bool,long
+id,name,parentId,clearType,enabled,tipVersion
+1000,邮箱入口,0,0,false,0
+1001,邮件未读,1000,1,false,0
+2000,任务入口,0,0,false,0
+2001,日常奖励,2000,1,false,0
+2002,成就奖励,2000,1,false,0
+3000,活动入口,0,0,false,0
+3001,新活动提示,3000,2,false,1

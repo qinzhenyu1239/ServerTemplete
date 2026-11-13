@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///玩家当前的任务实例列表
     ///</summary>
+    [SqlSugar.SugarTable("gamegoods")]
     public partial class Gamegoods
     {
            public Gamegoods(){

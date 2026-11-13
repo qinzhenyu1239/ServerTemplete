@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///玩家道具背包
     ///</summary>
+    [SqlSugar.SugarTable("player_item")]
     public partial class Player_item
     {
            public Player_item(){

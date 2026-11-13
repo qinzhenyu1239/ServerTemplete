@@ -1,0 +1,7 @@
+﻿唯一ID,设备名称,装备描述,补充量,买入价格,出售价格
+int,string,string,int,int,int
+ID,name,GoodsDesic,SupplementValue,BuyInPrice,SellOutPrice
+10001,红药水,"小瓶红药水,补充玩家体力",10,3,2
+10002,蓝药水,"小瓶蓝药水,补充玩家魔法",10,3,2
+10003,红药水,"大瓶红药水,补充玩家体力",30,6,5
+10004,蓝药水,"大瓶蓝药水,补充玩家魔法",30,6,5

@@ -1,0 +1,325 @@
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Events/PlayerBasicInfoEvents.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Events/PlayerBasicInfoEvents.cs
+@@ -12,19 +12,25 @@
+     public sealed class PlayerBasicInfoLoadingEvent : IEventMessage
+     {
+         public readonly Guid RequestId;
+-        public PlayerBasicInfoLoadingEvent(Guid requestId) => RequestId = requestId;
++        public readonly bool IsSessionRefresh;
++        public PlayerBasicInfoLoadingEvent(Guid requestId, bool isSessionRefresh = false)
++        { RequestId = requestId; IsSessionRefresh = isSessionRefresh; }
+     }
+     public sealed class PlayerBasicInfoLoadedEvent : IEventMessage
+     {
+         public readonly Guid RequestId;
+         public readonly PlayerBasicInfoModel Info;
+-        public PlayerBasicInfoLoadedEvent(Guid requestId, PlayerBasicInfoModel info) { RequestId = requestId; Info = info; }
++        public readonly bool IsSessionRefresh;
++        public PlayerBasicInfoLoadedEvent(Guid requestId, PlayerBasicInfoModel info, bool isSessionRefresh = false)
++        { RequestId = requestId; Info = info; IsSessionRefresh = isSessionRefresh; }
+     }
+     public sealed class PlayerBasicInfoFailedEvent : IEventMessage
+     {
+         public readonly Guid RequestId;
+         public readonly string Error;
+-        public PlayerBasicInfoFailedEvent(Guid requestId, string error) { RequestId = requestId; Error = error; }
++        public readonly bool IsSessionRefresh;
++        public PlayerBasicInfoFailedEvent(Guid requestId, string error, bool isSessionRefresh = false)
++        { RequestId = requestId; Error = error; IsSessionRefresh = isSessionRefresh; }
+     }
+     // Guid.Empty means a session-wide invalidation for every panel, including completed queries.
+     public sealed class PlayerBasicInfoClearedEvent : IEventMessage
+--- a/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager/PlayerBasicInfoManager.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Manager/PlayerBasicInfoManager.cs
+@@ -1,5 +1,8 @@
+ using System;
+ using System.Threading;
++using System.Threading.Tasks;
++using TowerDefence.Networking.Recovery;
++using TowerDefence.Networking.Session;
+ using Cysharp.Threading.Tasks;
+ using TowerDefence.Networking.Messages;
+ using UniFramework.Event;
+@@ -31,35 +34,50 @@
+             var request = (PlayerBasicInfoRequestedEvent)message;
+             if (_disposed || request.RequestId == Guid.Empty || request.Cancellation.IsCancellationRequested) return;
+             if (IsBusy) { Fail(request.RequestId, "正在查询，请稍后重试。"); return; }
+-            QueryAsync(request).Forget();
++            if (SessionNetwork.HasInstance && SessionNetwork.Singleton.State == NetworkState.Recovering)
++            { Fail(request.RequestId, "正在恢复用户信息，请稍候。"); return; }
++            QueryAsync(request).AsUniTask().Forget();
+         }
+-        private async UniTaskVoid QueryAsync(PlayerBasicInfoRequestedEvent request)
++        public Task RecoverAsync(RecoveryContext context)
+         {
++            context.ThrowIfInvalid();
++            if (_disposed) throw new ObjectDisposedException(nameof(PlayerBasicInfoManager));
++            if (IsBusy) throw new InvalidOperationException("A profile query is already running during recovery.");
++            return QueryAsync(new PlayerBasicInfoRequestedEvent(Guid.NewGuid(), context.CancellationToken), context);
++        }
++        private async Task QueryAsync(PlayerBasicInfoRequestedEvent request, RecoveryContext recovery = null)
++        {
++            bool isSessionRefresh = recovery != null;
+             CancellationTokenSource scope = null;
+             try
+             {
+                 var login = LoginManager.Singleton;
+                 var network = SessionNetwork.Singleton;
+-                if (!login.IsLoggedIn || !network.IsGameAuthenticated) { Fail(request.RequestId, "请先登录并连接游戏服。"); return; }
++                if (!login.IsLoggedIn || !network.IsGameAuthenticated) throw new InvalidOperationException("请先登录并连接游戏服。");
++                recovery?.ThrowIfInvalid();
+                 long accountId = login.CurrentAccountId, connection = network.ConnectionGeneration, generation = _generation;
+                 scope = CancellationTokenSource.CreateLinkedTokenSource(request.Cancellation, login.SessionCancellation, network.ConnectionCancellation);
+                 _operation = scope;
+-                UniEvent.SendMessage(new PlayerBasicInfoLoadingEvent(request.RequestId));
++                UniEvent.SendMessage(new PlayerBasicInfoLoadingEvent(request.RequestId, isSessionRefresh));
+                 var response = await PlayerBasicInfoNetwork.QueryAsync(scope.Token);
+                 scope.Token.ThrowIfCancellationRequested();
+-                if (_disposed || generation != _generation || accountId != login.CurrentAccountId || connection != network.ConnectionGeneration || !network.IsGameAuthenticated) return;
++                recovery?.ThrowIfInvalid();
++                if (_disposed || generation != _generation || accountId != login.CurrentAccountId || connection != network.ConnectionGeneration || !network.IsGameAuthenticated)
++                    throw new OperationCanceledException("Profile session changed.");
+                 if (response == null || response.status != (int)Respones.OK || response.playerId <= 0)
+-                    throw new InvalidOperationException(response?.errorMessage ?? "查询用户信息失败。");
++                    throw new InvalidOperationException(string.IsNullOrWhiteSpace(response?.errorMessage) ? "查询用户信息失败。" : response.errorMessage);
+                 CurrentInfo = new PlayerBasicInfoModel(response.playerId, accountId, response.name, response.avatarId, response.createTime, response.baseLevel, response.mainStage, response.resonanceLevel, response.towerStage);
+-                UniEvent.SendMessage(new PlayerBasicInfoLoadedEvent(request.RequestId, CurrentInfo));
++                UniEvent.SendMessage(new PlayerBasicInfoLoadedEvent(request.RequestId, CurrentInfo, isSessionRefresh));
+             }
+             catch (OperationCanceledException)
+             {
+-                if (!_disposed && !request.Cancellation.IsCancellationRequested && ReferenceEquals(_operation, scope)) Fail(request.RequestId, "连接已变化，请重新查询。");
++                if (!_disposed && !request.Cancellation.IsCancellationRequested && ReferenceEquals(_operation, scope)) Fail(request.RequestId, "连接已变化，请重新查询。", isSessionRefresh);
++                if (isSessionRefresh) throw;
+             }
+             catch (Exception error)
+             {
+-                if (!_disposed && !request.Cancellation.IsCancellationRequested && (scope == null || ReferenceEquals(_operation, scope))) Fail(request.RequestId, error.Message);
++                if (!_disposed && !request.Cancellation.IsCancellationRequested && (scope == null || ReferenceEquals(_operation, scope))) Fail(request.RequestId, error.Message, isSessionRefresh);
++                if (isSessionRefresh) throw;
+             }
+             finally
+             {
+@@ -67,7 +85,7 @@
+                 scope?.Dispose();
+             }
+         }
+-        private static void Fail(Guid id, string error) => UniEvent.SendMessage(new PlayerBasicInfoFailedEvent(id, error));
++        private static void Fail(Guid id, string error, bool isSessionRefresh = false) => UniEvent.SendMessage(new PlayerBasicInfoFailedEvent(id, error, isSessionRefresh));
+         private void OnSessionChanged(IEventMessage message)
+         {
+             _generation++; CurrentInfo = null;
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Network/PlayerBasicInfoRecoveryHandler.cs
+@@ -0,0 +1,22 @@
++using System.Collections.Generic;
++using TowerDefence.Networking.Recovery;
++using UnityEngine.Scripting;
++
++namespace TowerDefence.Networking.Integration
++{
++    [Preserve]
++    public sealed class PlayerBasicInfoRecoveryHandler : IReconnectRecoveryHandler
++    {
++        public string ModuleId => "player.basic-info";
++        public IEnumerable<RecoveryTask> CollectTasks(RecoveryContext context)
++        {
++            // Collection stays side-effect free; the registry executes this after game authentication.
++            yield return new RecoveryTask(RecoveryPhase.Refresh, (long)SessionSyncOrder.PlayerProfile,
++                "refresh-profile", token =>
++                {
++                    context.ThrowIfInvalid();
++                    return PlayerBasicInfoManager.Singleton.RecoverAsync(context);
++                });
++        }
++    }
++}
+--- /dev/null
++++ b/client/Assets/Rogue/Scripts/HotUpdate/Game/PlayerBasicInfo/Network/PlayerBasicInfoRecoveryHandler.cs.meta
+@@ -0,0 +1,11 @@
++fileFormatVersion: 2
++guid: 01bf2800a3c7cb3bac328035dc5accdf
++MonoImporter:
++  externalObjects: {}
++  serializedVersion: 2
++  defaultReferences: []
++  executionOrder: 0
++  icon: {instanceID: 0}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+--- a/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.cs
++++ b/client/Assets/Rogue/Scripts/HotUpdate/UI/Panel/PlayerBasicInfo/UIPlayerBasicInfo.cs
+@@ -54,11 +54,16 @@
+             UniEvent.SendMessage(new PlayerBasicInfoRequestedEvent(_requestId, _request.Token));
+         }
+         private void OnLoading(IEventMessage message)
+-        { if (((PlayerBasicInfoLoadingEvent)message).RequestId == _requestId) SetLoading(true, "正在获取用户信息…"); }
++        {
++            var result = (PlayerBasicInfoLoadingEvent)message;
++            if (result.IsSessionRefresh) { CancelRequest(); _requestId = result.RequestId; }
++            if (result.RequestId == _requestId) SetLoading(true, result.IsSessionRefresh ? "正在恢复用户信息…" : "正在获取用户信息…");
++        }
+         private void OnLoaded(IEventMessage message)
+         {
+             var result = (PlayerBasicInfoLoadedEvent)message;
+-            if (result.RequestId != _requestId) return;
++            if (!result.IsSessionRefresh && result.RequestId != _requestId) return;
++            if (result.IsSessionRefresh) CancelRequest();
+             var info = result.Info;
+             PlayerIdText.text = info.PlayerId.ToString(); AccountIdText.text = info.AccountId.ToString();
+             NameText.text = string.IsNullOrEmpty(info.Name) ? "未命名" : info.Name; AvatarIdText.text = info.AvatarId.ToString();
+@@ -73,7 +78,7 @@
+             catch (ArgumentOutOfRangeException) { return "未知"; }
+         }
+         private void OnFailed(IEventMessage message)
+-        { var result = (PlayerBasicInfoFailedEvent)message; if (result.RequestId == _requestId) SetLoading(false, result.Error); }
++        { var result = (PlayerBasicInfoFailedEvent)message; if (result.IsSessionRefresh || result.RequestId == _requestId) SetLoading(false, result.Error); }
+         private void OnCleared(IEventMessage message)
+         {
+             var result = (PlayerBasicInfoClearedEvent)message;
+--- a/client/Tools/SessionVerification/LoopbackGameServer.cs
++++ b/client/Tools/SessionVerification/LoopbackGameServer.cs
+@@ -29,6 +29,7 @@
+     public volatile bool DropBasicInfoResponse;
+     public volatile int BasicInfoDelayMilliseconds;
+     public int BasicInfoRequests;
++    public volatile string BasicInfoName = "事件验证角色";
+     public volatile int LoginDelayMilliseconds, TicketDelayMilliseconds;
+     public volatile bool DropAuthenticationResponse, SilenceHeartbeats;
+     public int Authentications => Volatile.Read(ref _authentications);
+@@ -159,7 +160,7 @@
+                 Interlocked.Increment(ref BasicInfoRequests);
+                 if (DropBasicInfoResponse) continue;
+                 if (BasicInfoDelayMilliseconds > 0) await Task.Delay(BasicInfoDelayMilliseconds).ConfigureAwait(false);
+-                response = new ResGetPlayerBasicInfo { status = 1, playerId = 9000000001, name = "事件验证角色", avatarId = 7, baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45, createTime = 1792000000, displayAchievementIds = "[0,0,0,0,0,0,0]", displayCharacterIds = "[0,0,0,0,0,0]", signature = "" };
++                response = new ResGetPlayerBasicInfo { status = 1, playerId = 9000000001, name = BasicInfoName, avatarId = 7, baseLevel = 12, mainStage = 23, resonanceLevel = 34, towerStage = 45, createTime = 1792000000, displayAchievementIds = "[0,0,0,0,0,0,0]", displayCharacterIds = "[0,0,0,0,0,0]", signature = "" };
+             }
+             else throw new InvalidDataException("Unexpected test TCP request.");
+             byte[] frame = TcpFraming.Encode(_codec.Encode(response, envelope.RequestId));
+--- a/client/Tools/PlayerBasicInfoVerification/PlayerBasicInfoSmoke.cs
++++ b/client/Tools/PlayerBasicInfoVerification/PlayerBasicInfoSmoke.cs
+@@ -1,5 +1,6 @@
+ #if UNITY_EDITOR
+ using System;
++using Cysharp.Threading.Tasks;
+ using System.IO;
+ using System.Linq;
+ using System.Threading;
+@@ -27,12 +28,12 @@
+         };
+     }
+     public static void Run() { SessionState.SetBool(Key, true); EditorApplication.EnterPlaymode(); }
+-    private static void Start() { _deadline = DateTime.UtcNow.AddSeconds(100); _task = VerifyAsync(); EditorApplication.update += Tick; }
++    private static void Start() { _deadline = DateTime.UtcNow.AddSeconds(130); _task = VerifyAsync(); EditorApplication.update += Tick; }
+     private static void Tick()
+     {
+         if (!_task.IsCompleted && DateTime.UtcNow < _deadline) return;
+         int exit = 0;
+-        try { Check(_task.IsCompleted, "smoke deadline"); _task.GetAwaiter().GetResult(); Debug.Log("PLAYER_BASIC_INFO_PASS: real database query and avatar update; event request/result correlation; repeat click; panel cancellation; disconnect; logout; login again; delayed response; 10-second timeout; references and screenshot"); }
++        try { Check(_task.IsCompleted, "smoke deadline"); _task.GetAwaiter().GetResult(); Debug.Log("PLAYER_BASIC_INFO_PASS: real database query and avatar update; event request/result correlation; repeat click; panel cancellation; disconnect; logout; login again; delayed response; 10-second timeout; references and screenshot; automatic authenticated profile recovery, hidden panel, retry, timeout propagation and logout cancellation"); }
+         catch (Exception error) { Debug.LogException(error); exit = 1; }
+         SessionState.SetBool(Key, false); EditorApplication.update -= Tick; EditorApplication.Exit(exit);
+     }
+@@ -47,9 +48,11 @@
+         string username = "zprofile_" + DateTime.UtcNow.ToString("MMddHHmmss") + Guid.NewGuid().ToString("N").Substring(0, 5);
+         File.WriteAllText("profile-test-account.txt", username);
+         File.AppendAllText("profile-test-accounts-progress.txt", username + "\n");
++        File.AppendAllText("profile-test-accounts-recovery.txt", username + "\n");
+         await login.RegisterAsync(username, "ProfileTest_123", "ProfileTest_123");
+         Check((await login.LoginAsync(username, "ProfileTest_123")).Success, "real account login");
+         await ConnectReal();
++        Check(PlayerBasicInfoManager.Singleton.CurrentInfo != null && _panel.PlayerIdText.text != "—", "first authentication populates cache and active UI without manual query");
+         _panel.OnSHow(); _panel.RefreshButton.onClick.Invoke();
+         Guid duplicate = Guid.NewGuid(); bool duplicateRejected = false;
+         Action<IEventMessage> failed = message => { if (((PlayerBasicInfoFailedEvent)message).RequestId == duplicate) duplicateRejected = true; };
+@@ -71,10 +74,11 @@
+         Check(_panel.AvatarIdText.text == "12", "refresh reads persisted avatar");
+         Capture();
+         await network.DisconnectAsync(); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.PlayerIdText.text == "—", "disconnect clears UI and snapshot");
+-        await ConnectReal(); _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
++        await ConnectReal();
++        Check(_panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null && _panel.PlayerIdText.text == real.PlayerId.ToString(), "re-authentication automatically refreshes open panel");
+         await login.LogoutAsync(); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.AccountIdText.text == "—", "logout clears");
+         Check((await login.LoginAsync(username, "ProfileTest_123")).Success, "login again"); await ConnectReal();
+-        _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
++        Check(PlayerBasicInfoManager.Singleton.CurrentInfo != null && _panel.PlayerIdText.text == real.PlayerId.ToString(), "relogin automatically refreshes profile");
+         Check(PlayerBasicInfoManager.Singleton.CurrentInfo.PlayerId == real.PlayerId, "relogin selects same role without job");
+         await login.LogoutAsync();
+         UnityEngine.Object.DestroyImmediate(network.gameObject); UnityEngine.Object.DestroyImmediate(login.gameObject);
+@@ -87,18 +91,57 @@
+             Check(zones.Success, "fixture zones");
+             var zone = ServerSelectManager.Singleton.ServerZones[0];
+             Check((await ServerSelectManager.Singleton.ConnectAsync(zone)).Success, "fixture connect"); await login.AuthenticateGameServerAsync(zone.ID);
++            Check(fixture.BasicInfoRequests == 1 && _panel.NameText.text == "事件验证角色", "registry executes profile once per authenticated session");
+             fixture.BasicInfoDelayMilliseconds = 300;
+-            _panel.OnSHow(); await Until(() => fixture.BasicInfoRequests > 0); _panel.CloseButton.onClick.Invoke();
++            var beforeCancelledRead = PlayerBasicInfoManager.Singleton.CurrentInfo;
++            int beforeCancelledRequests = fixture.BasicInfoRequests;
++            _panel.OnSHow(); await Until(() => fixture.BasicInfoRequests > beforeCancelledRequests); _panel.CloseButton.onClick.Invoke();
+             Check(!_panel.gameObject.activeSelf, "close button hides panel");
+-            await Task.Delay(500); Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null, "cancelled late response cannot populate snapshot");
++            await Task.Delay(500); Check(ReferenceEquals(beforeCancelledRead, PlayerBasicInfoManager.Singleton.CurrentInfo), "cancelled late response cannot replace the authenticated snapshot");
+             _panel.gameObject.SetActive(true); _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable && PlayerBasicInfoManager.Singleton.CurrentInfo != null);
+             Check(_panel.NameText.text == "事件验证角色", "reopen after cancellation");
+             Check(_panel.BaseLevelText.text == "12" && _panel.MainStageText.text == "23" && _panel.ResonanceLevelText.text == "34" && _panel.TowerStageText.text == "45", "non-default progress values reach UI through events");
++            int beforeReconnectRequests = fixture.BasicInfoRequests, beforeReconnectAuth = fixture.Authentications;
++            fixture.BasicInfoName = "重连自动更新角色";
++            fixture.BasicInfoDelayMilliseconds = 300;
++            fixture.DropGameConnection();
++            await Until(() => fixture.Authentications > beforeReconnectAuth && fixture.BasicInfoRequests > beforeReconnectRequests);
++            Check(network.State == TowerDefence.Networking.Session.NetworkState.Recovering, "profile queried during authenticated recovery");
++            _panel.gameObject.SetActive(false); _panel.gameObject.SetActive(true); _panel.OnSHow();
++            await Until(() => network.IsOnline && _panel.NameText.text == fixture.BasicInfoName);
++            Check(fixture.BasicInfoRequests == beforeReconnectRequests + 1, "opening during recovery does not duplicate network queries and accepts recovery result");
++            _panel.gameObject.SetActive(false);
++            fixture.BasicInfoName = "隐藏面板仍恢复资料"; beforeReconnectRequests = fixture.BasicInfoRequests;
++            fixture.DropGameConnection();
++            await Until(() => network.IsOnline && PlayerBasicInfoManager.Singleton.CurrentInfo?.Name == fixture.BasicInfoName);
++            Check(fixture.BasicInfoRequests == beforeReconnectRequests + 1 && !_panel.gameObject.activeSelf, "recovery updates account snapshot without an open panel");
++            _panel.gameObject.SetActive(true); _panel.OnSHow(); await Until(() => _panel.RefreshButton.interactable);
+             fixture.DropBasicInfoResponse = true; var watch = System.Diagnostics.Stopwatch.StartNew();
+             _panel.RefreshButton.onClick.Invoke(); await Until(() => _panel.RefreshButton.interactable, 13);
+             Check(watch.Elapsed.TotalSeconds >= 9 && _panel.StatusText.text != "已更新", "10 second timeout restores refresh");
+             _panel.RefreshButton.onClick.Invoke(); await network.DisconnectAsync(); await Task.Delay(100);
+             Check(PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.PlayerIdText.text == "—", "disconnect cancels pending read");
++            // A failed recovery must propagate through the coordinator instead of reporting Online.
++            await network.ConnectAsync(zone.ServerIp, zone.TcpPort, zone.ID, CancellationToken.None);
++            watch.Restart(); Exception recoveryFailure = null;
++            try { await login.AuthenticateGameServerAsync(zone.ID); } catch (Exception error) { recoveryFailure = error; }
++            Check(recoveryFailure != null && watch.Elapsed.TotalSeconds >= 9 && !network.IsOnline &&
++                PlayerBasicInfoManager.Singleton.CurrentInfo == null && !ReconnectRecoveryCoordinatorNetwork.Instance.IsRecovering,
++                "profile timeout fails recovery and releases busy state");
++            await network.DisconnectAsync(); fixture.DropBasicInfoResponse = false;
++            await network.ConnectAsync(zone.ServerIp, zone.TcpPort, zone.ID, CancellationToken.None);
++            await login.AuthenticateGameServerAsync(zone.ID);
++            Check(network.IsOnline && PlayerBasicInfoManager.Singleton.CurrentInfo != null, "fresh authentication retries profile after recovery failure");
++            await network.DisconnectAsync();
++            fixture.BasicInfoDelayMilliseconds = 500; beforeReconnectRequests = fixture.BasicInfoRequests;
++            await network.ConnectAsync(zone.ServerIp, zone.TcpPort, zone.ID, CancellationToken.None);
++            var authentication = login.AuthenticateGameServerAsync(zone.ID).AsTask();
++            await Until(() => fixture.BasicInfoRequests > beforeReconnectRequests);
++            await login.LogoutAsync(); bool cancelledRecovery = false;
++            try { await authentication; } catch (OperationCanceledException) { cancelledRecovery = true; }
++            await Task.Delay(600);
++            Check(cancelledRecovery && PlayerBasicInfoManager.Singleton.CurrentInfo == null && _panel.AccountIdText.text == "—",
++                "logout cancels recovery and late response cannot restore old account info");
+             Check(fixture.Failure == null, "fixture protocol health");
+         }
+         Check(UIPlayerBasicInfo.FormatTime(0) == "未知" && UIPlayerBasicInfo.FormatTime(long.MaxValue) == "未知", "invalid time");
+--- a/server/docs/PlayerBasicInfo.md
++++ b/server/docs/PlayerBasicInfo.md
+@@ -26,6 +26,13 @@
+ 
+ 项目技能见 ../.codex/skills/zombie-ui-network-template/SKILL.md，固定 UI → Manager → Network 与 UI／Manager 双向事件交互两项规范。
+ 
++## 登录与重连恢复
++
++PlayerBasicInfoRecoveryHandler 实现 IReconnectRecoveryHandler，由现有注册表自动发现，在 Refresh 阶段按 SessionSyncOrder.PlayerProfile 顺序执行。首次游戏服鉴权和每次重连鉴权成功后，协调器都会调用 Manager.RecoverAsync；不是通过 NetworkConnected 再追加查询。
++恢复查询复用91／92和原Network层，成功更新Manager快照并发布带 IsSessionRefresh=true 的加载／成功事件，所有已打开面板都可接收；普通手动查询继续按请求编号匹配。
++恢复期间打开或刷新面板不会重复发包。面板关闭仅取消它自己的手动查询，不取消账号级恢复；即使面板没有打开，恢复仍会更新资料快照。
++关联恢复、账号和连接取消令牌，写入快照及发事件前校验当前上下文。断线／注销会清空资料，旧连接的迟到响应不能覆盖新会话。恢复查询错误和超时向协调器传播，不能在缺少资料时报告Online；自动重连沿用现有重试策略。
++
+ ## 数据库更新与导表
+ 
+ 新环境使用 sql/zombie_init.sql。现有本机环境执行 tools/Update-ZombiePlayer.ps1：仅停止本项目服务，备份 player 后依次应用精简迁移和新增进度迁移（20261112_002_zombie_player_progress.sql），整组重复执行两次，核对保留字段与最终列清单。备份默认保存在本机临时目录。

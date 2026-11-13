@@ -4,6 +4,7 @@ using Game.Datas.Messages;
 using Google.Protobuf;
 using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace Framework.Core.Serializer
 {
@@ -15,7 +16,8 @@ namespace Framework.Core.Serializer
             try
             {
                 var output = new CodedOutputStream(stream, leaveOpen: true);
-                if (source is ReqGuestLogin value0)
+                if (source is ReqUpdatePlayerBasicInfo updatedReqUpdatePlayerBasicInfo) { WriteReqUpdatePlayerBasicInfo(output, updatedReqUpdatePlayerBasicInfo); }
+                else if (source is ReqGuestLogin value0)
                 {
                     WriteReqGuestLogin(output, value0);
                 }
@@ -473,7 +475,8 @@ namespace Framework.Core.Serializer
             try
             {
                 var input = new CodedInputStream(stream, leaveOpen: true);
-                if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
+                if (messageType == typeof(ReqUpdatePlayerBasicInfo)) message = ReadReqUpdatePlayerBasicInfo(input);
+                else if (messageType == typeof(ReqGuestLogin)) message = ReadReqGuestLogin(input);
                 else if (messageType == typeof(ReqGuestUpgrade)) message = ReadReqGuestUpgrade(input);
                 else if (messageType == typeof(ReqRegisterUser)) message = ReadReqRegisterUser(input);
                 else if (messageType == typeof(ResGuestLogin)) message = ReadResGuestLogin(input);
@@ -4353,47 +4356,55 @@ namespace Framework.Core.Serializer
 
         private static void WriteResGetPlayerBasicInfo(CodedOutputStream output, ResGetPlayerBasicInfo message)
         {
-            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteTag(1, (WireFormat.WireType)0);
             output.WriteInt32(message.status);
             if (message.errorMessage != null)
             {
-                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(2, (WireFormat.WireType)2);
                 output.WriteString(message.errorMessage);
             }
-            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteTag(3, (WireFormat.WireType)0);
             output.WriteInt64(message.playerId);
-            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteTag(4, (WireFormat.WireType)0);
             output.WriteInt32(message.avatarId);
             if (message.name != null)
             {
-                output.WriteTag(5, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(5, (WireFormat.WireType)2);
                 output.WriteString(message.name);
             }
-            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteTag(6, (WireFormat.WireType)0);
             output.WriteInt64(message.guildId);
-            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteTag(7, (WireFormat.WireType)0);
             output.WriteInt64(message.createTime);
-            output.WriteTag(8, WireFormat.WireType.Varint);
+            output.WriteTag(8, (WireFormat.WireType)0);
             output.WriteInt32(message.titleId);
             if (message.signature != null)
             {
-                output.WriteTag(9, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(9, (WireFormat.WireType)2);
                 output.WriteString(message.signature);
             }
-            output.WriteTag(10, WireFormat.WireType.Varint);
+            output.WriteTag(10, (WireFormat.WireType)0);
             output.WriteInt32(message.avatarFrameId);
-            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteTag(11, (WireFormat.WireType)0);
             output.WriteInt32(message.backgroundId);
             if (message.displayAchievementIds != null)
             {
-                output.WriteTag(12, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(12, (WireFormat.WireType)2);
                 output.WriteString(message.displayAchievementIds);
             }
             if (message.displayCharacterIds != null)
             {
-                output.WriteTag(13, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(13, (WireFormat.WireType)2);
                 output.WriteString(message.displayCharacterIds);
             }
+            output.WriteTag(14, (WireFormat.WireType)0);
+            output.WriteInt32(message.baseLevel);
+            output.WriteTag(15, (WireFormat.WireType)0);
+            output.WriteInt32(message.mainStage);
+            output.WriteTag(16, (WireFormat.WireType)0);
+            output.WriteInt32(message.resonanceLevel);
+            output.WriteTag(17, (WireFormat.WireType)0);
+            output.WriteInt32(message.towerStage);
         }
 
         private static ResGetPlayerBasicInfo ReadResGetPlayerBasicInfo(CodedInputStream input)
@@ -4402,50 +4413,60 @@ namespace Framework.Core.Serializer
             uint tag;
             while ((tag = input.ReadTag()) != 0)
             {
-                switch (WireFormat.GetTagFieldNumber(tag))
+                switch (tag)
                 {
-                    case 1:
+                    case 8:
                         message.status = input.ReadInt32();
                         break;
-                    case 2:
+                    case 18:
                         message.errorMessage = input.ReadString();
                         break;
-                    case 3:
+                    case 24:
                         message.playerId = input.ReadInt64();
                         break;
-                    case 4:
+                    case 32:
                         message.avatarId = input.ReadInt32();
                         break;
-                    case 5:
+                    case 42:
                         message.name = input.ReadString();
                         break;
-                    case 6:
+                    case 48:
                         message.guildId = input.ReadInt64();
                         break;
-                    case 7:
+                    case 56:
                         message.createTime = input.ReadInt64();
                         break;
-                    case 8:
+                    case 64:
                         message.titleId = input.ReadInt32();
                         break;
-                    case 9:
+                    case 74:
                         message.signature = input.ReadString();
                         break;
-                    case 10:
+                    case 80:
                         message.avatarFrameId = input.ReadInt32();
                         break;
-                    case 11:
+                    case 88:
                         message.backgroundId = input.ReadInt32();
                         break;
-                    case 12:
+                    case 98:
                         message.displayAchievementIds = input.ReadString();
                         break;
-                    case 13:
+                    case 106:
                         message.displayCharacterIds = input.ReadString();
                         break;
-                    default:
-                        input.SkipLastField();
+                    case 112:
+                        message.baseLevel = input.ReadInt32();
                         break;
+                    case 120:
+                        message.mainStage = input.ReadInt32();
+                        break;
+                    case 128:
+                        message.resonanceLevel = input.ReadInt32();
+                        break;
+                    case 136:
+                        message.towerStage = input.ReadInt32();
+                        break;
+                    default: input.SkipLastField(); break;
                 }
             }
             return message;
@@ -4478,47 +4499,55 @@ namespace Framework.Core.Serializer
 
         private static void WriteResUpdatePlayerBasicInfo(CodedOutputStream output, ResUpdatePlayerBasicInfo message)
         {
-            output.WriteTag(1, WireFormat.WireType.Varint);
+            output.WriteTag(1, (WireFormat.WireType)0);
             output.WriteInt32(message.status);
             if (message.errorMessage != null)
             {
-                output.WriteTag(2, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(2, (WireFormat.WireType)2);
                 output.WriteString(message.errorMessage);
             }
-            output.WriteTag(3, WireFormat.WireType.Varint);
+            output.WriteTag(3, (WireFormat.WireType)0);
             output.WriteInt64(message.playerId);
-            output.WriteTag(4, WireFormat.WireType.Varint);
+            output.WriteTag(4, (WireFormat.WireType)0);
             output.WriteInt32(message.avatarId);
             if (message.name != null)
             {
-                output.WriteTag(5, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(5, (WireFormat.WireType)2);
                 output.WriteString(message.name);
             }
-            output.WriteTag(6, WireFormat.WireType.Varint);
+            output.WriteTag(6, (WireFormat.WireType)0);
             output.WriteInt64(message.guildId);
-            output.WriteTag(7, WireFormat.WireType.Varint);
+            output.WriteTag(7, (WireFormat.WireType)0);
             output.WriteInt64(message.createTime);
-            output.WriteTag(8, WireFormat.WireType.Varint);
+            output.WriteTag(8, (WireFormat.WireType)0);
             output.WriteInt32(message.titleId);
             if (message.signature != null)
             {
-                output.WriteTag(9, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(9, (WireFormat.WireType)2);
                 output.WriteString(message.signature);
             }
-            output.WriteTag(10, WireFormat.WireType.Varint);
+            output.WriteTag(10, (WireFormat.WireType)0);
             output.WriteInt32(message.avatarFrameId);
-            output.WriteTag(11, WireFormat.WireType.Varint);
+            output.WriteTag(11, (WireFormat.WireType)0);
             output.WriteInt32(message.backgroundId);
             if (message.displayAchievementIds != null)
             {
-                output.WriteTag(12, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(12, (WireFormat.WireType)2);
                 output.WriteString(message.displayAchievementIds);
             }
             if (message.displayCharacterIds != null)
             {
-                output.WriteTag(13, WireFormat.WireType.LengthDelimited);
+                output.WriteTag(13, (WireFormat.WireType)2);
                 output.WriteString(message.displayCharacterIds);
             }
+            output.WriteTag(14, (WireFormat.WireType)0);
+            output.WriteInt32(message.baseLevel);
+            output.WriteTag(15, (WireFormat.WireType)0);
+            output.WriteInt32(message.mainStage);
+            output.WriteTag(16, (WireFormat.WireType)0);
+            output.WriteInt32(message.resonanceLevel);
+            output.WriteTag(17, (WireFormat.WireType)0);
+            output.WriteInt32(message.towerStage);
         }
 
         private static ResUpdatePlayerBasicInfo ReadResUpdatePlayerBasicInfo(CodedInputStream input)
@@ -4527,50 +4556,60 @@ namespace Framework.Core.Serializer
             uint tag;
             while ((tag = input.ReadTag()) != 0)
             {
-                switch (WireFormat.GetTagFieldNumber(tag))
+                switch (tag)
                 {
-                    case 1:
+                    case 8:
                         message.status = input.ReadInt32();
                         break;
-                    case 2:
+                    case 18:
                         message.errorMessage = input.ReadString();
                         break;
-                    case 3:
+                    case 24:
                         message.playerId = input.ReadInt64();
                         break;
-                    case 4:
+                    case 32:
                         message.avatarId = input.ReadInt32();
                         break;
-                    case 5:
+                    case 42:
                         message.name = input.ReadString();
                         break;
-                    case 6:
+                    case 48:
                         message.guildId = input.ReadInt64();
                         break;
-                    case 7:
+                    case 56:
                         message.createTime = input.ReadInt64();
                         break;
-                    case 8:
+                    case 64:
                         message.titleId = input.ReadInt32();
                         break;
-                    case 9:
+                    case 74:
                         message.signature = input.ReadString();
                         break;
-                    case 10:
+                    case 80:
                         message.avatarFrameId = input.ReadInt32();
                         break;
-                    case 11:
+                    case 88:
                         message.backgroundId = input.ReadInt32();
                         break;
-                    case 12:
+                    case 98:
                         message.displayAchievementIds = input.ReadString();
                         break;
-                    case 13:
+                    case 106:
                         message.displayCharacterIds = input.ReadString();
                         break;
-                    default:
-                        input.SkipLastField();
+                    case 112:
+                        message.baseLevel = input.ReadInt32();
                         break;
+                    case 120:
+                        message.mainStage = input.ReadInt32();
+                        break;
+                    case 128:
+                        message.resonanceLevel = input.ReadInt32();
+                        break;
+                    case 136:
+                        message.towerStage = input.ReadInt32();
+                        break;
+                    default: input.SkipLastField(); break;
                 }
             }
             return message;
@@ -7434,6 +7473,95 @@ namespace Framework.Core.Serializer
             var nestedInput = new CodedInputStream(input.ReadBytes().ToByteArray());
             T value = reader(nestedInput);
             return value;
+        }
+        private static void WriteReqUpdatePlayerBasicInfo(CodedOutputStream output, ReqUpdatePlayerBasicInfo message)
+        {
+            if (message.updateFields != null)
+                foreach (var item in message.updateFields)
+                {
+                    output.WriteTag(1, (WireFormat.WireType)0);
+                    output.WriteEnum((int)item);
+                }
+            if (message.avatarId.HasValue)
+            {
+                output.WriteTag(2, (WireFormat.WireType)0);
+                output.WriteInt32(message.avatarId.Value);
+            }
+            if (message.avatarFrameId.HasValue)
+            {
+                output.WriteTag(3, (WireFormat.WireType)0);
+                output.WriteInt32(message.avatarFrameId.Value);
+            }
+            if (message.titleId.HasValue)
+            {
+                output.WriteTag(4, (WireFormat.WireType)0);
+                output.WriteInt32(message.titleId.Value);
+            }
+            if (message.backgroundId.HasValue)
+            {
+                output.WriteTag(5, (WireFormat.WireType)0);
+                output.WriteInt32(message.backgroundId.Value);
+            }
+            if (message.displayAchievementIds != null)
+            {
+                output.WriteTag(6, (WireFormat.WireType)2);
+                output.WriteString(message.displayAchievementIds);
+            }
+            if (message.displayCharacterIds != null)
+            {
+                output.WriteTag(7, (WireFormat.WireType)2);
+                output.WriteString(message.displayCharacterIds);
+            }
+            if (message.signature != null)
+            {
+                output.WriteTag(8, (WireFormat.WireType)2);
+                output.WriteString(message.signature);
+            }
+        }
+
+        private static ReqUpdatePlayerBasicInfo ReadReqUpdatePlayerBasicInfo(CodedInputStream input)
+        {
+            var message = new ReqUpdatePlayerBasicInfo();
+            var items_updateFields = new List<PlayerProfileField>();
+            uint tag;
+            while ((tag = input.ReadTag()) != 0)
+            {
+                switch (tag)
+                {
+                    case 8:
+                        items_updateFields.Add((PlayerProfileField)input.ReadEnum());
+                        break;
+                    case 10:
+                        using (var packed = new CodedInputStream(input.ReadBytes().ToByteArray()))
+                            while (!packed.IsAtEnd)
+                                items_updateFields.Add((PlayerProfileField)packed.ReadEnum());
+                        break;
+                    case 16:
+                        message.avatarId = input.ReadInt32();
+                        break;
+                    case 24:
+                        message.avatarFrameId = input.ReadInt32();
+                        break;
+                    case 32:
+                        message.titleId = input.ReadInt32();
+                        break;
+                    case 40:
+                        message.backgroundId = input.ReadInt32();
+                        break;
+                    case 50:
+                        message.displayAchievementIds = input.ReadString();
+                        break;
+                    case 58:
+                        message.displayCharacterIds = input.ReadString();
+                        break;
+                    case 66:
+                        message.signature = input.ReadString();
+                        break;
+                    default: input.SkipLastField(); break;
+                }
+            }
+            if (items_updateFields.Count > 0) message.updateFields = items_updateFields.ToArray();
+            return message;
         }
     }
 }

@@ -31,6 +31,7 @@ namespace Game.Core.Db
             SqlSugarClient db = new SqlSugarClient(new ConnectionConfig()
             {
                 ConnectionString = connGameDataStr.ConnectionString,
+                ConfigureExternalServices = new ConfigureExternalServices { EntityNameService = ConfigureEntityTableName },
                 DbType = DbType.MySql,
                 IsAutoCloseConnection = true,
                 InitKeyType = InitKeyType.Attribute//从特性读取主键自增信息
@@ -51,6 +52,7 @@ namespace Game.Core.Db
             SqlSugarClient db = new SqlSugarClient(new ConnectionConfig()
             {
                 ConnectionString = connAuthUserStr.ConnectionString,
+                ConfigureExternalServices = new ConfigureExternalServices { EntityNameService = ConfigureEntityTableName },
                 DbType = DbType.MySql,
                 IsAutoCloseConnection = true,
                 InitKeyType = InitKeyType.Attribute//从特性读取主键自增信息
@@ -65,6 +67,15 @@ namespace Game.Core.Db
             db.Ado.CommandTimeOut = commandTimeoutSeconds;
             return db;
 
+        }
+        private static void ConfigureEntityTableName(Type entityType, EntityInfo entityInfo)
+        {
+            // Generated entity names start uppercase, but the SQL schema uses lowercase tables.
+            if (entityType.Namespace == typeof(Game.Datas.DBEntities.Player).Namespace &&
+                !Attribute.IsDefined(entityType, typeof(SugarTable), inherit: true))
+            {
+                entityInfo.DbTableName = entityType.Name.ToLowerInvariant();
+            }
         }
     }
 }

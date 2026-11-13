@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenExcelClass\\GenExcelClass.csproj",
+      "projectUniqueName": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenExcelClass\\GenExcelClass.csproj",
       "projectName": "GenExcelClass",
-      "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenExcelClass\\GenExcelClass.csproj",
+      "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenExcelClass\\GenExcelClass.csproj",
       "packagesPath": "C:\\Users\\Windows\\.nuget\\packages\\",
-      "outputPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\tools\\GenExcelClass\\obj\\",
+      "outputPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\tools\\GenExcelClass\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Windows\\AppData\\Roaming\\NuGet\\NuGet.Config"

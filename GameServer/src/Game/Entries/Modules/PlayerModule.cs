@@ -53,7 +53,8 @@ namespace Game.Entries.Modules
                 name = info.Name, guildId = info.GuildId, createTime = info.CreateTime,
                 titleId = info.TitleId, signature = info.Signature,
                 avatarFrameId = info.AvatarFrameId, backgroundId = info.BackgroundId,
-                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds)
+                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds),
+                baseLevel = info.BaseLevel, mainStage = info.MainStage, resonanceLevel = info.ResonanceLevel, towerStage = info.TowerStage
             };
         }
 
@@ -96,7 +97,8 @@ namespace Game.Entries.Modules
                 status = (int)Respones.OK, playerId = info.PlayerId, avatarId = info.AvatarId, name = info.Name,
                 guildId = info.GuildId, createTime = info.CreateTime, titleId = info.TitleId, signature = info.Signature,
                 avatarFrameId = info.AvatarFrameId, backgroundId = info.BackgroundId,
-                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds)
+                displayAchievementIds = JsonSerializer.Serialize(info.DisplayAchievementIds), displayCharacterIds = JsonSerializer.Serialize(info.DisplayCharacterIds),
+                baseLevel = info.BaseLevel, mainStage = info.MainStage, resonanceLevel = info.ResonanceLevel, towerStage = info.TowerStage
             };
         }
 
@@ -112,73 +114,13 @@ namespace Game.Entries.Modules
 
         private void CopyDbPlayerToResponesData(Game.Datas.DBEntities.Player p, PlayerInfo pInfo)
         {
-            pInfo.exp = p.exp;
-            pInfo.hp = p.HP;
-            pInfo.mp = p.MP;
-            pInfo.umoney = p.umoney;
+            pInfo.exp = pInfo.hp = pInfo.mp = pInfo.umoney = pInfo.ucion = pInfo.usex = 0;
             pInfo.unick = p.name;
-            pInfo.ucion = p.ucoin;
-            pInfo.usex = p.usex;
         }
 
         public ResRecvLoginBonues HandlerRecvLoginBonues(IdSession s, ReqRecvLoginBonues req, long playerId)
         {
-            ResRecvLoginBonues res = new ResRecvLoginBonues();
-
-            // ��֤accountId, playerID�˺�;
-            if (playerId <= 0)
-            {
-                res.status = (int)Respones.AccountIsNotLogin;
-                return res;
-            }
-
-
-            Loginbonues data = GM_AccountEntityMgr.Instance.GetLoginBonues(playerId);
-            if (data == null)
-            {
-                res.status = (int)Respones.SystemErr;
-                return res;
-            }
-
-            if (data.days == 0 || data.status != 0)
-            { // ����������ȡ���Ƿ�����
-                res.status = (int)Respones.InvalidOpt;
-                return res;
-            }
-
-
-            res.status = (int)Respones.OK;
-            res.num = data.bonues;
-
-            Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetPlayerById(playerId);
-            if (p != null)
-            { // ���ڽ�����ʲô��������Ϸ��������������;
-                // logger.Info($"{p.GetHashCode()}");
-                p.ucoin += data.bonues;
-            }
-
-            if (p != null)
-            {
-                GM_AccountEntityMgr.Instance.UpdatePlayer(p);
-            }
-
-            // The account entity already keeps the account-to-player association.
-            /* 
-             * ���������Bug,Ҫ����һ�£�����δ������������һ��Player ֻ����һ��ְҵ;
-            p = GM_AccountEntityMgr.Instance.GetPlayerByAccountId(accountId, 0);
-            if (p != null)
-            {
-                // logger.Info($"{p.GetHashCode()}");
-                p.ucoin += data.bonues;
-            }*/
-
-            data.bonues = 0;
-            data.status = 1;
-            GM_AccountEntityMgr.Instance.UpdateLoginBonues(data);
-
-
-
-            return res;
+            return new ResRecvLoginBonues { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
         }
 
         public ResSelectPlayer HandlerHttpReqSelectPlayer(ReqSelectPlayer req, long accountId)
@@ -193,11 +135,7 @@ namespace Game.Entries.Modules
             }
 
             // ���req����,����зǷ��ģ���ô�ͷ��ز�������
-            if (req.job <= 0)
-            {  // �����Լ���ʵ�������������
-                res.status = (int)Respones.InvalidParams;
-                return res;
-            }
+            // Legacy job and sex parameters are accepted but no longer select a player.
 
             Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
                 accountId,
@@ -248,11 +186,7 @@ namespace Game.Entries.Modules
             }
 
             // ���req����,����зǷ��ģ���ô�ͷ��ز�������
-            if (req.job <= 0)
-            {  // �����Լ���ʵ�������������
-                res.status = (int)Respones.InvalidParams;
-                return res;
-            }
+            // Legacy job and sex parameters are accepted but no longer select a player.
 
             Game.Datas.DBEntities.Player p = GM_AccountEntityMgr.Instance.GetOrCreatePlayer(
                 accountId,
@@ -480,29 +414,7 @@ namespace Game.Entries.Modules
         }
 
         public ResRecvBonues HandlerReqRecvBonues(IdSession s, ReqRecvBonues req, long playerId) {
-            ResRecvBonues res = new ResRecvBonues();
-            // ��֤accountId, playerID�˺�;
-            if (playerId <= 0) {
-                res.status = (int)Respones.AccountIsNotLogin;
-                return res;
-            }
-
-            Bonues data = GM_BonuesMgr.Instance.GetBonuesBy(req.bonuesId);
-            if (data == null || data.uid != playerId || data.status != 0) {
-                res.status = (int)Respones.InvalidOpt;
-                return res;
-            }
-
-            GM_BonuesMgr.Instance.RecvBonues(req.bonuesId, data);
-            res.status = (int)Respones.OK;
-            res.typeId = data.tid;
-            res.b1 = data.bonues1;
-            res.b2 = data.bonues2;
-            res.b3 = data.bonues3;
-            res.b4 = data.bonues4;
-            res.b5 = data.bonues5;
-
-            return res;
+            return new ResRecvBonues { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
         }
 
         public ResPullingTaskList HandlerReqPullingTaskList(IdSession s, ReqPullingTaskList req, long playerId) {
@@ -553,57 +465,7 @@ namespace Game.Entries.Modules
         }
 
         public ResPullingRank HandlerReqPullingRank(IdSession s, ReqPullingRank req, long playerId) {
-            ResPullingRank res = new ResPullingRank();
-            // ��֤accountId, playerID�˺�;
-            if (playerId <= 0)
-            {
-                res.status = (int)Respones.AccountIsNotLogin;
-                return res;
-            }
-
-            GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);
-            if (player == null)
-            {
-                res.status = (int)Respones.InvalidOpt;
-                return res;
-            }
-            res.status = (int)Respones.OK;
-            res.selfIndex = -1;
-
-            // int rankType = req.typeId;
-            int rankType = (int)RankType.WorldCoin;
-            RankData[] rankData = GM_RankMgr.Instance.GetRankData(rankType, 30);
-            if (rankData == null || rankData.Length <= 0) {
-                return res;
-            }
-
-            res.ranks = new RankItem[rankData.Length];
-            for (int i = 0; i < rankData.Length; i++) {
-                RankItem item = new RankItem(); // uid ��Ҫ�Žo�ͻ���;
-
-                Player p = GM_AccountEntityMgr.Instance.GetPlayerById(rankData[i].uid);
-                if (p == null) {
-                    this.logger.Error($"rankdata Error uid {rankData[i].uid}");
-                    continue;
-                }
-                Account a = GM_AccountEntityMgr.Instance.GetAccountById(p.accountId);
-                if (a == null) {
-                    this.logger.Error($"rankdata Error uid {rankData[i].uid}");
-                    continue;
-                }
-                item.uface = a.uface;
-                item.unick = a.unick;
-                item.value = rankData[i].value;
-
-                if (rankData[i].uid == playerId) {
-                    res.selfIndex = i;
-                }
-
-                res.ranks[i] = item;
-            }
-
-
-            return res;
+            return new ResPullingRank { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
         }
 
         public void HandlerReqEnterLogicServer(IdSession s, ReqEnterLogicServer req, long playerId)
@@ -693,31 +555,7 @@ namespace Game.Entries.Modules
         }
 
         public ResExchangeProduct HandlerReqExchangeProduct(IdSession s, ReqExchangeProduct req, long playerId) {
-            ResExchangeProduct res = new ResExchangeProduct();
-            // ��֤accountId, playerID�˺�;
-            if (/*s.accountId <= 0 || */playerId <= 0)
-            {
-                res.status = (int)Respones.AccountIsNotLogin;
-                return res;
-            }
-
-            GM_PlayerEntity player = GM_EntityMgr.Instance.Get(playerId);
-            if (player == null)
-            {
-                res.status = (int)Respones.InvalidOpt;
-                return res;
-            }
-
-            int status = GM_TradingMgr.Instance.CanExchangeProduct(player, req.productId);
-            if (status != (int)Respones.OK) {
-                res.status = status;
-                return res;
-            }
-
-            GM_TradingMgr.Instance.DoExchangeProduct(player, req.productId);
-
-            res.status = (int)Respones.OK;
-            return res;
+            return new ResExchangeProduct { status = (int)(playerId <= 0 ? Respones.AccountIsNotLogin : Respones.InvalidOpt) };
         }
 
         public ResPullingPackData HandlerReqPullingPackData(IdSession s, ReqPullingPackData req, long playerId) {

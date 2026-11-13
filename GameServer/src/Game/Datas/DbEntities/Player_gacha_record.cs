@@ -7,6 +7,7 @@ namespace Game.Datas.DBEntities
     ///<summary>
     ///玩家角色抽奖记录
     ///</summary>
+    [SqlSugar.SugarTable("player_gacha_record")]
     public partial class Player_gacha_record
     {
            public Player_gacha_record(){

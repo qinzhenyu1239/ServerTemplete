@@ -1,0 +1,5 @@
+不重复ID,道具ID,道具数量
+string,string,string
+ID,ItemID,ItemCount
+1,10001,20
+2,10002,100

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "wkLYBXlKEPA=",
+  "dgSpecHash": "Nu6HYxjulmc=",
   "success": true,
-  "projectFilePath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj",
+  "projectFilePath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Windows\\.nuget\\packages\\dotnetty.buffers\\0.7.6\\dotnetty.buffers.0.7.6.nupkg.sha512",
     "C:\\Users\\Windows\\.nuget\\packages\\dotnetty.codecs\\0.7.6\\dotnetty.codecs.0.7.6.nupkg.sha512",
@@ -98,9 +98,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'Google.Protobuf' 3.12.4 has a known high severity vulnerability, https://github.com/advisories/GHSA-77rm-9x9h-xj3g",
-      "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj",
+      "projectPath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\BaiduNetdiskDownload\\CSharpGame\\CSharpGameServer\\GameServer\\GameServer.csproj",
+      "filePath": "D:\\BaiduNetdiskDownload\\CSharpGame_js\\CSharpGameServer\\GameServer\\GameServer.csproj",
       "libraryId": "Google.Protobuf",
       "targetGraphs": [
         "net8.0"

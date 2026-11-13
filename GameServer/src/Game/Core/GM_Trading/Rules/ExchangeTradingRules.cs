@@ -1,4 +1,4 @@
-﻿using Framework.Core.Utils;
+using Framework.Core.Utils;
 using Game.Core.EntityMgr;
 using Game.Core.GM_Backpack;
 using Game.Datas.Excels;
@@ -23,39 +23,14 @@ namespace Game.Core.GM_Trading
                 return (int)Respones.InvalidParams;
             }
 
-            if (player.uPlayer.playerInfo.umoney < config.Price) {
-                return (int)Respones.MoneyIsNotEnough;
-            }
-
-            return (int)Respones.OK;
+            return (int)Respones.InvalidOpt;
         }
 
 
         [RuleProcesser("DoExchange", -1)]
         static bool DefaultDoExchange(GM_PlayerEntity player, int productId)
         {
-            ExchangeTrading config = (ExchangeTrading)ExcelUtils.GetConfigData<ExchangeTrading>(productId.ToString());
-            if (config == null) {
-                return false;
-            }
-            Dictionary<string, int> products = GameUtils.ParseStringWithKeyIntValue(config.Product);
-            if (products.Count <= 0) {
-                return false;
-            }
-
-            player.uPlayer.playerInfo.umoney -= config.Price;
-            GM_AccountEntityMgr.Instance.UpdatePlayer(player.uPlayer.playerInfo);
-
-            foreach (var key in products.Keys) {
-                int value = products[key];
-                int typeId = int.Parse(key);
-
-                
-                // 注意多线程
-                GM_BackpackMgr.Instance.UpdateGoodsWithTid(player, typeId, value);
-            }
-
-            return true;
+            return false; // Legacy yuanbao exchange is disabled.
         }
 
 

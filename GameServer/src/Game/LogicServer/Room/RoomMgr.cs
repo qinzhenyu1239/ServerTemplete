@@ -120,7 +120,7 @@ namespace Game.LogicServer {
         protected ResUserArrivedSeat GetUserArrivedSeatData(GM_PlayerEntity entity, int seatId) {
             ResUserArrivedSeat userData = new ResUserArrivedSeat();
             userData.unick = entity.uPlayer.playerInfo.name;
-            userData.usex = entity.uPlayer.playerInfo.usex;
+            userData.usex = 0;
             userData.uface = entity.uPlayer.accountInfo.uface;
 
             userData.seatId = seatId;

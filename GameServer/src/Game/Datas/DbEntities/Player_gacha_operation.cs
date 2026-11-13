@@ -2,6 +2,7 @@ using System;
 
 namespace Game.Datas.DBEntities
 {
+    [SqlSugar.SugarTable("player_gacha_operation")]
     public sealed class Player_gacha_operation
     {
         public long id { get; set; }

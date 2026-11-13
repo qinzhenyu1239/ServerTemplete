@@ -1,0 +1,70 @@
+[2026-11-12 12:16:57.0661] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:50987 method=POST uri=/ReqRegisterUser bytes=92 
+[2026-11-12 12:16:57.7153] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:50987 status=200 bytes=24 
+[2026-11-12 12:16:57.7417] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:50995 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 12:16:57.7536] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:50995 status=200 bytes=99 
+[2026-11-12 12:16:57.8655] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:50999 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:16:57.8655] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:50999 status=200 bytes=272 
+[2026-11-12 12:19:12.4566] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51188 method=POST uri=/ReqRegisterUser bytes=92 
+[2026-11-12 12:19:13.1347] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51188 status=200 bytes=24 
+[2026-11-12 12:19:13.1632] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51196 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 12:19:13.1747] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51196 status=200 bytes=99 
+[2026-11-12 12:19:13.2991] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51200 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:19:13.2991] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51200 status=200 bytes=272 
+[2026-11-12 12:19:14.3990] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51210 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:19:14.3990] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51210 status=200 bytes=272 
+[2026-11-12 12:19:14.4248] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51211 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 12:19:14.5139] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51211 status=200 bytes=24 
+[2026-11-12 12:19:14.5139] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51214 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 12:19:14.5139] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51214 status=200 bytes=99 
+[2026-11-12 12:19:14.5139] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51216 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:19:14.5139] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51216 status=200 bytes=272 
+[2026-11-12 12:19:14.5463] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51217 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 12:19:14.5463] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51217 status=200 bytes=24 
+[2026-11-12 12:21:22.8203] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51382 method=POST uri=/ReqRegisterUser bytes=92 
+[2026-11-12 12:21:22.8254] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51382 status=200 bytes=24 
+[2026-11-12 12:21:22.8466] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51383 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 12:21:22.8466] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51383 status=200 bytes=99 
+[2026-11-12 12:21:22.9913] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51387 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:21:22.9913] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51387 status=200 bytes=272 
+[2026-11-12 12:21:23.2850] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51389 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:21:23.2850] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51389 status=200 bytes=272 
+[2026-11-12 12:21:23.3239] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51390 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 12:21:23.3239] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51390 status=200 bytes=24 
+[2026-11-12 12:21:23.3395] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51393 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 12:21:23.3395] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51393 status=200 bytes=99 
+[2026-11-12 12:21:23.3538] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51395 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 12:21:23.3538] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51395 status=200 bytes=272 
+[2026-11-12 12:21:23.3751] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:51396 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 12:21:23.3751] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:51396 status=200 bytes=24 
+[2026-11-12 14:10:00.3325] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57492 method=POST uri=/ReqRegisterUser bytes=92 
+[2026-11-12 14:10:00.8817] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57492 status=200 bytes=24 
+[2026-11-12 14:10:00.9077] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57502 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 14:10:00.9169] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57502 status=200 bytes=99 
+[2026-11-12 14:10:01.0253] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57506 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 14:10:01.0253] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57506 status=200 bytes=272 
+[2026-11-12 14:10:01.8732] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57516 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 14:10:01.8732] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57516 status=200 bytes=272 
+[2026-11-12 14:10:01.9021] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57517 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 14:10:01.9921] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57517 status=200 bytes=24 
+[2026-11-12 14:10:01.9985] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57520 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 14:10:01.9985] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57520 status=200 bytes=99 
+[2026-11-12 14:10:02.0077] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57522 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 14:10:02.0077] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57522 status=200 bytes=272 
+[2026-11-12 14:10:02.0287] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:57523 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 14:10:02.0287] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:57523 status=200 bytes=24 
+[2026-11-12 15:05:16.5525] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63316 method=POST uri=/ReqRegisterUser bytes=92 
+[2026-11-12 15:05:16.8811] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63316 status=200 bytes=24 
+[2026-11-12 15:05:16.9062] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63324 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 15:05:16.9062] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63324 status=200 bytes=99 
+[2026-11-12 15:05:17.0323] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63328 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 15:05:17.0323] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63328 status=200 bytes=272 
+[2026-11-12 15:05:17.5498] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63331 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 15:05:17.5498] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63331 status=200 bytes=272 
+[2026-11-12 15:05:17.5728] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63332 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 15:05:17.6395] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63332 status=200 bytes=24 
+[2026-11-12 15:05:17.6395] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63335 method=POST uri=/ReqUserLogin bytes=88 
+[2026-11-12 15:05:17.6395] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63335 status=200 bytes=99 
+[2026-11-12 15:05:17.6569] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63337 method=POST uri=/ReqIssueGameTicket bytes=92 
+[2026-11-12 15:05:17.6569] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63337 status=200 bytes=272 
+[2026-11-12 15:05:17.6865] [MESSAGE] [RECV] transport=HTTP remote=[::ffff:127.0.0.1]:63338 method=POST uri=/ReqUserLogout bytes=92 
+[2026-11-12 15:05:17.7111] [MESSAGE] [SEND] transport=HTTP remote=[::ffff:127.0.0.1]:63338 status=200 bytes=24 
